@@ -2,7 +2,7 @@ package heat
 
 import (
 	comv1 "github.com/openstack-k8s-operators/heat-operator/pkg/apis/heat/v1"
-	util "github.com/openstack-k8s-operators/keystone-operator/pkg/util"
+	util "github.com/openstack-k8s-operators/heat-operator/pkg/util"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
