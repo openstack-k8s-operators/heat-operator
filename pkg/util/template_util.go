@@ -12,7 +12,7 @@ import (
 // ExecuteTemplateFile creates a template from the file and execute it with the specified data
 func ExecuteTemplateFile(filename string, data interface{}) string {
 
-	templates := os.Getenv("HEAT_OPERATOR_TEMPLATES")
+	templates := os.Getenv("OPERATOR_TEMPLATES")
 	filepath := ""
 	if templates == "" {
 		// support local testing with 'up local'
