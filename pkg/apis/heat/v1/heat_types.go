@@ -33,8 +33,6 @@ type HeatStatus struct {
 	// Deployment hash used to detect changes
 	DeploymentHash       string `json:"deploymentHash"`
 	EngineDeploymentHash string `json:"engineDeploymentHash"`
-	// bootstrap completed
-	BootstrapHash string `json:"bootstrapHash"`
 }
 
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object

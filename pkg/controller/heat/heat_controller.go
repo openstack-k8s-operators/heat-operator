@@ -9,7 +9,7 @@ import (
 	comv1 "github.com/openstack-k8s-operators/heat-operator/pkg/apis/heat/v1"
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/pkg/apis/heat/v1"
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
-	util "github.com/openstack-k8s-operators/keystone-operator/pkg/util"
+	util "github.com/openstack-k8s-operators/lib-common/pkg/util"
 	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -161,7 +161,7 @@ func (r *ReconcileHeat) Reconcile(request reconcile.Request) (reconcile.Result, 
 	reqLogger.Info("HeatEngineContainerImage")
 	reqLogger.Info(instance.Spec.HeatEngineContainerImage)
 	job := heat.DbSyncJob(instance, instance.Name)
-	dbSyncHash := util.ObjectHash(job)
+	dbSyncHash, err := util.ObjectHash(job)
 
 	requeue := true
 	if instance.Status.DbSyncHash != dbSyncHash {
@@ -187,10 +187,10 @@ func (r *ReconcileHeat) Reconcile(request reconcile.Request) (reconcile.Result, 
 	}
 
 	// Define a new Deployment object
-	configMapHash := util.ObjectHash(configMap)
+	configMapHash, err := util.ObjectHash(configMap)
 	reqLogger.Info("ConfigMapHash: ", "ConfigMapHash:", configMapHash)
 	deployment := heat.HeatAPIDeployment(instance, "heat-api", configMapHash)
-	deploymentHash := util.ObjectHash(deployment)
+	deploymentHash, err := util.ObjectHash(deployment)
 	reqLogger.Info("Heat API DeploymentHash: ", "DeploymentHash:", deploymentHash)
 
 	// Set Heat instance as the owner and controller
@@ -236,7 +236,7 @@ func (r *ReconcileHeat) Reconcile(request reconcile.Request) (reconcile.Result, 
 	// Define a new Deployment object
 	reqLogger.Info("ConfigMapHash: ", "Data Hash:", configMapHash)
 	engineDeployment := heat.HeatEngineDeployment(instance, "heat-engine", configMapHash)
-	engineDeploymentHash := util.ObjectHash(engineDeployment)
+	engineDeploymentHash, err := util.ObjectHash(engineDeployment)
 	reqLogger.Info("Heat Engine DeploymentHash: ", "DeploymentHash:", engineDeploymentHash)
 
 	// Set Heat instance as the owner and controller
@@ -428,18 +428,6 @@ func (r *ReconcileHeat) setDbSyncHash(instance *comv1.Heat, hashStr string) erro
 
 	if hashStr != instance.Status.DbSyncHash {
 		instance.Status.DbSyncHash = hashStr
-		if err := r.client.Status().Update(context.TODO(), instance); err != nil {
-			return err
-		}
-	}
-	return nil
-
-}
-
-func (r *ReconcileHeat) setBootstrapHash(instance *comv1.Heat, hashStr string) error {
-
-	if hashStr != instance.Status.BootstrapHash {
-		instance.Status.BootstrapHash = hashStr
 		if err := r.client.Status().Update(context.TODO(), instance); err != nil {
 			return err
 		}
