@@ -65,7 +65,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 	// TODO(user): Modify this to be the types you create that are owned by the primary resource
 	// Watch for changes to secondary resource Pods and requeue the owner Heat
 	err = c.Watch(&source.Kind{Type: &corev1.Pod{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
+		IsController: false,
 		OwnerType:    &heatv1.Heat{},
 	})
 	if err != nil {
@@ -74,7 +74,7 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to secondary ConfigMaps
 	err = c.Watch(&source.Kind{Type: &corev1.ConfigMap{}}, &handler.EnqueueRequestForOwner{
-		IsController: true,
+		IsController: false,
 		OwnerType:    &heatv1.Heat{},
 	})
 	if err != nil {
@@ -83,6 +83,24 @@ func add(mgr manager.Manager, r reconcile.Reconciler) error {
 
 	// Watch for changes to secondary Secrets
 	err = c.Watch(&source.Kind{Type: &corev1.Secret{}}, &handler.EnqueueRequestForOwner{
+		IsController: false,
+		OwnerType:    &heatv1.Heat{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to secondary Jobs
+	err = c.Watch(&source.Kind{Type: &batchv1.Job{}}, &handler.EnqueueRequestForOwner{
+		IsController: false,
+		OwnerType:    &heatv1.Heat{},
+	})
+	if err != nil {
+		return err
+	}
+
+	// Watch for changes to secondary Jobs
+	err = c.Watch(&source.Kind{Type: &appsv1.Deployment{}}, &handler.EnqueueRequestForOwner{
 		IsController: true,
 		OwnerType:    &heatv1.Heat{},
 	})
