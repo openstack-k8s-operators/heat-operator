@@ -200,7 +200,7 @@ Install and configure OpenStack Heat.
 
 				Owned: []csvv1.CRDDescription{
 					{
-						Name:        "heat.heat.openstack.org",
+						Name:        "heats.heat.openstack.org",
 						Version:     "v1",
 						Kind:        "Heat",
 						DisplayName: "Heat",
