@@ -16,3 +16,4 @@ spec:
   heatServicePassword: heat
   heatStackDomainAdminPassword: heat
   mysqlContainerImage: docker.io/tripleomaster/centos-binary-mariadb:current-tripleo
+  serviceAccount: heat

@@ -103,7 +103,7 @@ Install and configure OpenStack Heat.
 				Rules:              *rules,
 			},
 			{
-				ServiceAccountName: "heat-operator",
+				ServiceAccountName: "heat",
 				Rules:              *serviceRules,
 			},
 		},
@@ -320,6 +320,17 @@ func getServiceRules() *[]rbacv1.PolicyRule {
 			},
 			Resources: []string{
 				"pods",
+			},
+			Verbs: []string{
+				"*",
+			},
+		},
+		{
+			APIGroups: []string{
+				"batch",
+			},
+			Resources: []string{
+				"jobs",
 			},
 			Verbs: []string{
 				"*",

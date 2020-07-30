@@ -34,7 +34,7 @@ func DbSyncJob(cr *comv1.Heat, cmName string) *batchv1.Job {
 			Template: corev1.PodTemplateSpec{
 				Spec: corev1.PodSpec{
 					RestartPolicy:      "OnFailure",
-					ServiceAccountName: "heat-operator",
+					ServiceAccountName: cr.Spec.ServiceAccount,
 					Containers: []corev1.Container{
 						{
 							Name:  "heat-db-sync",

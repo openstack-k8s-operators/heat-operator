@@ -23,6 +23,8 @@ type HeatSpec struct {
 	HeatServicePassword          string `json:"heatServicePassword"`
 	HeatStackDomainAdminPassword string `json:"heatStackDomainAdminPassword"`
 	MysqlContainerImage          string `json:"mysqlContainerImage,omitempty"`
+	// service account used to create pods
+	ServiceAccount string `json:"serviceAccount"`
 }
 
 // HeatStatus defines the observed state of Heat
