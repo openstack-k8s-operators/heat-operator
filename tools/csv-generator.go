@@ -309,6 +309,20 @@ func getOperatorRules() *[]rbacv1.PolicyRule {
 				"*",
 			},
 		},
+		{
+			APIGroups: []string{
+				"security.openshift.io",
+			},
+			Resources: []string{
+				"securitycontextconstraints",
+			},
+			ResourceNames: []string{
+				"anyuid",
+			},
+			Verbs: []string{
+				"use",
+			},
+		},
 	}
 }
 
