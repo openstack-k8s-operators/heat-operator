@@ -29,7 +29,7 @@ func HeatAPIDeployment(cr *comv1.Heat, cmName string, configHash string) *appsv1
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "heat-operator",
+					ServiceAccountName: cr.Spec.ServiceAccount,
 					Containers: []corev1.Container{
 						{
 							Name:  "heat-api",
@@ -79,7 +79,7 @@ func HeatEngineDeployment(cr *comv1.Heat, cmName string, configHash string) *app
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: "heat-operator",
+					ServiceAccountName: cr.Spec.ServiceAccount,
 					Containers: []corev1.Container{
 						{
 							Name:  "heat-engine",

@@ -59,11 +59,15 @@ spec:
               type: string
             mysqlContainerImage:
               type: string
+            serviceAccount:
+              description: service account used to create pods
+              type: string
           required:
           - heatAPIReplicas
           - heatEngineReplicas
           - heatServicePassword
           - heatStackDomainAdminPassword
+          - serviceAccount
           type: object
         status:
           description: HeatStatus defines the observed state of Heat
