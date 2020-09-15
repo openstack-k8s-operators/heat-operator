@@ -8,7 +8,7 @@ import (
 )
 
 // Deployment func
-func HeatAPIDeployment(cr *comv1.Heat, cmName string, configHash string) *appsv1.Deployment {
+func Deployment(cr *comv1.Heat, cmName string, configHash string) *appsv1.Deployment {
 	runAsUser := int64(0)
 
 	labels := map[string]string{
@@ -58,7 +58,8 @@ func HeatAPIDeployment(cr *comv1.Heat, cmName string, configHash string) *appsv1
 	return deployment
 }
 
-func HeatEngineDeployment(cr *comv1.Heat, cmName string, configHash string) *appsv1.Deployment {
+// EngineDeployment func
+func EngineDeployment(cr *comv1.Heat, cmName string, configHash string) *appsv1.Deployment {
 	runAsUser := int64(0)
 
 	labels := map[string]string{
