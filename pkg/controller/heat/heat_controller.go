@@ -207,7 +207,7 @@ func (r *ReconcileHeat) Reconcile(request reconcile.Request) (reconcile.Result, 
 	// Define a new Deployment object
 	configMapHash, err := util.ObjectHash(configMap)
 	reqLogger.Info("ConfigMapHash: ", "ConfigMapHash:", configMapHash)
-	deployment := heat.HeatAPIDeployment(instance, "heat-api", configMapHash)
+	deployment := heat.Deployment(instance, "heat-api", configMapHash)
 	deploymentHash, err := util.ObjectHash(deployment)
 	reqLogger.Info("Heat API DeploymentHash: ", "DeploymentHash:", deploymentHash)
 
@@ -253,7 +253,7 @@ func (r *ReconcileHeat) Reconcile(request reconcile.Request) (reconcile.Result, 
 
 	// Define a new Deployment object
 	reqLogger.Info("ConfigMapHash: ", "Data Hash:", configMapHash)
-	engineDeployment := heat.HeatEngineDeployment(instance, "heat-engine", configMapHash)
+	engineDeployment := heat.EngineDeployment(instance, "heat-engine", configMapHash)
 	engineDeploymentHash, err := util.ObjectHash(engineDeployment)
 	reqLogger.Info("Heat Engine DeploymentHash: ", "DeploymentHash:", engineDeploymentHash)
 
