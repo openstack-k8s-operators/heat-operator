@@ -1,0 +1,20 @@
+# permissions for end users to view heats.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: heat-viewer-role
+rules:
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heats
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heats/status
+  verbs:
+  - get

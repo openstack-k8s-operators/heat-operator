@@ -1,0 +1,24 @@
+# permissions for end users to edit heats.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: heat-editor-role
+rules:
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heats
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heats/status
+  verbs:
+  - get

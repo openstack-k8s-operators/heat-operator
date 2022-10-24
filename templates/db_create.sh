@@ -1,1 +1,0 @@
-mysql -h openstack-db-mariadb -u {{.DatabaseAdminUsername}} -P 3306 -e "CREATE DATABASE IF NOT EXISTS heat; GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'localhost' IDENTIFIED BY '{{.HeatDatabasePassword}}';GRANT ALL PRIVILEGES ON heat.* TO 'heat'@'%' IDENTIFIED BY '{{.HeatDatabasePassword}}';"
