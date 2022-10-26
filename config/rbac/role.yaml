@@ -1,0 +1,85 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  creationTimestamp: null
+  name: manager-role
+rules:
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatapiss
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatapiss/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatapiss/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatengines
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatengines/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatengines/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heats
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heats/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heats/status
+  verbs:
+  - get
+  - patch
+  - update
