@@ -17,40 +17,31 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-
-	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
-
+	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-const (
-	// DbSyncHash hash
-	DbSyncHash = "dbsync"
-
-	// DeploymentHash hash used to detect changes
-	DeploymentHash = "deployment"
-)
-
-// HeatSpec defines the desired state of Heat
-type HeatSpec struct {
+// HeatAPISpec defines the desired state of Heat
+type HeatAPISpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=heat
 	// ServiceUser - optional username used for this service to register in heat
 	ServiceUser string `json:"serviceUser"`
 
 	// +kubebuilder:validation:Required
-	// MariaDB instance name.
-	// Right now required by the maridb-operator to get the credentials from the instance to create the DB.
-	// Might not be required in future.
-	DatabaseInstance string `json:"databaseInstance,omitempty"`
+	// ContainerImage - Heat API Container Image URL
+	ContainerImage string `json:"containerImage,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=heat
 	// DatabaseUser - optional username used for heat DB, defaults to heat.
 	// TODO: -> implement needs work in mariadb-operator, right now only heat.
 	DatabaseUser string `json:"databaseUser"`
+
+	// +kubebuilder:validation:Optional
+	// DatabaseHostname - Ironic Database Hostname
+	DatabaseHostname string `json:"databaseHostname,omitempty"`
 
 	// +kubebuilder:validation:Required
 	// Secret containing OpenStack password information for heat HeatDatabasePassword, AdminPassword
@@ -66,9 +57,8 @@ type HeatSpec struct {
 	Debug HeatDebug `json:"debug,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// PreserveJobs - do not delete jobs after they finished e.g. to check logs
-	PreserveJobs bool `json:"preserveJobs,omitempty"`
+	// NodeSelector to target subset of worker nodes for running the API service
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="# add your customization here"
@@ -84,46 +74,13 @@ type HeatSpec struct {
 	DefaultConfigOverwrite map[string]string `json:"defaultConfigOverwrite,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// HeatEngineCount - interface to overwrite default number of Heat engine pods. This will
-	// scale the number of Heat engine pods. Note that this shouldn't be confused with the heat.conf option
-	// for num_engine_workers: n. This option provides an alternative and allows the user to scale in a k8s native
-	// manner, while preseving the num_engine_workers option as well.
-	HeatEngineCount int32 `json:"heatEngineCount,omitempty"`
-
-	// +kubebuilder:validation:Required
-	// HeatAPI - Spec definition for the API service of this Heat deployment
-	HeatAPI HeatAPISpec `json:"heatAPI"`
-}
-
-type PasswordSelector struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="heatDatabasePassword"
-	// Database - Selector to get the heat Database user password from the Secret
-	// TODO: not used, need change in mariadb-operator
-	Database string `json:"database,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="heatPassword"
-	// Database - Selector to get the heat service password from the Secret
-	Service string `json:"admin,omitempty"`
-}
-
-type HeatDebug struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// DBSync enable debug
-	DBSync bool `json:"dbSync,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// ReadyCount enable debug
-	Bootstrap bool `json:"bootstrap,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// Service enable debug
-	Service bool `json:"service,omitempty"`
+	// Resources - Compute Resources required by this service (Limits/Requests).
+	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // HeatStatus defines the observed state of Heat
-type HeatStatus struct {
+type HeatAPIStatus struct {
 	// Map of hashes to track e.g. job status
 	Hash map[string]string `json:"hash,omitempty"`
 
@@ -133,59 +90,37 @@ type HeatStatus struct {
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
 
-	// Neutron Database Hostname
-	DatabaseHostname string `json:"databaseHostname,omitempty"`
-
 	// ServiceID - the ID of the registered service in keystone
 	ServiceIDs string `json:"serviceID,omitempty"`
 
 	// ReadyCount of Heat instances
 	ReadyCount int32 `json:"readyCount,omitempty"`
-
-	// ReadyCount of Heat API instance
-	HeatAPIReadyCount int32 `json:"heatApiReadyCount,omitempty"`
-
-	// ReadyCount of Heat API instance
-	HeatEngineReadyCount int32 `json:"heatEngineReadyCount,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// Heat is the Schema for the heats API
-type Heat struct {
+type HeatAPI struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HeatSpec   `json:"spec,omitempty"`
-	Status HeatStatus `json:"status,omitempty"`
+	Spec   HeatAPISpec   `json:"spec,omitempty"`
+	Status HeatAPIStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
 // HeatList contains a list of Heat
-type HeatList struct {
+type HeatAPIList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Heat `json:"items"`
+	Items           []HeatAPI `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Heat{}, &HeatList{})
+	SchemeBuilder.Register(&HeatAPI{}, &HeatAPIList{})
 }
 
-func (instance HeatAPI) GetEndpoint(endpointType endpoint.Endpoint) (string, error) {
-	if url, found := instance.Status.APIEndpoints[string(endpointType)]; found {
-		return url, nil
-	}
-	return "", fmt.Errorf("%s endpoint not found", string(endpointType))
-}
-
-// IsReady - returns true if service is ready to serve requests
-func (instance Heat) IsReady() bool {
-	ready := instance.Status.HeatAPIReadyCount > 0
-
-	ready = ready && instance.Status.HeatEngineReadyCount > 0
-
-	return ready
+func (instance HeatAPI) IsReady() bool {
+	return instance.Status.ReadyCount >= 1
 }

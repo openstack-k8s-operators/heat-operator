@@ -245,6 +245,17 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
+	_, err = r.createHashOfInputHashes(ctx, instance, configMapVars)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.ServiceConfigReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.ServiceConfigReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+
 	// Create ConfigMaps and Secrets - end
 
 	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
@@ -470,9 +481,8 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(instance *heatv1beta1.Heat)
 	}
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, deployment, func() error {
-		deployment.Spec = instance.Spec.heatAPI
+		deployment.Spec = instance.Spec.HeatAPI
 		// TODO: Add logic to determine when to set/overwrite, etc
-		deployment.Spec.Standalone = instance.Spec.Standalone
 		deployment.Spec.ServiceUser = instance.Spec.ServiceUser
 		deployment.Spec.DatabaseHostname = instance.Status.DatabaseHostname
 		deployment.Spec.DatabaseUser = instance.Spec.DatabaseUser
@@ -526,8 +536,6 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	templateParameters := make(map[string]interface{})
 	templateParameters["ServiceUser"] = instance.Spec.ServiceUser
 	templateParameters["KeystoneInternalURL"] = authURL
-	templateParameters["DHCPRange"] = instance.Spec.heatEngine.DHCPRange
-	templateParameters["Standalone"] = instance.Spec.Standalone
 
 	cms := []util.Template{
 		// ScriptsConfigMap
