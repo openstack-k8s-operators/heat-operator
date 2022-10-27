@@ -35,7 +35,7 @@ const (
 	// ComponentSelector - used by operators to specify pod labels
 	ComponentSelector = "component"
 	// ApiComponent -
-	ApiComponent = "api"
+	APIComponent = "api"
 	// EngineComponent -
 	EngineComponent = "engine"
 )

@@ -17,10 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
-	"fmt"
-
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -93,6 +90,10 @@ type HeatSpec struct {
 	// +kubebuilder:validation:Required
 	// HeatAPI - Spec definition for the API service of this Heat deployment
 	HeatAPI HeatAPISpec `json:"heatAPI"`
+
+	// +kubebuilder:validation:Required
+	// HeatEngine - Spec definition for the API service of this Heat deployment
+	HeatEngine HeatEngineSpec `json:"heatEngine"`
 }
 
 type PasswordSelector struct {
@@ -128,7 +129,7 @@ type HeatStatus struct {
 	Hash map[string]string `json:"hash,omitempty"`
 
 	// API endpoint
-	APIEndpoints map[string]string `json:"apiEndpoint,omitempty"`
+	APIEndpoints map[string]map[string]string `json:"apiEndpoint,omitempty"`
 
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
@@ -137,7 +138,7 @@ type HeatStatus struct {
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
 
 	// ServiceID - the ID of the registered service in keystone
-	ServiceIDs string `json:"serviceID,omitempty"`
+	ServiceIDs map[string]string `json:"serviceIDs,omitempty"`
 
 	// ReadyCount of Heat instances
 	ReadyCount int32 `json:"readyCount,omitempty"`
@@ -172,13 +173,6 @@ type HeatList struct {
 
 func init() {
 	SchemeBuilder.Register(&Heat{}, &HeatList{})
-}
-
-func (instance HeatAPI) GetEndpoint(endpointType endpoint.Endpoint) (string, error) {
-	if url, found := instance.Status.APIEndpoints[string(endpointType)]; found {
-		return url, nil
-	}
-	return "", fmt.Errorf("%s endpoint not found", string(endpointType))
 }
 
 // IsReady - returns true if service is ready to serve requests

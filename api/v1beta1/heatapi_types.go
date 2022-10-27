@@ -34,13 +34,18 @@ type HeatAPISpec struct {
 	ContainerImage string `json:"containerImage,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=1
+	// Replicas - Heat API Replicas
+	Replicas int32 `json:"replicas"`
+
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=heat
 	// DatabaseUser - optional username used for heat DB, defaults to heat.
 	// TODO: -> implement needs work in mariadb-operator, right now only heat.
 	DatabaseUser string `json:"databaseUser"`
 
 	// +kubebuilder:validation:Optional
-	// DatabaseHostname - Ironic Database Hostname
+	// DatabaseHostname - Heat Database Hostname
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
 
 	// +kubebuilder:validation:Required
@@ -85,13 +90,13 @@ type HeatAPIStatus struct {
 	Hash map[string]string `json:"hash,omitempty"`
 
 	// API endpoint
-	APIEndpoints map[string]string `json:"apiEndpoint,omitempty"`
+	APIEndpoints map[string]map[string]string `json:"apiEndpoint,omitempty"`
 
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
 
 	// ServiceID - the ID of the registered service in keystone
-	ServiceIDs string `json:"serviceID,omitempty"`
+	ServiceIDs map[string]string `json:"serviceIDs,omitempty"`
 
 	// ReadyCount of Heat instances
 	ReadyCount int32 `json:"readyCount,omitempty"`

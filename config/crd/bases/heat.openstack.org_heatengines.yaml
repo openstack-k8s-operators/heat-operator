@@ -32,8 +32,11 @@ spec:
           metadata:
             type: object
           spec:
-            description: HeatSpec defines the desired state of Heat
+            description: HeatEngineSpec defines the desired state of Heat
             properties:
+              containerImage:
+                description: ContainerImage - Heat API Container Image URL
+                type: string
               customServiceConfig:
                 default: '# add your customization here'
                 description: CustomServiceConfig - customize the service config using
@@ -42,10 +45,8 @@ spec:
                   added to to /etc/<service>/<service>.conf.d directory as custom.conf
                   file.
                 type: string
-              databaseInstance:
-                description: MariaDB instance name. Right now required by the maridb-operator
-                  to get the credentials from the instance to create the DB. Might
-                  not be required in future.
+              databaseHostname:
+                description: DatabaseHostname - Heat Database Hostname
                 type: string
               databaseUser:
                 default: heat
@@ -79,15 +80,12 @@ spec:
                   files. Those get added to the service config dir in /etc/<service>
                   . TODO: -> implement'
                 type: object
-              heatEngineCount:
-                description: 'HeatEngineCount - interface to overwrite default number
-                  of Heat engine pods. This will scale the number of Heat engine pods.
-                  Note that this shouldn''t be confused with the heat.conf option
-                  for num_engine_workers: n. This option provides an alternative and
-                  allows the user to scale in a k8s native manner, while preseving
-                  the num_engine_workers option as well.'
-                format: int32
-                type: integer
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: NodeSelector to target subset of worker nodes for running
+                  the API service
+                type: object
               passwordSelectors:
                 description: PasswordSelectors - Selectors to identify the DB and
                   AdminUser password from the Secret
@@ -103,11 +101,38 @@ spec:
                       password from the Secret TODO: not used, need change in mariadb-operator'
                     type: string
                 type: object
-              preserveJobs:
-                default: false
-                description: PreserveJobs - do not delete jobs after they finished
-                  e.g. to check logs
-                type: boolean
+              replicas:
+                default: 1
+                description: Replicas - Heat API Replicas
+                format: int32
+                type: integer
+              resources:
+                description: Resources - Compute Resources required by this service
+                  (Limits/Requests). https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                properties:
+                  limits:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: 'Limits describes the maximum amount of compute resources
+                      allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                    type: object
+                  requests:
+                    additionalProperties:
+                      anyOf:
+                      - type: integer
+                      - type: string
+                      pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                      x-kubernetes-int-or-string: true
+                    description: 'Requests describes the minimum amount of compute
+                      resources required. If Requests is omitted for a container,
+                      it defaults to Limits if that is explicitly specified, otherwise
+                      to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                    type: object
+                type: object
               secret:
                 description: Secret containing OpenStack password information for
                   heat HeatDatabasePassword, AdminPassword
@@ -123,7 +148,9 @@ spec:
             properties:
               apiEndpoint:
                 additionalProperties:
-                  type: string
+                  additionalProperties:
+                    type: string
+                  type: object
                 description: API endpoint
                 type: object
               conditions:
@@ -169,30 +196,23 @@ spec:
                   - type
                   type: object
                 type: array
-              databaseHostname:
-                description: Neutron Database Hostname
-                type: string
               hash:
                 additionalProperties:
                   type: string
                 description: Map of hashes to track e.g. job status
                 type: object
-              heatApiReadyCount:
-                description: ReadyCount of Heat API instance
-                format: int32
-                type: integer
-              heatEngineReadyCount:
-                description: ReadyCount of Heat API instance
-                format: int32
-                type: integer
               readyCount:
                 description: ReadyCount of Heat instances
                 format: int32
                 type: integer
               serviceID:
+                additionalProperties:
+                  type: string
                 description: ServiceID - the ID of the registered service in keystone
-                type: string
+                type: object
             type: object
         type: object
     served: true
     storage: true
+    subresources:
+      status: {}

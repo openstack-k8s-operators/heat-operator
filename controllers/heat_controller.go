@@ -46,6 +46,7 @@ import (
 
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -116,7 +117,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		instance.Status.Hash = map[string]string{}
 	}
 	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]string{}
+		instance.Status.APIEndpoints = map[string]map[string]string{}
 	}
 
 	helper, err := helper.NewHelper(
@@ -303,7 +304,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			heatv1beta1.HeatEngineReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			heatv1beta1.HeatEngineReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
 	}
@@ -499,6 +499,33 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(instance *heatv1beta1.Heat)
 	return deployment, op, err
 }
 
+func (r *HeatReconciler) engineDeploymentCreateOrUpdate(instance *heatv1beta1.Heat) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
+	deployment := &heatv1beta1.HeatEngine{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-api", instance.Name),
+			Namespace: instance.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, deployment, func() error {
+		deployment.Spec = instance.Spec.HeatEngine
+		// TODO: Add logic to determine when to set/overwrite, etc
+		deployment.Spec.ServiceUser = instance.Spec.ServiceUser
+		deployment.Spec.DatabaseHostname = instance.Status.DatabaseHostname
+		deployment.Spec.DatabaseUser = instance.Spec.DatabaseUser
+		deployment.Spec.Secret = instance.Spec.Secret
+
+		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return deployment, op, err
+}
+
 // generateServiceConfigMaps - create create configmaps which hold scripts and service configuration
 // TODO add DefaultConfigOverwrite
 func (r *HeatReconciler) generateServiceConfigMaps(
@@ -564,4 +591,36 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	}
 
 	return nil
+}
+
+func (r *HeatReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
+	r.Log.Info("Reconciling Heat upgrade")
+
+	// TODO(bshephar): should have major version upgrade tasks
+	// -delete dbsync hash from status to rerun it?
+
+	r.Log.Info("Reconciled Heat upgrade successfully")
+	return ctrl.Result{}, nil
+}
+
+// createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart
+// if any of the input resources change, like configs, passwords, ...
+func (r *HeatReconciler) createHashOfInputHashes(
+	ctx context.Context,
+	instance *heatv1beta1.Heat,
+	envVars map[string]env.Setter,
+) (string, error) {
+	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
+	hash, err := util.ObjectHash(mergedMapVars)
+	if err != nil {
+		return hash, err
+	}
+	if hashMap, changed := util.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
+		instance.Status.Hash = hashMap
+		if err := r.Client.Status().Update(ctx, instance); err != nil {
+			return hash, err
+		}
+		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
+	}
+	return hash, nil
 }

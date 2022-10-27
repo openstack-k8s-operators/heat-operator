@@ -23,6 +23,8 @@ const (
 	HeatAPIReadyCondition condition.Type = "HeatAPIReady"
 
 	HeatEngineReadyCondition condition.Type = "HeatEngineReady"
+
+	HeatEngineReadyErrorMessage condition.Type = "HeatEngineError"
 )
 
 const (
