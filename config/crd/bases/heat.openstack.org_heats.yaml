@@ -80,6 +80,234 @@ spec:
                   files. Those get added to the service config dir in /etc/<service>
                   . TODO: -> implement'
                 type: object
+              heatAPI:
+                description: HeatAPI - Spec definition for the API service of this
+                  Heat deployment
+                properties:
+                  containerImage:
+                    description: ContainerImage - Heat API Container Image URL
+                    type: string
+                  customServiceConfig:
+                    default: '# add your customization here'
+                    description: CustomServiceConfig - customize the service config
+                      using this parameter to change service defaults, or overwrite
+                      rendered information using raw OpenStack config format. The
+                      content gets added to to /etc/<service>/<service>.conf.d directory
+                      as custom.conf file.
+                    type: string
+                  databaseHostname:
+                    description: DatabaseHostname - Heat Database Hostname
+                    type: string
+                  databaseUser:
+                    default: heat
+                    description: 'DatabaseUser - optional username used for heat DB,
+                      defaults to heat. TODO: -> implement needs work in mariadb-operator,
+                      right now only heat.'
+                    type: string
+                  debug:
+                    description: Debug - enable debug for different deploy stages.
+                      If an init container is used, it runs and the actual action
+                      pod gets started with sleep infinity
+                    properties:
+                      bootstrap:
+                        default: false
+                        description: ReadyCount enable debug
+                        type: boolean
+                      dbSync:
+                        default: false
+                        description: DBSync enable debug
+                        type: boolean
+                      service:
+                        default: false
+                        description: Service enable debug
+                        type: boolean
+                    type: object
+                  defaultConfigOverwrite:
+                    additionalProperties:
+                      type: string
+                    description: 'ConfigOverwrite - interface to overwrite default
+                      config files like e.g. policy.json. But can also be used to
+                      add additional files. Those get added to the service config
+                      dir in /etc/<service> . TODO: -> implement'
+                    type: object
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    description: NodeSelector to target subset of worker nodes for
+                      running the API service
+                    type: object
+                  passwordSelectors:
+                    description: PasswordSelectors - Selectors to identify the DB
+                      and AdminUser password from the Secret
+                    properties:
+                      admin:
+                        default: heatPassword
+                        description: Database - Selector to get the heat service password
+                          from the Secret
+                        type: string
+                      database:
+                        default: heatDatabasePassword
+                        description: 'Database - Selector to get the heat Database
+                          user password from the Secret TODO: not used, need change
+                          in mariadb-operator'
+                        type: string
+                    type: object
+                  replicas:
+                    default: 1
+                    description: Replicas - Heat API Replicas
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resources - Compute Resources required by this service
+                      (Limits/Requests). https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  secret:
+                    description: Secret containing OpenStack password information
+                      for heat HeatDatabasePassword, AdminPassword
+                    type: string
+                  serviceUser:
+                    default: heat
+                    description: ServiceUser - optional username used for this service
+                      to register in heat
+                    type: string
+                type: object
+              heatEngine:
+                description: HeatEngine - Spec definition for the API service of this
+                  Heat deployment
+                properties:
+                  containerImage:
+                    description: ContainerImage - Heat API Container Image URL
+                    type: string
+                  customServiceConfig:
+                    default: '# add your customization here'
+                    description: CustomServiceConfig - customize the service config
+                      using this parameter to change service defaults, or overwrite
+                      rendered information using raw OpenStack config format. The
+                      content gets added to to /etc/<service>/<service>.conf.d directory
+                      as custom.conf file.
+                    type: string
+                  databaseHostname:
+                    description: DatabaseHostname - Heat Database Hostname
+                    type: string
+                  databaseUser:
+                    default: heat
+                    description: 'DatabaseUser - optional username used for heat DB,
+                      defaults to heat. TODO: -> implement needs work in mariadb-operator,
+                      right now only heat.'
+                    type: string
+                  debug:
+                    description: Debug - enable debug for different deploy stages.
+                      If an init container is used, it runs and the actual action
+                      pod gets started with sleep infinity
+                    properties:
+                      bootstrap:
+                        default: false
+                        description: ReadyCount enable debug
+                        type: boolean
+                      dbSync:
+                        default: false
+                        description: DBSync enable debug
+                        type: boolean
+                      service:
+                        default: false
+                        description: Service enable debug
+                        type: boolean
+                    type: object
+                  defaultConfigOverwrite:
+                    additionalProperties:
+                      type: string
+                    description: 'ConfigOverwrite - interface to overwrite default
+                      config files like e.g. policy.json. But can also be used to
+                      add additional files. Those get added to the service config
+                      dir in /etc/<service> . TODO: -> implement'
+                    type: object
+                  nodeSelector:
+                    additionalProperties:
+                      type: string
+                    description: NodeSelector to target subset of worker nodes for
+                      running the API service
+                    type: object
+                  passwordSelectors:
+                    description: PasswordSelectors - Selectors to identify the DB
+                      and AdminUser password from the Secret
+                    properties:
+                      admin:
+                        default: heatPassword
+                        description: Database - Selector to get the heat service password
+                          from the Secret
+                        type: string
+                      database:
+                        default: heatDatabasePassword
+                        description: 'Database - Selector to get the heat Database
+                          user password from the Secret TODO: not used, need change
+                          in mariadb-operator'
+                        type: string
+                    type: object
+                  replicas:
+                    default: 1
+                    description: Replicas - Heat API Replicas
+                    format: int32
+                    type: integer
+                  resources:
+                    description: Resources - Compute Resources required by this service
+                      (Limits/Requests). https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+                    properties:
+                      limits:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Limits describes the maximum amount of compute
+                          resources allowed. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                      requests:
+                        additionalProperties:
+                          anyOf:
+                          - type: integer
+                          - type: string
+                          pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
+                          x-kubernetes-int-or-string: true
+                        description: 'Requests describes the minimum amount of compute
+                          resources required. If Requests is omitted for a container,
+                          it defaults to Limits if that is explicitly specified, otherwise
+                          to an implementation-defined value. More info: https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/'
+                        type: object
+                    type: object
+                  secret:
+                    description: Secret containing OpenStack password information
+                      for heat HeatDatabasePassword, AdminPassword
+                    type: string
+                  serviceUser:
+                    default: heat
+                    description: ServiceUser - optional username used for this service
+                      to register in heat
+                    type: string
+                type: object
               heatEngineCount:
                 description: 'HeatEngineCount - interface to overwrite default number
                   of Heat engine pods. This will scale the number of Heat engine pods.
@@ -118,13 +346,18 @@ spec:
                 description: ServiceUser - optional username used for this service
                   to register in heat
                 type: string
+            required:
+            - heatAPI
+            - heatEngine
             type: object
           status:
             description: HeatStatus defines the observed state of Heat
             properties:
               apiEndpoint:
                 additionalProperties:
-                  type: string
+                  additionalProperties:
+                    type: string
+                  type: object
                 description: API endpoint
                 type: object
               conditions:
@@ -190,9 +423,11 @@ spec:
                 description: ReadyCount of Heat instances
                 format: int32
                 type: integer
-              serviceID:
+              serviceIDs:
+                additionalProperties:
+                  type: string
                 description: ServiceID - the ID of the registered service in keystone
-                type: string
+                type: object
             type: object
         type: object
     served: true
