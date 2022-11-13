@@ -2,7 +2,6 @@ package heatengine
 
 import (
 	"github.com/openstack-k8s-operators/heat-operator/pkg/heat"
-	heatengine "github.com/openstack-k8s-operators/heat-operator/pkg/heatengine"
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -24,7 +23,7 @@ func GetVolumes(parentName string, name string) []corev1.Volume {
 		},
 	}
 
-	return append(heatengine.GetVolumes(parentName), backupVolumes...)
+	return append(heat.GetVolumes(parentName), backupVolumes...)
 }
 
 // GetInitVolumeMounts - heat API init task VolumeMounts
@@ -36,7 +35,7 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 		ReadOnly:  true,
 	}
 
-	return append(heatengine.GetInitVolumeMounts(), customConfVolumeMount)
+	return append(heat.GetInitVolumeMounts(), customConfVolumeMount)
 }
 
 // GetVolumeMounts - heat API VolumeMounts
