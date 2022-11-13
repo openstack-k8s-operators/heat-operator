@@ -431,7 +431,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	}
 
 	depl := deployment.NewDeployment(
-		heatengine.Deployment(instance, inputHash),
+		heatengine.Deployment(instance, inputHash, serviceLabels),
 		5,
 	)
 
