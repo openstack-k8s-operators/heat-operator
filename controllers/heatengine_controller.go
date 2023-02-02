@@ -51,7 +51,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 )
 
-// HeatReconciler reconciles a Heat object
+// HeatEngineReconciler reconciles a Heat object
 type HeatEngineReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme

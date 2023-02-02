@@ -233,3 +233,14 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+.PHONY: gowork
+gowork:
+	test -f go.work || go work init
+	go work use .
+	go work use ./api
+
+.PHONY: operator-lint
+operator-lint:
+	GOBIN=$(LOCALBIN) go install github.com/gibizer/operator-lint@v0.1.0
+	go vet -vettool=$(LOCALBIN)/operator-lint ./... ./api/...

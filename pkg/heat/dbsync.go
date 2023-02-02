@@ -25,13 +25,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// DBSyncCommand
 const (
-	// DBSyncCommand
 	DBSyncCommand = "/usr/local/bin/kolla_set_configs && su heat -s /bin/bash -c 'heat-manage --config-file /etc/heat/heat.conf db_sync"
 )
 
 // DBSyncJob function
-func DbSyncJob(
+func DBSyncJob(
 	instance *heatv1beta1.Heat,
 	labels map[string]string,
 ) *batchv1.Job {

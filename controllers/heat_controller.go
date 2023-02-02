@@ -430,7 +430,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 	// run Heat db sync
 	//
 	dbSyncHash := instance.Status.Hash[heatv1beta1.DbSyncHash]
-	jobDef := heat.DbSyncJob(instance, serviceLabels)
+	jobDef := heat.DBSyncJob(instance, serviceLabels)
 	dbSyncjob := job.NewJob(
 		jobDef,
 		heatv1beta1.DbSyncHash,

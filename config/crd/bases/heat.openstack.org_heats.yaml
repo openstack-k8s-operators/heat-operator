@@ -193,6 +193,9 @@ spec:
                     description: ServiceUser - optional username used for this service
                       to register in heat
                     type: string
+                required:
+                - containerImage
+                - secret
                 type: object
               heatEngine:
                 description: HeatEngine - Spec definition for the API service of this
@@ -307,6 +310,9 @@ spec:
                     description: ServiceUser - optional username used for this service
                       to register in heat
                     type: string
+                required:
+                - containerImage
+                - secret
                 type: object
               heatEngineCount:
                 description: 'HeatEngineCount - interface to overwrite default number
@@ -347,8 +353,10 @@ spec:
                   to register in heat
                 type: string
             required:
+            - databaseInstance
             - heatAPI
             - heatEngine
+            - secret
             type: object
           status:
             description: HeatStatus defines the observed state of Heat

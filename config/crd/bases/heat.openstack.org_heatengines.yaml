@@ -18,6 +18,7 @@ spec:
   - name: v1beta1
     schema:
       openAPIV3Schema:
+        description: HeatEngine defined.
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -142,9 +143,12 @@ spec:
                 description: ServiceUser - optional username used for this service
                   to register in heat
                 type: string
+            required:
+            - containerImage
+            - secret
             type: object
           status:
-            description: HeatStatus defines the observed state of Heat
+            description: HeatEngineStatus defines the observed state of Heat
             properties:
               apiEndpoint:
                 additionalProperties:

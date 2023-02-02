@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// APIDetails ..
 type APIDetails struct {
 	ContainerImage       string
 	DatabaseHost         string
@@ -34,10 +35,12 @@ type APIDetails struct {
 	Privileged           bool
 }
 
+// InitContainerCommand is
 const (
 	InitContainerCommand = "/usr/local/bin/container-scripts/init.sh"
 )
 
+// InitContainer ..
 func InitContainer(init APIDetails) []corev1.Container {
 	runAsUser := int64(0)
 	trueVar := true

@@ -26,15 +26,15 @@ const (
 	DatabaseName = "heat"
 	// HeatPublicPort -
 	HeatPublicPort int32 = 8004
-	// HeatPublicPort -
+	// HeatAdminPort -
 	HeatAdminPort int32 = 8004
-	// HeatPublicPort -
+	// HeatInternalPort -
 	HeatInternalPort int32 = 8004
 	// KollaConfigDbSync -
 	KollaConfigDbSync = "/var/lib/config-data/merged/db-sync-config.json"
 	// ComponentSelector - used by operators to specify pod labels
 	ComponentSelector = "component"
-	// ApiComponent -
+	// APIComponent -
 	APIComponent = "api"
 	// EngineComponent -
 	EngineComponent = "engine"
