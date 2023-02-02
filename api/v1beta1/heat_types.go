@@ -41,7 +41,7 @@ type HeatSpec struct {
 	// MariaDB instance name.
 	// Right now required by the maridb-operator to get the credentials from the instance to create the DB.
 	// Might not be required in future.
-	DatabaseInstance string `json:"databaseInstance,omitempty"`
+	DatabaseInstance string `json:"databaseInstance"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=heat
@@ -51,7 +51,7 @@ type HeatSpec struct {
 
 	// +kubebuilder:validation:Required
 	// Secret containing OpenStack password information for heat HeatDatabasePassword, AdminPassword
-	Secret string `json:"secret,omitempty"`
+	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
 	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
@@ -96,6 +96,7 @@ type HeatSpec struct {
 	HeatEngine HeatEngineSpec `json:"heatEngine"`
 }
 
+// PasswordSelector ..
 type PasswordSelector struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="heatDatabasePassword"
@@ -108,6 +109,7 @@ type PasswordSelector struct {
 	Service string `json:"admin,omitempty"`
 }
 
+// HeatDebug ...
 type HeatDebug struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false

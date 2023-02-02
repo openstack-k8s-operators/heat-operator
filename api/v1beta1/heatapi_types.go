@@ -31,7 +31,7 @@ type HeatAPISpec struct {
 
 	// +kubebuilder:validation:Required
 	// ContainerImage - Heat API Container Image URL
-	ContainerImage string `json:"containerImage,omitempty"`
+	ContainerImage string `json:"containerImage"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1
@@ -50,7 +50,7 @@ type HeatAPISpec struct {
 
 	// +kubebuilder:validation:Required
 	// Secret containing OpenStack password information for heat HeatDatabasePassword, AdminPassword
-	Secret string `json:"secret,omitempty"`
+	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
 	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
@@ -84,7 +84,7 @@ type HeatAPISpec struct {
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
-// HeatStatus defines the observed state of Heat
+// HeatAPIStatus defines the observed state of Heat
 type HeatAPIStatus struct {
 	// Map of hashes to track e.g. job status
 	Hash map[string]string `json:"hash,omitempty"`
@@ -105,6 +105,7 @@ type HeatAPIStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
+// HeatAPI ...
 type HeatAPI struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -115,7 +116,7 @@ type HeatAPI struct {
 
 //+kubebuilder:object:root=true
 
-// HeatList contains a list of Heat
+// HeatAPIList contains a list of Heat
 type HeatAPIList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -126,6 +127,7 @@ func init() {
 	SchemeBuilder.Register(&HeatAPI{}, &HeatAPIList{})
 }
 
+// IsReady ...
 func (instance HeatAPI) IsReady() bool {
 	return instance.Status.ReadyCount >= 1
 }

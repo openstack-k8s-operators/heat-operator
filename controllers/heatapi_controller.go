@@ -72,7 +72,7 @@ func (r *HeatAPIReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// HeatReconciler reconciles a Heat object
+// HeatAPIReconciler reconciles a Heat object
 type HeatAPIReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme

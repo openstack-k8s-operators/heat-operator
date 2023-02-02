@@ -20,29 +20,32 @@ import (
 )
 
 const (
+	// HeatAPIReadyCondition ...
 	HeatAPIReadyCondition condition.Type = "HeatAPIReady"
 
+	// HeatEngineReadyCondition ...
 	HeatEngineReadyCondition condition.Type = "HeatEngineReady"
 
+	// HeatEngineReadyErrorMessage ...
 	HeatEngineReadyErrorMessage condition.Type = "HeatEngineError"
 )
 
 const (
+	// HeatAPIReadyInitMessage ...
 	//
 	// HeatAPIReady condition messages
 	//
-	// HeatAPIReadyInitMessage
 	HeatAPIReadyInitMessage = "HeatAPI not started"
 
-	// HeatAPIReadyErrorMessage
+	// HeatAPIReadyErrorMessage ...
 	HeatAPIReadyErrorMessage = "HeatAPI error occured %s"
 
+	// HeatConductorReadyInitMessage ...
 	//
 	// HeatConductorReady condition messages
 	//
-	// HeatConductorReadyInitMessage
 	HeatConductorReadyInitMessage = "HeatConductor not started"
 
-	// HeatConductorReadyErrorMessage
+	// HeatConductorReadyErrorMessage ...
 	HeatConductorReadyErrorMessage = "HeatConductor error occured %s"
 )

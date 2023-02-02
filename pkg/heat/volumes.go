@@ -19,6 +19,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+// GetVolumes ...
 func GetVolumes(name string) []corev1.Volume {
 	var scriptsVolumeDefaultMode int32 = 0755
 	var config0640AccessMode int32 = 0640
@@ -55,6 +56,7 @@ func GetVolumes(name string) []corev1.Volume {
 	}
 }
 
+// GetInitVolumeMounts ...
 func GetInitVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
@@ -76,6 +78,7 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 
 }
 
+// GetVolumeMounts ...
 func GetVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
