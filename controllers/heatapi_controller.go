@@ -85,7 +85,7 @@ var (
 		{
 			"type": heat.ServiceType,
 			"name": heat.ServiceName,
-			"desc": "Heat baremetal provisioning service",
+			"desc": "Heat API service",
 		},
 	}
 )
@@ -294,6 +294,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 		heat.ServiceName,
 		serviceLabels,
 		data,
+		time.Duration(5)*time.Second,
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(

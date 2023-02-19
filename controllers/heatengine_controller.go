@@ -253,6 +253,7 @@ func (r *HeatEngineReconciler) reconcileInit(
 		heat.ServiceName,
 		serviceLabels,
 		data,
+		time.Duration(5)*time.Second,
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(

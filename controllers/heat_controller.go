@@ -572,9 +572,11 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	if err != nil {
 		return err
 	}
-	templateParameters := make(map[string]interface{})
-	templateParameters["ServiceUser"] = instance.Spec.ServiceUser
-	templateParameters["KeystoneInternalURL"] = authURL
+
+	templateParameters := map[string]interface{}{
+		"KeystoneInternalURL": authURL,
+		"ServiceUser":         instance.Spec.ServiceUser,
+	}
 
 	cms := []util.Template{
 		// ScriptsConfigMap
