@@ -1,4 +1,5 @@
-    http://www.apache.org/licenses/LICENSE-2.0
+/*
+http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
 distributed under the License is distributed on an "AS IS" BASIS,
@@ -511,7 +512,7 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(instance *heatv1beta1.Heat)
 func (r *HeatReconciler) engineDeploymentCreateOrUpdate(instance *heatv1beta1.Heat) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
 	deployment := &heatv1beta1.HeatEngine{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-api", instance.Name),
+			Name:      fmt.Sprintf("%s-engine", instance.Name),
 			Namespace: instance.Namespace,
 		},
 	}

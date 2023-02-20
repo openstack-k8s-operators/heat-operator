@@ -1,0 +1,19 @@
+{
+  "command": "/usr/bin/heat-engine --config-file /etc/heat/heat.conf",
+  "config_files": [
+    {
+      "source": "/var/lib/config-data/merged/heat.conf",
+      "dest": "/etc/heat/heat.conf",
+      "merge": false,
+      "preserve_properties": true,
+      "perm": "0644"
+    }
+  ],
+  "permissions": [
+    {
+      "path": "/var/log/heat",
+      "owner": "heat:heat",
+      "recurse": true
+    }
+  ]
+}

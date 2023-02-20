@@ -92,7 +92,7 @@ func Deployment(
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      heat.ServiceName,
+			Name:      ServiceName,
 			Namespace: instance.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{

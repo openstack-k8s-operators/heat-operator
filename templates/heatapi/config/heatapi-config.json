@@ -9,17 +9,11 @@
       "perm": "0644"
     },
     {
-      "source": "/var/lib/config-data/merged/httpd.conf",
+      "source": "/var/lib/config-data/merged/heat-api-httpd.conf",
       "dest": "/etc/httpd/conf/httpd.conf",
       "merge": false,
       "preserve_properties": true,
       "perm": "0644"
-    },
-    {
-      "source": "/var/lib/config-data/merged/ssl.conf",
-      "dest": "/etc/httpd/conf.d/ssl.conf",
-      "merge": false,
-      "preserve_properties": true
     }
   ],
   "permissions": [
