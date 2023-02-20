@@ -1,0 +1,37 @@
+{
+  "command": "/usr/sbin/httpd -DFOREGROUND",
+  "config_files": [
+    {
+      "source": "/var/lib/config-data/merged/heat.conf",
+      "dest": "/etc/heat/heat.conf",
+      "merge": false,
+      "preserve_properties": true,
+      "perm": "0644"
+    },
+    {
+      "source": "/var/lib/config-data/merged/httpd.conf",
+      "dest": "/etc/httpd/conf/httpd.conf",
+      "merge": false,
+      "preserve_properties": true,
+      "perm": "0644"
+    },
+    {
+      "source": "/var/lib/config-data/merged/ssl.conf",
+      "dest": "/etc/httpd/conf.d/ssl.conf",
+      "merge": false,
+      "preserve_properties": true
+    }
+  ],
+  "permissions": [
+    {
+      "path": "/var/log/heat",
+      "owner": "heat:heat",
+      "recurse": true
+    },
+    {
+      "path": "/etc/httpd/",
+      "owner": "apache:apache",
+      "recurse": true
+    }
+  ]
+}

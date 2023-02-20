@@ -401,22 +401,15 @@ func (r *HeatEngineReconciler) reconcileNormal(
 		return ctrl.Result{}, err
 	}
 	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
-	// Create ConfigMaps and Secrets - end
+	// Create ConfigMaps and Secrets - endv
 
 	serviceLabels := map[string]string{
 		common.AppSelector:     heat.ServiceName,
 		heat.ComponentSelector: heat.APIComponent,
 	}
-	// Handle service init
-	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
-	if err != nil {
-		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
-	}
 
 	// Handle service update
-	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
+	ctrlResult, err := r.reconcileUpdate(ctx, instance, helper)
 	if err != nil {
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {

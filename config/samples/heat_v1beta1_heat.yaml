@@ -1,6 +1,48 @@
 apiVersion: heat.openstack.org/v1beta1
 kind: Heat
 metadata:
-  name: heat-sample
+  name: heat
 spec:
-  # TODO(user): Add fields here
+  customServiceConfig: "# add your customization here"
+  databaseInstance: openstack
+  databaseUser: "heat"
+  debug:
+    bootstrap: true
+    dbSync:
+    service: true
+  heatAPI:
+    containerImage: "quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo"
+    customServiceConfig: "# add your customization here"
+    databaseUser: "heat"
+    debug:
+      bootstrap: true
+      dbSync: true
+      service: true
+    passwordSelectors:
+      admin: AdminPassword
+      database: AdminPassword
+    replicas: 1
+    resources: {}
+    secret: "osp-secret"
+    serviceUser: ""
+  heatEngine:
+    containerImage: "quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo"
+    customServiceConfig: "# add your customization here"
+    databaseUser: "heat"
+    debug:
+      bootstrap: true
+      dbSync: true
+      service: true
+    passwordSelectors:
+      admin: AdminPassword
+      database: AdminPassword
+    replicas: 1
+    resources: {}
+    secret: "osp-secret"
+    serviceUser: ""
+  passwordSelectors:
+    admin: AdminPassword
+    database: AdminPassword
+  preserveJobs: true
+  secret: osp-secret
+  serviceUser: "heat"

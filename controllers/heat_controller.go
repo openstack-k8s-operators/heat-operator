@@ -1,10 +1,3 @@
-/*
-Copyright 2022.
-
-Licensed under the Apache License, Version 2.0 (the "License");
-you may not use this file except in compliance with the License.
-You may obtain a copy of the License at
-
     http://www.apache.org/licenses/LICENSE-2.0
 
 Unless required by applicable law or agreed to in writing, software
@@ -371,19 +364,23 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 	//
 	// create service DB instance
 	//
-	db := database.NewDatabase(
-		instance.Name,
+	db := database.NewDatabaseWithNamespace(
+		heat.DatabaseName,
 		instance.Spec.DatabaseUser,
 		instance.Spec.Secret,
 		map[string]string{
 			"dbName": instance.Spec.DatabaseInstance,
 		},
+		"heat",
+		instance.Namespace,
 	)
 	// create or patch the DB
-	ctrlResult, err := db.CreateOrPatchDB(
+	ctrlResult, err := db.CreateOrPatchDBByName(
 		ctx,
 		helper,
+		instance.Spec.DatabaseInstance,
 	)
+
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBReadyCondition,

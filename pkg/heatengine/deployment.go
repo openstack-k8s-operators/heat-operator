@@ -32,7 +32,7 @@ import (
 
 const (
 	// ServiceCommand -
-	ServiceCommand = "/usr/local/bin/container-scripts/api-prep.sh && /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
+	ServiceCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
 )
 
 // Deployment func

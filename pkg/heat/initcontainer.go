@@ -93,7 +93,6 @@ func InitContainer(init APIDetails) []corev1.Container {
 				"/bin/bash",
 			},
 			Args: []string{
-				"-c",
 				InitContainerCommand,
 			},
 			Env:          envs,
