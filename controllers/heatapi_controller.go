@@ -620,19 +620,33 @@ func (r *HeatAPIReconciler) generateServiceConfigMaps(
 
 	customData[common.CustomServiceConfigFileName] = instance.Spec.CustomServiceConfig
 
+	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
+	if err != nil {
+		return err
+	}
+	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
+	if err != nil {
+		return err
+	}
+	templateParameters := map[string]interface{}{
+		"KeystonePublicURL": authURL,
+		"ServiceUser":       instance.Spec.ServiceUser,
+	}
+
 	cms := []util.Template{
 		// Custom ConfigMap
 		{
-			Name:         fmt.Sprintf("%s-config-data", instance.Name),
-			Namespace:    instance.Namespace,
-			Type:         util.TemplateTypeConfig,
-			InstanceType: instance.Kind,
-			CustomData:   customData,
-			Labels:       cmLabels,
+			Name:          fmt.Sprintf("%s-config-data", instance.Name),
+			Namespace:     instance.Namespace,
+			Type:          util.TemplateTypeConfig,
+			InstanceType:  instance.Kind,
+			CustomData:    customData,
+			ConfigOptions: templateParameters,
+			Labels:        cmLabels,
 		},
 	}
 
-	err := configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
+	err = configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 	if err != nil {
 		return nil
 	}

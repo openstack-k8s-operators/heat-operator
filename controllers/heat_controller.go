@@ -566,14 +566,14 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	if err != nil {
 		return err
 	}
-	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointInternal)
+	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
 	if err != nil {
 		return err
 	}
 
 	templateParameters := map[string]interface{}{
-		"KeystoneInternalURL": authURL,
-		"ServiceUser":         instance.Spec.ServiceUser,
+		"KeystonePublicURL": authURL,
+		"ServiceUser":       instance.Spec.ServiceUser,
 	}
 
 	cms := []util.Template{
