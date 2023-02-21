@@ -7,17 +7,17 @@ spec:
   databaseInstance: openstack
   databaseUser: "heat"
   debug:
-    bootstrap: true
+    bootstrap: false
     dbSync:
-    service: true
+    service: false
   heatAPI:
     containerImage: "quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo"
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      bootstrap: true
-      dbSync: true
-      service: true
+      bootstrap: false
+      dbSync: false
+      service: false
     passwordSelectors:
       admin: AdminPassword
       database: AdminPassword
@@ -26,13 +26,13 @@ spec:
     secret: "osp-secret"
     serviceUser: ""
   heatEngine:
-    containerImage: "quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo"
+    containerImage: "quay.io/tripleozedcentos9/openstack-heat-engine:current-tripleo"
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      bootstrap: true
-      dbSync: true
-      service: true
+      bootstrap: false
+      dbSync: false
+      service: false
     passwordSelectors:
       admin: AdminPassword
       database: AdminPassword
@@ -43,6 +43,6 @@ spec:
   passwordSelectors:
     admin: AdminPassword
     database: AdminPassword
-  preserveJobs: true
+  preserveJobs: false
   secret: osp-secret
   serviceUser: "heat"
