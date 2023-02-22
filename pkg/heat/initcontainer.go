@@ -84,7 +84,22 @@ func InitContainer(init APIDetails) []corev1.Container {
 	}
 	envs = env.MergeEnvs(envs, envVars)
 
-	containers := []corev1.Container{
+	if init.TransportURL != "" {
+		envTransport := corev1.EnvVar{
+			Name: "TransportURL",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: init.TransportURL,
+					},
+					Key: "transport_url",
+				},
+			},
+		}
+		envs = append(envs, envTransport)
+	}
+
+	return []corev1.Container{
 		{
 			Name:            "init",
 			Image:           init.ContainerImage,
@@ -99,5 +114,4 @@ func InitContainer(init APIDetails) []corev1.Container {
 			VolumeMounts: init.VolumeMounts,
 		},
 	}
-	return containers
 }

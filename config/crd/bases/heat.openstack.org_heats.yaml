@@ -215,6 +215,9 @@ spec:
                     description: ServiceUser - optional username used for this service
                       to register in heat
                     type: string
+                  transportURLSecret:
+                    description: TransportURLSecret - Secret containing RabbitMQ transportURL
+                    type: string
                 required:
                 - containerImage
                 - secret
@@ -354,6 +357,9 @@ spec:
                     description: ServiceUser - optional username used for this service
                       to register in heat
                     type: string
+                  transportURLSecret:
+                    description: TransportURLSecret - Secret containing RabbitMQ transportURL
+                    type: string
                 required:
                 - containerImage
                 - secret
@@ -387,6 +393,11 @@ spec:
                 description: PreserveJobs - do not delete jobs after they finished
                   e.g. to check logs
                 type: boolean
+              rabbitMqClusterName:
+                default: rabbitmq
+                description: RabbitMQ instance name Needed to request a transportURL
+                  that is created and used in Heat
+                type: string
               secret:
                 description: Secret containing OpenStack password information for
                   heat HeatDatabasePassword, AdminPassword
@@ -400,6 +411,7 @@ spec:
             - databaseInstance
             - heatAPI
             - heatEngine
+            - rabbitMqClusterName
             - secret
             type: object
           status:
@@ -480,6 +492,9 @@ spec:
                   type: string
                 description: ServiceID - the ID of the registered service in keystone
                 type: object
+              transportURLSecret:
+                description: TransportURLSecret - Secret containing RabbitMQ transportURL
+                type: string
             type: object
         type: object
     served: true

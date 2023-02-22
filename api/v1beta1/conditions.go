@@ -49,3 +49,26 @@ const (
 	// HeatConductorReadyErrorMessage ...
 	HeatConductorReadyErrorMessage = "HeatConductor error occured %s"
 )
+
+const (
+	// HeatRabbitMqTransportURLReadyCondition Status=True condition which indicates if the RabbitMQ TransportURLUrl is ready
+	HeatRabbitMqTransportURLReadyCondition condition.Type = "HeatRabbitMqTransportURLReady"
+)
+
+// Common Messages used by API objects.
+const (
+	//
+	// HeatRabbitMqTransportURLReady condition messages
+	//
+	// HeatRabbitMqTransportURLReadyInitMessage
+	HeatRabbitMqTransportURLReadyInitMessage = "HeatRabbitMqTransportURL not started"
+
+	// HeatRabbitMqTransportURLReadyRunningMessage
+	HeatRabbitMqTransportURLReadyRunningMessage = "HeatRabbitMqTransportURL creation in progress"
+
+	// HeatRabbitMqTransportURLReadyMessage
+	HeatRabbitMqTransportURLReadyMessage = "HeatRabbitMqTransportURL successfully created"
+
+	// HeatRabbitMqTransportURLReadyErrorMessage
+	HeatRabbitMqTransportURLReadyErrorMessage = "HeatRabbitMqTransportURL error occured %s"
+)

@@ -408,7 +408,6 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	if err := r.Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
-
 	// ConfigMap
 	configMapVars := make(map[string]env.Setter)
 
@@ -486,7 +485,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 		return ctrl.Result{}, err
 	}
 	// Create ConfigMaps - end
-
+	// Create ConfigMaps and Secrets - end
 	//
 	// create hash over all the different input resources to identify if any those changed
 	// and a restart/recreate is required.
@@ -502,8 +501,6 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 		return ctrl.Result{}, err
 	}
 	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
-	// Create ConfigMaps and Secrets - end
-
 	//
 	// TODO check when/if Init, Update, or Upgrade should/could be skipped
 	//
@@ -628,6 +625,7 @@ func (r *HeatAPIReconciler) generateServiceConfigMaps(
 	if err != nil {
 		return err
 	}
+
 	templateParameters := map[string]interface{}{
 		"KeystonePublicURL": authURL,
 		"ServiceUser":       instance.Spec.ServiceUser,

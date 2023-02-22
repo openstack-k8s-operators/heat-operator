@@ -42,14 +42,14 @@ func Deployment(
 	runAsUser := int64(0)
 
 	livenessProbe := &corev1.Probe{
-		TimeoutSeconds:      5,
+		TimeoutSeconds:      10,
 		PeriodSeconds:       5,
-		InitialDelaySeconds: 3,
+		InitialDelaySeconds: 5,
 	}
 	readinessProbe := &corev1.Probe{
-		TimeoutSeconds:      5,
+		TimeoutSeconds:      10,
 		PeriodSeconds:       5,
-		InitialDelaySeconds: 3,
+		InitialDelaySeconds: 5,
 	}
 
 	args := []string{"-c"}
@@ -153,6 +153,7 @@ func Deployment(
 		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector: instance.Spec.PasswordSelectors.Service,
 		VolumeMounts:         GetInitVolumeMounts(),
+		TransportURL:         instance.Spec.TransportURLSecret,
 	}
 	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
 

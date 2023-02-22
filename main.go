@@ -36,6 +36,7 @@ import (
 
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/heat-operator/controllers"
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	mariadbv1beta1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 	//+kubebuilder:scaffold:imports
@@ -52,6 +53,7 @@ func init() {
 	utilruntime.Must(heatv1beta1.AddToScheme(scheme))
 	utilruntime.Must(mariadbv1beta1.AddToScheme(scheme))
 	utilruntime.Must(routev1.AddToScheme(scheme))
+	utilruntime.Must(rabbitmqv1.AddToScheme(scheme))
 	err := keystonev1beta1.AddToScheme(scheme)
 	if err != nil {
 		setupLog.Info("Adding keystone schema failed, only standalone deployments are available")

@@ -94,6 +94,12 @@ type HeatSpec struct {
 	// +kubebuilder:validation:Required
 	// HeatEngine - Spec definition for the API service of this Heat deployment
 	HeatEngine HeatEngineSpec `json:"heatEngine"`
+
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=rabbitmq
+	// RabbitMQ instance name
+	// Needed to request a transportURL that is created and used in Heat
+	RabbitMqClusterName string `json:"rabbitMqClusterName"`
 }
 
 // PasswordSelector ..
@@ -141,6 +147,9 @@ type HeatStatus struct {
 
 	// ServiceID - the ID of the registered service in keystone
 	ServiceIDs map[string]string `json:"serviceIDs,omitempty"`
+
+	// TransportURLSecret - Secret containing RabbitMQ transportURL
+	TransportURLSecret string `json:"transportURLSecret,omitempty"`
 
 	// ReadyCount of Heat instances
 	ReadyCount int32 `json:"readyCount,omitempty"`

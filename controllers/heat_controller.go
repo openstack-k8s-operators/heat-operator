@@ -34,11 +34,13 @@ import (
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	labels "github.com/openstack-k8s-operators/lib-common/modules/common/labels"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	database "github.com/openstack-k8s-operators/lib-common/modules/database"
 
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 
@@ -164,6 +166,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&batchv1.Job{}).
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ConfigMap{}).
+		Owns(&rabbitmqv1.TransportURL{}).
 		Complete(r)
 }
 
@@ -195,15 +198,76 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Service")
 
+	// ConfigMap
+	configMapVars := make(map[string]env.Setter)
+	//
+	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
+	//
+
+	transportURL, op, err := r.transportURLCreateOrUpdate(instance)
+
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			heatv1beta1.HeatRabbitMqTransportURLReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			heatv1beta1.HeatRabbitMqTransportURLReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", transportURL.Name, string(op)))
+	}
+
+	instance.Status.TransportURLSecret = transportURL.Status.SecretName
+
+	if instance.Status.TransportURLSecret == "" {
+		r.Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
+
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			heatv1beta1.HeatRabbitMqTransportURLReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			heatv1beta1.HeatRabbitMqTransportURLReadyRunningMessage))
+
+		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
+	}
+
+	//
+	// check for required TransportURL secret holding transport URL string
+	//
+
+	transportURLSecret, hash, err := secret.GetSecret(ctx, helper, instance.Status.TransportURLSecret, instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.InputReadyWaitingMessage))
+			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("TransportURL secret %s not found", instance.Status.TransportURLSecret)
+		}
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	configMapVars[transportURLSecret.Name] = env.SetValue(hash)
+
+	// run check TransportURL secret - end
+
+	instance.Status.Conditions.MarkTrue(heatv1beta1.HeatRabbitMqTransportURLReadyCondition, heatv1beta1.HeatRabbitMqTransportURLReadyMessage)
+
 	// If the service object doesn't have our finalizer, add it.
 	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
 	// Register the finalizer immediately to avoid orphaning resources on delete
 	if err := r.Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
-
-	// ConfigMap
-	configMapVars := make(map[string]env.Setter)
 
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
@@ -497,7 +561,9 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(instance *heatv1beta1.Heat)
 		deployment.Spec.DatabaseHostname = instance.Status.DatabaseHostname
 		deployment.Spec.DatabaseUser = instance.Spec.DatabaseUser
 		deployment.Spec.Secret = instance.Spec.Secret
+		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
 
+		r.Log.Info(fmt.Sprintf("bshephar-debug: Deployment: %+v", deployment))
 		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 		if err != nil {
 			return err
@@ -524,6 +590,7 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(instance *heatv1beta1.He
 		deployment.Spec.DatabaseHostname = instance.Status.DatabaseHostname
 		deployment.Spec.DatabaseUser = instance.Spec.DatabaseUser
 		deployment.Spec.Secret = instance.Spec.Secret
+		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
 
 		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 		if err != nil {
@@ -635,4 +702,22 @@ func (r *HeatReconciler) createHashOfInputHashes(
 		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
 	return hash, nil
+}
+
+func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
+	transportURL := &rabbitmqv1.TransportURL{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-heat-transport", instance.Name),
+			Namespace: instance.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, transportURL, func() error {
+		transportURL.Spec.RabbitmqClusterName = instance.Spec.RabbitMqClusterName
+
+		err := controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
+		return err
+	})
+
+	return transportURL, op, err
 }

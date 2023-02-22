@@ -6,6 +6,7 @@ spec:
   customServiceConfig: "# add your customization here"
   databaseInstance: openstack
   databaseUser: "heat"
+  rabbitMqClusterName: rabbitmq
   debug:
     bootstrap: false
     dbSync:
