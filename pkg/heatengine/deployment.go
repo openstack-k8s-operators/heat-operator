@@ -27,12 +27,11 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
 const (
 	// ServiceCommand -
-	ServiceCommand = "/usr/local/bin/container-scripts/api-prep.sh && /usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
+	ServiceCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
 )
 
 // Deployment func
@@ -40,14 +39,12 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	runAsUser := int64(0)
 
 	livenessProbe := &corev1.Probe{
-		TimeoutSeconds:      5,
-		PeriodSeconds:       5,
-		InitialDelaySeconds: 3,
+		TimeoutSeconds: 5,
+		PeriodSeconds:  5,
 	}
 	readinessProbe := &corev1.Probe{
-		TimeoutSeconds:      5,
-		PeriodSeconds:       5,
-		InitialDelaySeconds: 3,
+		TimeoutSeconds: 5,
+		PeriodSeconds:  5,
 	}
 
 	args := []string{"-c"}
@@ -70,13 +67,15 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		//
 		// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 		//
-		livenessProbe.HTTPGet = &corev1.HTTPGetAction{
-			Path: "/v1",
-			Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatInternalPort)},
+		livenessProbe.Exec = &corev1.ExecAction{
+			Command: []string{
+				"/usr/bin/pgrep", "-r", "DRST", "heat-engine",
+			},
 		}
-		readinessProbe.HTTPGet = &corev1.HTTPGetAction{
-			Path: "/v1",
-			Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatInternalPort)},
+		readinessProbe.Exec = &corev1.ExecAction{
+			Command: []string{
+				"/usr/bin/pgrep", "-r", "DRST", "heat-engine",
+			},
 		}
 	}
 
@@ -151,6 +150,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector: instance.Spec.PasswordSelectors.Service,
 		VolumeMounts:         GetInitVolumeMounts(),
+		TransportURL:         instance.Spec.TransportURLSecret,
 	}
 	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
 

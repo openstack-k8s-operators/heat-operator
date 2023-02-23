@@ -27,7 +27,7 @@ import (
 
 // DBSyncCommand
 const (
-	DBSyncCommand = "/usr/local/bin/kolla_set_configs && su heat -s /bin/bash -c 'heat-manage --config-file /etc/heat/heat.conf db_sync"
+	DBSyncCommand = "/usr/local/bin/kolla_set_configs && su heat -s /bin/bash -c 'heat-manage --config-file /etc/heat/heat.conf db_sync'"
 )
 
 // DBSyncJob function

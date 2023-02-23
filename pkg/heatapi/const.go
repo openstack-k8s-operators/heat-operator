@@ -17,5 +17,8 @@ package heatapi
 
 const (
 	// KollaConfig -
-	KollaConfig = "/var/lib/config-data/merged/heat-api-config.json"
+	KollaConfig = "/var/lib/config-data/merged/heatapi-config.json"
+
+	// ServiceName -
+	ServiceName = "heat-api"
 )

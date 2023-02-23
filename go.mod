@@ -45,6 +45,7 @@ require (
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
 	github.com/nxadm/tail v1.4.8 // indirect
+	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230220203606-fedb77ed9233 // indirect
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230216124714-dd23df83ccb7 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/prometheus/client_golang v1.14.0 // indirect

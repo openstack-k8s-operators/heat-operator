@@ -30,6 +30,7 @@ type HeatAPISpec struct {
 	ServiceUser string `json:"serviceUser"`
 
 	// +kubebuilder:validation:Required
+	// +kubebuilder:default="quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo"
 	// ContainerImage - Heat API Container Image URL
 	ContainerImage string `json:"containerImage"`
 
@@ -82,6 +83,10 @@ type HeatAPISpec struct {
 	// Resources - Compute Resources required by this service (Limits/Requests).
 	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// TransportURLSecret - Secret containing RabbitMQ transportURL
+	TransportURLSecret string `json:"transportURLSecret,omitempty"`
 }
 
 // HeatAPIStatus defines the observed state of Heat

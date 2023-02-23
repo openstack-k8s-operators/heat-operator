@@ -408,7 +408,6 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	if err := r.Update(ctx, instance); err != nil {
 		return ctrl.Result{}, err
 	}
-
 	// ConfigMap
 	configMapVars := make(map[string]env.Setter)
 
@@ -486,7 +485,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 		return ctrl.Result{}, err
 	}
 	// Create ConfigMaps - end
-
+	// Create ConfigMaps and Secrets - end
 	//
 	// create hash over all the different input resources to identify if any those changed
 	// and a restart/recreate is required.
@@ -502,8 +501,6 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 		return ctrl.Result{}, err
 	}
 	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
-	// Create ConfigMaps and Secrets - end
-
 	//
 	// TODO check when/if Init, Update, or Upgrade should/could be skipped
 	//
@@ -620,19 +617,34 @@ func (r *HeatAPIReconciler) generateServiceConfigMaps(
 
 	customData[common.CustomServiceConfigFileName] = instance.Spec.CustomServiceConfig
 
+	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
+	if err != nil {
+		return err
+	}
+	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
+	if err != nil {
+		return err
+	}
+
+	templateParameters := map[string]interface{}{
+		"KeystonePublicURL": authURL,
+		"ServiceUser":       instance.Spec.ServiceUser,
+	}
+
 	cms := []util.Template{
 		// Custom ConfigMap
 		{
-			Name:         fmt.Sprintf("%s-config-data", instance.Name),
-			Namespace:    instance.Namespace,
-			Type:         util.TemplateTypeConfig,
-			InstanceType: instance.Kind,
-			CustomData:   customData,
-			Labels:       cmLabels,
+			Name:          fmt.Sprintf("%s-config-data", instance.Name),
+			Namespace:     instance.Namespace,
+			Type:          util.TemplateTypeConfig,
+			InstanceType:  instance.Kind,
+			CustomData:    customData,
+			ConfigOptions: templateParameters,
+			Labels:        cmLabels,
 		},
 	}
 
-	err := configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
+	err = configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 	if err != nil {
 		return nil
 	}

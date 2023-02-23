@@ -1,0 +1,43 @@
+{
+  "command": "/usr/sbin/httpd -DFOREGROUND",
+  "config_files": [
+    {
+      "source": "/var/lib/config-data/merged/heat.conf",
+      "dest": "/etc/heat/heat.conf",
+      "merge": false,
+      "preserve_properties": true,
+      "perm": "0644"
+    },
+    {
+      "source": "/var/lib/config-data/merged/heat-api-httpd.conf",
+      "dest": "/etc/httpd/conf/httpd.conf",
+      "merge": false,
+      "preserve_properties": true,
+      "perm": "0644"
+    },
+    {
+      "source": "/usr/bin/heat-wsgi-api",
+      "dest": "/var/www/cgi-bin/heat/heat_api",
+      "merge": false,
+      "preserve_properties": true,
+      "perm": "0644"
+    }
+  ],
+  "permissions": [
+    {
+      "path": "/var/log/heat",
+      "owner": "heat:heat",
+      "recurse": true
+    },
+    {
+      "path": "/etc/httpd/",
+      "owner": "apache:apache",
+      "recurse": true
+    },
+    {
+      "path": "/var/www/cgi-bin/heat",
+      "owner": "heat:heat",
+      "recurse": true
+    }
+  ]
+}

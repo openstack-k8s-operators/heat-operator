@@ -1,3 +1,39 @@
+# Binaries f
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+/bin
+
+# Test binar
+*.test
+
+# Output of 
+*.out
+
+# Kubernetes
+
+!vendor/**/z
+
+#Operator SD
+/bundle/
+bundle.Docke
+config/manag
+
+# editor and
+.idea
+*.swp
+*.swo
+*~
+
+# Common CI 
+CI_TOOLS_REP
+
+# generated 
+go.work
+go.work.sum
+
 # Temporary Build Files
 build/_output
 build/_test
