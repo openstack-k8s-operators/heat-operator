@@ -1,0 +1,45 @@
+apiVersion: operators.coreos.com/v1alpha1
+kind: ClusterServiceVersion
+metadata:
+  annotations:
+    alm-examples: "[]"
+    capabilities: Basic Install
+  name: heat-operator.v0.0.0
+  namespace: placeholder
+spec:
+  apiservicedefinitions: {}
+  customresourcedefinitions:
+    owned:
+      - description: heat is the Schema for the heats API
+        displayName: heat
+        kind: Heat
+        name: heats.heat.openstack.org
+        version: v1alpha1
+  description: heat operator
+  displayName: heat-operator-bundle
+  icon:
+    - base64data: ""
+      mediatype: ""
+  install:
+    spec:
+      deployments: null
+    strategy: ""
+  installModes:
+    - supported: true
+      type: OwnNamespace
+    - supported: true
+      type: SingleNamespace
+    - supported: false
+      type: MultiNamespace
+    - supported: true
+      type: AllNamespaces
+  keywords:
+    - fkjdasf
+  links:
+    - name: heat Operator
+      url: https://heat-operator.domain
+  maturity: alpha
+  provider:
+    name: anything
+    url: fsadfl
+  version: 0.0.0
