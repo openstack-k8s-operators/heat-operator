@@ -4,8 +4,8 @@ metadata:
   annotations:
     alm-examples: "[]"
     capabilities: Basic Install
-  name: heat-operator.v0.0.0
-  namespace: placeholder
+  name: heat-operator.v0.0.1
+  namespace: openstack
 spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
