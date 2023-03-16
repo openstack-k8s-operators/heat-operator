@@ -230,69 +230,7 @@ func (r *HeatEngineReconciler) reconcileInit(
 ) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Engine init")
 
-	//
-	// expose the service (create service, route and return the created endpoint URLs)
-	//
-
-	// V1
-	data := map[endpoint.Endpoint]endpoint.Data{
-		endpoint.EndpointPublic: {
-			Port: heat.HeatPublicPort,
-		},
-		endpoint.EndpointAdmin: {
-			Port: heat.HeatAdminPort,
-		},
-		endpoint.EndpointInternal: {
-			Port: heat.HeatInternalPort,
-		},
-	}
-
-	apiEndpoints, ctrlResult, err := endpoint.ExposeEndpoints(
-		ctx,
-		helper,
-		heat.ServiceName,
-		serviceLabels,
-		data,
-		time.Duration(5)*time.Second,
-	)
-	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.ExposeServiceReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.ExposeServiceReadyErrorMessage,
-			err.Error()))
-		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.ExposeServiceReadyCondition,
-			condition.RequestedReason,
-			condition.SeverityInfo,
-			condition.ExposeServiceReadyRunningMessage))
-		return ctrlResult, nil
-	}
-
-	//
-	// Update instance status with service endpoint url from route host information for v2
-	//
-	// TODO: need to support https default here
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]map[string]string{}
-	}
-	instance.Status.APIEndpoints[heat.ServiceName] = apiEndpoints
-	// V1 - end
-
-	instance.Status.Conditions.MarkTrue(condition.ExposeServiceReadyCondition, condition.ExposeServiceReadyMessage)
-
-	// expose service - end
-
-	//
-	// create users and endpoints
-	// TODO: rework this
-	//
-	if instance.Status.ServiceIDs == nil {
-		instance.Status.ServiceIDs = map[string]string{}
-	}
+	// TODO(tkajinam): Do we need this ?
 
 	r.Log.Info("Reconciled Engine init successfully")
 	return ctrl.Result{}, nil
@@ -406,6 +344,14 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	serviceLabels := map[string]string{
 		common.AppSelector:     heat.ServiceName,
 		heat.ComponentSelector: heat.APIComponent,
+	}
+
+	// Handle service init
+	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
+	if err != nil {
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
 	}
 
 	// Handle service update
