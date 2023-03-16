@@ -1,4 +1,4 @@
-name: Release horizon Operator
+name: Release heat Operator
 
 on:
   release:
