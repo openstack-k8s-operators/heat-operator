@@ -1,4 +1,4 @@
-name: Horizon Operator image builder
+name: Heat Operator image builder
 
 on:
   push:
@@ -22,8 +22,8 @@ jobs:
     outputs:
       have-secrets: ${{ steps.have-secrets.outputs.ok }}
 
-  build-horizon-operator:
-    name: Build horizon-operator image using buildah
+  build-heat-operator:
+    name: Build heat-operator image using buildah
     runs-on: ubuntu-latest
     needs: [check-secrets]
     if: needs.check-secrets.outputs.have-secrets == 'true'
@@ -41,26 +41,26 @@ jobs:
         echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
     - name: Buildah Action
-      id: build-horizon-operator
+      id: build-heat-operator
       uses: redhat-actions/buildah-build@v2
       with:
-        image: horizon-operator
+        image: heat-operator
         tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
           ./Dockerfile
 
-    - name: Push horizon-operator To ${{ env.imageregistry }}
+    - name: Push heat-operator To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
-        image: ${{ steps.build-horizon-operator.outputs.image }}
-        tags: ${{ steps.build-horizon-operator.outputs.tags }}
+        image: ${{ steps.build-heat-operator.outputs.image }}
+        tags: ${{ steps.build-heat-operator.outputs.tags }}
         registry: ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
-  build-horizon-operator-bundle:
-    needs: [ check-secrets, build-horizon-operator ]
-    name: horizon-operator-bundle
+  build-heat-operator-bundle:
+    needs: [ check-secrets, build-heat-operator ]
+    name: heat-operator-bundle
     runs-on: ubuntu-latest
     if: needs.check-secrets.outputs.have-secrets == 'true'
 
@@ -70,7 +70,7 @@ jobs:
       with:
         go-version: 1.19.x
 
-    - name: Checkout horizon-operator repository
+    - name: Checkout heat-operator repository
       uses: actions/checkout@v2
 
     - name: Install operator-sdk
@@ -102,7 +102,7 @@ jobs:
       env:
         REGISTRY:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         GITHUB_SHA: ${{ github.sha }}
-        BASE_IMAGE: horizon-operator
+        BASE_IMAGE: heat-operator
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Get branch name
@@ -114,32 +114,32 @@ jobs:
       run: |
         echo "latesttag=${{ steps.branch-name.outputs.current_branch }}-latest" >> $GITHUB_ENV
 
-    - name: Build horizon-operator-bundle using buildah
-      id: build-horizon-operator-bundle
+    - name: Build heat-operator-bundle using buildah
+      id: build-heat-operator-bundle
       uses: redhat-actions/buildah-build@v2
       with:
-        image: horizon-operator-bundle
+        image: heat-operator-bundle
         tags: ${{ env.latesttag }} ${{ github.sha }}
         containerfiles: |
           ./bundle.Dockerfile
 
-    - name: Push horizon-operator To ${{ env.imageregistry }}
+    - name: Push heat-operator To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
-        image: ${{ steps.build-horizon-operator-bundle.outputs.image }}
-        tags: ${{ steps.build-horizon-operator-bundle.outputs.tags }}
+        image: ${{ steps.build-heat-operator-bundle.outputs.image }}
+        tags: ${{ steps.build-heat-operator-bundle.outputs.tags }}
         registry:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
         password: ${{ secrets.QUAY_PASSWORD }}
 
-  build-horizon-operator-index:
-    needs: [ check-secrets, build-horizon-operator-bundle ]
-    name: horizon-operator-index
+  build-heat-operator-index:
+    needs: [ check-secrets, build-heat-operator-bundle ]
+    name: heat-operator-index
     runs-on: ubuntu-latest
     if: needs.check-secrets.outputs.have-secrets == 'true'
 
     steps:
-    - name: Checkout horizon-operator repository
+    - name: Checkout heat-operator repository
       uses: actions/checkout@v2
 
     - name: Get branch name
@@ -173,14 +173,14 @@ jobs:
       env:
         REGISTRY:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         GITHUB_SHA: ${{ github.sha }}
-        BUNDLE_IMAGE: horizon-operator-bundle
+        BUNDLE_IMAGE: heat-operator-bundle
         INDEX_IMAGE_TAG: ${{ env.latesttag }}
-        INDEX_IMAGE: horizon-operator-index
+        INDEX_IMAGE: heat-operator-index
 
-    - name: Push horizon-operator-index To ${{ env.imageregistry }}
+    - name: Push heat-operator-index To ${{ env.imageregistry }}
       uses: redhat-actions/push-to-registry@v2
       with:
-        image: horizon-operator-index
+        image: heat-operator-index
         tags: ${{ env.latesttag }} ${{ github.sha }}
         registry:  ${{ env.imageregistry }}/${{ env.imagenamespace }}
         username: ${{ secrets.QUAY_USERNAME }}
