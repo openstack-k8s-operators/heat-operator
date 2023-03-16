@@ -426,7 +426,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 
 	depl := deployment.NewDeployment(
 		heatengine.Deployment(instance, inputHash, serviceLabels),
-		5,
+		time.Duration(5)*time.Second,
 	)
 
 	ctrlResult, err = depl.CreateOrPatch(ctx, helper)
