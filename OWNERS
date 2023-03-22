@@ -1,13 +1,10 @@
+# See the OWNERS docs at https://go.k8s.io/owners
 approvers:
-  - abays
-  - dprince
-  - olliewalsh
-  - stuggi
-  - bshephar
+  - heat-approvers
+  - ci-approvers
+  - openstack-approvers
 
 reviewers:
-  - abays
-  - dprince
-  - olliewalsh
-  - stuggi
-  - bshephar
+  - heat-approvers
+  - ci-approvers
+  - openstack-approvers
