@@ -21,7 +21,7 @@ const (
 	// ServiceType -
 	ServiceType = "orchestration"
 	// ServiceAccount -
-	ServiceAccount = "heat-operator"
+	ServiceAccount = "heat-operator-heat"
 	// DatabaseName -
 	DatabaseName = "heat"
 	// HeatPublicPort -

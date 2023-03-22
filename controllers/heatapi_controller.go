@@ -279,12 +279,15 @@ func (r *HeatAPIReconciler) reconcileInit(
 	data := map[endpoint.Endpoint]endpoint.Data{
 		endpoint.EndpointPublic: {
 			Port: heat.HeatPublicPort,
+			Path: "/v1/%(tenant_id)s",
 		},
 		endpoint.EndpointAdmin: {
 			Port: heat.HeatAdminPort,
+			Path: "/v1/%(tenant_id)s",
 		},
 		endpoint.EndpointInternal: {
 			Port: heat.HeatInternalPort,
+			Path: "/v1/%(tenant_id)s",
 		},
 	}
 
