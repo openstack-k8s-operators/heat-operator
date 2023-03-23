@@ -22,6 +22,10 @@ const (
 	ServiceType = "orchestration"
 	// ServiceAccount -
 	ServiceAccount = "heat-operator-heat"
+	// StackDomainAdmin -
+	StackDomainAdminUsername = "heat_stack_domain_admin"
+	// StackDomainName -
+	StackDomainName = "heat_stack"
 	// DatabaseName -
 	DatabaseName = "heat"
 	// HeatPublicPort -

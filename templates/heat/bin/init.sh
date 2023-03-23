@@ -73,7 +73,7 @@ fi
 
 crudini --set ${SVC_CFG_MERGED} database connection mysql+pymysql://${DBUSER}:${DBPASSWORD}@${DBHOST}/${DB}
 crudini --set ${SVC_CFG_MERGED} keystone_authtoken password $heatPASSWORD
-# TODO: nova password
-#crudini --set ${SVC_CFG_MERGED} nova password $NOVAPASSWORD
+crudini --set ${SVC_CFG_MERGED} DEFAULT stack_domain_admin_password $heatPASSWORD
+crudini --set ${SVC_CFG_MERGED} trustee password $heatPASSWORD
 # TODO: service token
 #crudini --set ${SVC_CFG_MERGED} service_user password $HeatPassword

@@ -47,7 +47,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/labels"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
+	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 )
 
@@ -258,7 +258,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
 	//
-	ospSecret, hash, err := secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
+	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			instance.Status.Conditions.Set(condition.FalseCondition(
@@ -455,9 +455,12 @@ func (r *HeatEngineReconciler) generateServiceConfigMaps(
 	if err != nil {
 		return err
 	}
+
 	templateParameters := map[string]interface{}{
-		"KeystonePublicURL": authURL,
-		"ServiceUser":       instance.Spec.ServiceUser,
+		"KeystonePublicURL":        authURL,
+		"ServiceUser":              instance.Spec.ServiceUser,
+		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
+		"StackDomainName":          heat.StackDomainName,
 	}
 
 	cms := []util.Template{
