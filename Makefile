@@ -98,8 +98,9 @@ fmt: ## Run go fmt against code.
 	go fmt ./...
 
 .PHONY: vet
-vet: ## Run go vet against code.
+vet: gowork ## Run go vet against code.
 	go vet ./...
+	go vet ./api/...
 
 .PHONY: tidy
 tidy: vet
