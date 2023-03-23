@@ -1,6 +1,6 @@
-module github.com/openstack-k8s-operators/horizon-operator/api
+module github.com/openstack-k8s-operators/heat-operator/api
 
-go 1.20
+go 1.19
 
 require (
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230317112218-d5812b757909
