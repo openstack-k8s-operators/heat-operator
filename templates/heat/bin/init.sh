@@ -68,7 +68,7 @@ fi
 # set secrets
 # TODO: transportURL
 if [ -n "$TRANSPORTURL" ]; then
-	crudini --set ${SVC_CFG_MERGED} DEFAULT transport_url $TRANSPORTURL
+    crudini --set ${SVC_CFG_MERGED} DEFAULT transport_url $TRANSPORTURL
 fi
 
 crudini --set ${SVC_CFG_MERGED} database connection mysql+pymysql://${DBUSER}:${DBPASSWORD}@${DBHOST}/${DB}

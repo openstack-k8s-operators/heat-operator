@@ -9,7 +9,7 @@
 # Test binar
 *.test
 
-# Output of 
+# Output of
 *.out
 
 # Kubernetes
@@ -27,10 +27,10 @@ config/manag
 *.swo
 *~
 
-# Common CI 
+# Common CI
 CI_TOOLS_REP
 
-# generated 
+# generated
 go.work
 go.work.sum
 
