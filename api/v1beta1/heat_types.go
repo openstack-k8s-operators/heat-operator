@@ -110,9 +110,9 @@ type PasswordSelector struct {
 	// TODO: not used, need change in mariadb-operator
 	Database string `json:"database,omitempty"`
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="heatPassword"
+	// +kubebuilder:default="HeatPassword"
 	// Database - Selector to get the heat service password from the Secret
-	Service string `json:"admin,omitempty"`
+	Service string `json:"service,omitempty"`
 }
 
 // HeatDebug ...

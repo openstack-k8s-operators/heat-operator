@@ -92,15 +92,15 @@ spec:
                 description: PasswordSelectors - Selectors to identify the DB and
                   AdminUser password from the Secret
                 properties:
-                  admin:
-                    default: heatPassword
-                    description: Database - Selector to get the heat service password
-                      from the Secret
-                    type: string
                   database:
                     default: heatDatabasePassword
                     description: 'Database - Selector to get the heat Database user
                       password from the Secret TODO: not used, need change in mariadb-operator'
+                    type: string
+                  service:
+                    default: HeatPassword
+                    description: Database - Selector to get the heat service password
+                      from the Secret
                     type: string
                 type: object
               replicas:

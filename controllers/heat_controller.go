@@ -38,6 +38,7 @@ import (
 	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 	database "github.com/openstack-k8s-operators/lib-common/modules/database"
+	"github.com/openstack-k8s-operators/lib-common/modules/openstack"
 
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
@@ -373,6 +374,44 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// normal reconcile tasks
 	//
+	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	//
+	// get admin authentication OpenStack
+	//
+	os, _, err := keystonev1.GetAdminServiceClient(
+		ctx,
+		helper,
+		keystoneAPI,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Create Heat user
+	userID, err := r.ensureHeatUser(ctx, helper, instance, keystoneAPI, os)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Create domain for Heat stacks
+	heatDomain := openstack.Domain{
+		Name:        "heat_stack",
+		Description: "Domain for Heat stacks",
+	}
+	domainID, err := r.ensureHeatDomain(heatDomain, os)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Add the user to the domain
+	err = r.addUserToDomain(userID, domainID, os)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
 	// deploy heat-engine
 	heatEngine, op, err := r.engineDeploymentCreateOrUpdate(instance)
@@ -570,7 +609,6 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(instance *heatv1beta1.Heat)
 		deployment.Spec.Secret = instance.Spec.Secret
 		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
 
-		r.Log.Info(fmt.Sprintf("bshephar-debug: Deployment: %+v", deployment))
 		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 		if err != nil {
 			return err
@@ -727,4 +765,56 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 	})
 
 	return transportURL, op, err
+}
+
+func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os *openstack.OpenStack) (string, error) {
+	domainID, err := os.CreateDomain(r.Log, domain)
+
+	if err != nil {
+		return "", err
+	}
+
+	return domainID, nil
+}
+
+func (r *HeatReconciler) ensureHeatUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, keystoneAPI *keystonev1.KeystoneAPI, os *openstack.OpenStack) (string, error) {
+
+	// get the password of the service user from the secret
+	password, _, err := oko_secret.GetDataFromSecret(
+		ctx,
+		helper,
+		instance.Spec.Secret,
+		time.Duration(10),
+		instance.Spec.PasswordSelectors.Service)
+	if err != nil {
+		return "", err
+	}
+
+	userID, err := os.CreateUser(
+		r.Log,
+		openstack.User{
+			Name:      heat.StackDomainAdminUsername,
+			Password:  password,
+			ProjectID: "service",
+		})
+	if err != nil {
+		return "", err
+	}
+	return userID, nil
+}
+
+func (r *HeatReconciler) addUserToDomain(userID string, domainID string, os *openstack.OpenStack) error {
+	//
+	// add user to admin role
+	//
+	err := os.AssignUserDomainRole(
+		r.Log,
+		"admin",
+		userID,
+		domainID)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
