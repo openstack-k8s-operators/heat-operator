@@ -72,4 +72,3 @@ USER $USER_ID
 ENV PATH="/:${PATH}"
 
 ENTRYPOINT ["/manager"]
-
