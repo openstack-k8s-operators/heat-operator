@@ -92,5 +92,4 @@ func GetVolumeMounts() []corev1.VolumeMount {
 			ReadOnly:  false,
 		},
 	}
-
 }
