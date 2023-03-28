@@ -20,7 +20,7 @@ spec:
       dbSync: false
       service: false
     passwordSelectors:
-      admin: AdminPassword
+      service: AdminPassword
       database: AdminPassword
     replicas: 1
     resources: {}
@@ -35,14 +35,14 @@ spec:
       dbSync: false
       service: false
     passwordSelectors:
-      admin: AdminPassword
+      service: AdminPassword
       database: AdminPassword
     replicas: 1
     resources: {}
     secret: "osp-secret"
     serviceUser: ""
   passwordSelectors:
-    admin: AdminPassword
+    service: AdminPassword
     database: AdminPassword
   preserveJobs: false
   secret: osp-secret
