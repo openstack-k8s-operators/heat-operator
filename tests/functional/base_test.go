@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package functional_test
+package functional
 
 import (
 	"github.com/google/uuid"
@@ -74,17 +74,15 @@ func GetDefaultHeatSpec() map[string]interface{} {
 
 func GetDefaultHeatAPISpec() map[string]interface{} {
 	return map[string]interface{}{
-		"databaseHostname": "test-heat-db-instance",
-		"secret":           SecretName,
-		"replicas":         1,
+		"secret":   SecretName,
+		"replicas": 1,
 	}
 }
 
 func GetDefaultHeatEngineSpec() map[string]interface{} {
 	return map[string]interface{}{
-		"databaseHostname": "test-heat-db-instance",
-		"secret":           SecretName,
-		"replicas":         1,
+		"secret":   SecretName,
+		"replicas": 1,
 	}
 }
 

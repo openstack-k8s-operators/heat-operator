@@ -59,6 +59,23 @@ type HeatReconciler struct {
 	Scheme  *runtime.Scheme
 }
 
+// OkoOpenStack interface provides an abstraction from the openstack library itself to allow
+// for better decoupling and integration testing.
+type OkoOpenStack interface {
+	CreateUser(log logr.Logger, user openstack.User) (string, error)
+	CreateDomain(log logr.Logger, domain openstack.Domain) (string, error)
+}
+
+type OpenStackImpl struct{}
+
+func (o OpenStackImpl) CreateUser(log logr.Logger, user openstack.User) (string, error) {
+	return o.CreateUser(log, user)
+}
+
+func (o OpenStackImpl) CreateDomain(log logr.Logger, domain openstack.Domain) (string, error) {
+	return o.CreateDomain(log, domain)
+}
+
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats/finalizers,verbs=update
@@ -77,13 +94,6 @@ type HeatReconciler struct {
 // +kubebuilder:rbac:groups=rabbitmq.openstack.org,resources=transporturls,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneendpoints,verbs=get;list;watch;
-
-// IOpenStack interface provides an abstraction from the openstack library itself to allow
-// for better decoupling and integration testing.
-type IOpenStack interface {
-	CreateUser(log logr.Logger, user openstack.User) (string, error)
-	CreateDomain(log logr.Logger, domain openstack.Domain) (string, error)
-}
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -779,7 +789,7 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 	return transportURL, op, err
 }
 
-func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os IOpenStack) (string, error) {
+func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os OkoOpenStack) (string, error) {
 	domainID, err := os.CreateDomain(r.Log, domain)
 
 	if err != nil {
@@ -789,7 +799,7 @@ func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os IOpenStack
 	return domainID, nil
 }
 
-func (r *HeatReconciler) ensureHeatUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, keystoneAPI *keystonev1.KeystoneAPI, os IOpenStack) (string, error) {
+func (r *HeatReconciler) ensureHeatUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, keystoneAPI *keystonev1.KeystoneAPI, os OkoOpenStack) (string, error) {
 
 	// get the password of the service user from the secret
 	password, _, err := oko_secret.GetDataFromSecret(

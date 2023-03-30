@@ -14,13 +14,13 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package functional_test
+package functional
 
 import (
 	"fmt"
-	"github.com/go-logr/logr"
 	"os"
 
+	"github.com/golang/mock/gomock"
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -31,16 +31,7 @@ import (
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
-	"github.com/openstack-k8s-operators/lib-common/modules/openstack"
 )
-
-type mockIOpenStack struct {
-	CreateUserFunc func(log logr.Logger, user openstack.User) (string, error)
-}
-
-func (m *mockIOpenStack) CreateUser(log logr.Logger, user openstack.User) (string, error) {
-	return m.CreateUserFunc(log, user)
-}
 
 var _ = Describe("Heat controller", func() {
 
@@ -50,6 +41,14 @@ var _ = Describe("Heat controller", func() {
 	var heatName types.NamespacedName
 
 	BeforeEach(func() {
+		mockCtrl := gomock.NewController(GinkgoT())
+		defer mockCtrl.Finish()
+
+		mockOkoOpenStack := NewMockOkoOpenStack(mockCtrl)
+		expected := "blahUserID"
+		mockOkoOpenStack.EXPECT().CreateUser(gomock.Any(), gomock.Any()).Return(expected, nil)
+		//domainExpected := "blahDomainID"
+		//mockOkoOpenStack.EXPECT().CreateDomain(gomock.Any(), gomock.Any()).Return(domainExpected, nil)
 		// NOTE(gibi): We need to create a unique namespace for each test run
 		// as namespaces cannot be deleted in a locally running envtest. See
 		// https://book.kubebuilder.io/reference/envtest.html#namespace-usage-limitation
@@ -64,7 +63,8 @@ var _ = Describe("Heat controller", func() {
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
 		Expect(err).NotTo(HaveOccurred())
 
-		name := fmt.Sprintf("heat-%s", uuid.New().String())
+		//name := fmt.Sprintf("heat-%s", uuid.New().String())
+		name := "heat"
 		heatTransportURLName = types.NamespacedName{
 			Namespace: namespace,
 			Name:      name + "-heat-transport",
