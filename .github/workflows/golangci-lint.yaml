@@ -23,7 +23,7 @@ jobs:
       - name: Run golint.sh
         run: ./openstack-k8s-operators-ci/test-runner/golint.sh
       - name: Run gotest.sh
-        run: ./openstack-k8s-operators-ci/test-runner/gotest.sh
+        run: make test
 
   golangci:
     name: github (golangci)

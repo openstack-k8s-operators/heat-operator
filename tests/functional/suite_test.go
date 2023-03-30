@@ -50,7 +50,7 @@ var (
 const (
 	timeout = time.Second * 2
 
-	SecretName = "osp-secret"
+	SecretName = "test-osp-secret"
 
 	TestNamespace = "default"
 

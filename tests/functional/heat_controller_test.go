@@ -1,283 +1,408 @@
+/*
+Copyright 2022.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package functional_test
 
 import (
 	"fmt"
+	"github.com/go-logr/logr"
 	"os"
 
 	"github.com/google/uuid"
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	. "github.com/openstack-k8s-operators/lib-common/modules/test/helpers"
 	corev1 "k8s.io/api/core/v1"
-	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
-	heat "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
-	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	"github.com/openstack-k8s-operators/lib-common/modules/openstack"
 )
 
-func DefaultheatTemplate() *heat.Heat {
-	return &heat.Heat{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "heat.openstack.org/v1alpha1",
-			Kind:       "heat",
-		},
-		ObjectMeta: metav1.ObjectMeta{},
-		Spec: heat.HeatSpec{
-			DatabaseInstance: "test-db-instance",
-			Secret:           SecretName,
-		},
-	}
+type mockIOpenStack struct {
+	CreateUserFunc func(log logr.Logger, user openstack.User) (string, error)
 }
 
-type Testheat struct {
-	LookupKey types.NamespacedName
-	// The input data for creating a heat
-	Template *heat.Heat
-	// The current state of the heat resource updated by Refresh()
-	Instance *heat.Heat
-	// TransportURLName -
-	TransportURLName types.NamespacedName
+func (m *mockIOpenStack) CreateUser(log logr.Logger, user openstack.User) (string, error) {
+	return m.CreateUserFunc(log, user)
 }
 
-// NewTestheat initializes the the input for a heat instance
-// but does not create it yet. So the client can finetuned the Template data
-// before calling Create()
-func NewTestheat(namespace string) Testheat {
-	name := fmt.Sprintf("heat-%s", uuid.New().String())
-	template := DefaultheatTemplate()
-	template.ObjectMeta.Name = name
-	template.ObjectMeta.Namespace = namespace
-	return Testheat{
-		LookupKey: types.NamespacedName{Name: name, Namespace: namespace},
-		Template:  template,
-		Instance:  &heat.Heat{},
-		TransportURLName: types.NamespacedName{
-			Namespace: namespace,
-			Name:      fmt.Sprintf("%s-heat-transport", name),
-		},
-	}
-}
+var _ = Describe("Heat controller", func() {
 
-// Creates the heat resource in k8s based on the Template. The Template
-// is not updated during create. This call waits until the resource is created.
-// The last known state of the resource is available via Instance.
-func (t Testheat) Create() {
-	Expect(k8sClient.Create(ctx, t.Template.DeepCopy())).Should(Succeed())
-	t.Refresh()
-}
-
-// Deletes the heat resource from k8s and waits until it is deleted.
-func (t Testheat) Delete() {
-	Expect(k8sClient.Delete(ctx, t.Instance)).Should(Succeed())
-	// We have to wait for the heat instance to be fully deleted
-	// by the controller
-	Eventually(func() bool {
-		err := k8sClient.Get(ctx, t.LookupKey, t.Instance)
-		return k8s_errors.IsNotFound(err)
-	}, timeout, interval).Should(BeTrue())
-}
-
-// Refreshes the state of the Instance from k8s
-func (t Testheat) Refresh() *heat.Heat {
-	Eventually(func() bool {
-		err := k8sClient.Get(ctx, t.LookupKey, t.Instance)
-		return err == nil
-	}, timeout, interval).Should(BeTrue())
-	return t.Instance
-}
-
-// Gets the condition of given type from the resource.
-func (t Testheat) GetCondition(conditionType condition.Type, reason condition.Reason) condition.Condition {
-	t.Refresh()
-	if t.Instance.Status.Conditions == nil {
-		return condition.Condition{}
-	}
-
-	cond := t.Instance.Status.Conditions.Get(conditionType)
-	if cond != nil && cond.Reason == reason {
-		return *cond
-	}
-
-	return condition.Condition{}
-
-}
-
-type TestKeystoneAPI struct {
-	LookupKey types.NamespacedName
-	// The input data for creating a KeystoneAPI
-	Template *keystonev1.KeystoneAPI
-	Instance *keystonev1.KeystoneAPI
-}
-
-// NewTestKeystoneAPI initializes the the input for a KeystoneAPI instance
-// but does not create it yet. So the client can finetuned the Template data
-// before calling Create()
-func NewTestKeystoneAPI(namespace string) *TestKeystoneAPI {
-	name := fmt.Sprintf("keystone-%s", uuid.New().String())
-	template := &keystonev1.KeystoneAPI{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "keystone.openstack.org/v1beta1",
-			Kind:       "KeystoneAPI",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: TestNamespace,
-		},
-		Spec: keystonev1.KeystoneAPISpec{
-			DatabaseUser: "foo-bar-baz",
-		},
-		Status: keystonev1.KeystoneAPIStatus{
-			APIEndpoints: map[string]string{
-				"internal": "fake-keystone-internal-endpoint",
-				"public":   "fake-keystone-public-endpoint",
-			},
-			DatabaseHostname: "fake-database-hostname",
-		},
-	}
-	return &TestKeystoneAPI{
-		LookupKey: types.NamespacedName{Name: name, Namespace: namespace},
-		Template:  template,
-		Instance:  &keystonev1.KeystoneAPI{},
-	}
-}
-
-// Creates the KeystoneAPI resource in k8s based on the Template. The Template
-// is not updated with the result of the create.
-func (t TestKeystoneAPI) Create() {
-	t.Instance = t.Template.DeepCopy()
-	Expect(k8sClient.Create(ctx, t.Instance)).Should(Succeed())
-
-	// the Status field needs to be written via a separate client
-	t.Instance.Status = t.Template.Status
-	Expect(k8sClient.Status().Update(ctx, t.Instance)).Should(Succeed())
-}
-
-// Deletes the KeystoneAPI resource from k8s and waits until it is deleted.
-func (t TestKeystoneAPI) Delete() {
-	Expect(k8sClient.Delete(ctx, t.Template.DeepCopy())).Should(Succeed())
-	// We have to wait for the instance to be fully deleted
-	// by the controller
-	Eventually(func() bool {
-		err := k8sClient.Get(ctx, t.LookupKey, t.Instance)
-		return k8s_errors.IsNotFound(err)
-	}, timeout, interval).Should(BeTrue())
-}
-
-var _ = Describe("heat controller", func() {
-
-	var heat Testheat
+	var namespace string
 	var secret *corev1.Secret
-	var keystoneAPI *TestKeystoneAPI
 	var heatTransportURLName types.NamespacedName
+	var heatName types.NamespacedName
 
 	BeforeEach(func() {
+		// NOTE(gibi): We need to create a unique namespace for each test run
+		// as namespaces cannot be deleted in a locally running envtest. See
+		// https://book.kubebuilder.io/reference/envtest.html#namespace-usage-limitation
+		namespace = uuid.New().String()
+		th.CreateNamespace(namespace)
+		// We still request the delete of the Namespace to properly cleanup if
+		// we run the test in an existing cluster.
+		DeferCleanup(th.DeleteNamespace, namespace)
 		// lib-common uses OPERATOR_TEMPLATES env var to locate the "templates"
-		// directory of the operator. We need to set them othervise lib-common
+		// directory of the operator. We need to set them otherwise lib-common
 		// will fail to generate the ConfigMap as it does not find common.sh
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
 		Expect(err).NotTo(HaveOccurred())
+
+		name := fmt.Sprintf("heat-%s", uuid.New().String())
 		heatTransportURLName = types.NamespacedName{
-			Name: heat.LookupKey.Name + "-heat-transport",
+			Namespace: namespace,
+			Name:      name + "-heat-transport",
 		}
 
-		heat = NewTestheat(TestNamespace)
-		heat.Create()
-
+		heatName = CreateHeat(namespace, name, GetDefaultHeatSpec())
+		DeferCleanup(DeleteHeat, heatName)
 	})
 
-	AfterEach(func() {
-		heat.Delete()
-		if secret != nil {
-			Expect(k8sClient.Delete(ctx, secret)).Should(Succeed())
-		}
-		if keystoneAPI != nil {
-			keystoneAPI.Delete()
-		}
-	})
-
-	When("A heat instance is created", func() {
-		BeforeEach(func() {
-			DeferCleanup(DeleteInstance, CreateHeat(heat.LookupKey, GetDefaultHeatSpec()))
+	When("A Heat instance is created", func() {
+		It("should have the Spec fields initialized", func() {
+			Heat := GetHeat(heatName)
+			Expect(Heat.Spec.DatabaseInstance).Should(Equal("test-heat-db-instance"))
+			Expect(Heat.Spec.DatabaseUser).Should(Equal("heat"))
+			Expect(Heat.Spec.RabbitMqClusterName).Should(Equal("rabbitmq"))
+			Expect(Heat.Spec.ServiceUser).Should(Equal("heat"))
 		})
 
-		It("should have the Spec and Status fields initialized", func() {
-			Expect(heat.Instance.Spec.Secret).Should(Equal("osp-secret"))
-			// TODO(gibi): Why defaulting does not work?
-			// Expect(heat.Instance.Spec.ServiceUser).Should(Equal("heat"))
+		It("should have the Status fields initialized", func() {
+			Heat := GetHeat(heatName)
+			Expect(Heat.Status.Hash).To(BeEmpty())
+			Expect(Heat.Status.DatabaseHostname).To(Equal(""))
+			Expect(Heat.Status.TransportURLSecret).To(Equal(""))
+			Expect(Heat.Status.APIEndpoints).To(BeEmpty())
+			Expect(Heat.Status.ReadyCount).To(Equal(int32(0)))
+		})
+
+		It("should have Unknown Conditions initialized as transporturl not created", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.InputReadyCondition,
+				corev1.ConditionUnknown,
+			)
 		})
 
 		It("should have a finalizer", func() {
-			th.GetTransportURL(heatTransportURLName)
-			th.SimulateTransportURLReady(heatTransportURLName)
 			// the reconciler loop adds the finalizer so we have to wait for
 			// it to run
 			Eventually(func() []string {
-				return heat.Refresh().ObjectMeta.Finalizers
-			}, timeout, interval).Should(ContainElement("heat"))
+				return GetHeat(heatName).Finalizers
+			}, timeout, interval).Should(ContainElement("Heat"))
 		})
 
-		It("should be in a state of not having the input ready as the secrete is not create yet", func() {
-			Eventually(func() condition.Condition {
-				// TODO (mschuppert) change conditon package to be able to use haveSameStateOf Matcher here
-				return heat.GetCondition(condition.InputReadyCondition, condition.RequestedReason)
-			}, timeout, interval).Should(HaveField("Status", corev1.ConditionFalse))
+		It("should not create a config map", func() {
+			Eventually(func() []corev1.ConfigMap {
+				return th.ListConfigMaps(fmt.Sprintf("%s-%s", heatName.Name, "config-data")).Items
+			}, timeout, interval).Should(BeEmpty())
 		})
 	})
 
 	When("an unrelated secret is provided", func() {
 		It("should remain in a state of waiting for the proper secret", func() {
+			SimulateTransportURLReady(heatTransportURLName)
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "an-unrelated-secret",
-					Namespace: TestNamespace,
+					Namespace: namespace,
 				},
 			}
 			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+			DeferCleanup(k8sClient.Delete, ctx, secret)
 
-			Eventually(func() condition.Condition {
-				return heat.GetCondition(condition.InputReadyCondition, condition.RequestedReason)
-			}, timeout, interval).Should(HaveField("Status", corev1.ConditionFalse))
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.InputReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatRabbitMqTransportURLReadyCondition,
+				corev1.ConditionFalse,
+			)
+
+		})
+		It("should not create a config map", func() {
+			Eventually(func() []corev1.ConfigMap {
+				return th.ListConfigMaps(fmt.Sprintf("%s-%s", heatName.Name, "config-data")).Items
+			}, timeout, interval).Should(BeEmpty())
 		})
 	})
 
-	When("the proper secret is provided", func() {
-		It("should not be in a state of having the input ready", func() {
+	When("the proper secret is provided and TransportURL Created", func() {
+		BeforeEach(func() {
+			SimulateTransportURLReady(heatTransportURLName)
+
 			secret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
-					Name:      SecretName,
-					Namespace: TestNamespace,
+					Name:      heatTransportURLName.Name,
+					Namespace: namespace,
 				},
 			}
 			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-			Eventually(func() condition.Condition {
-				return heat.GetCondition(condition.InputReadyCondition, condition.ReadyReason)
-			}, timeout, interval).Should(HaveField("Status", corev1.ConditionTrue))
+			DeferCleanup(k8sClient.Delete, ctx, secret)
+		})
+
+		It("should be in a state of having the TransportURL ready", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatRabbitMqTransportURLReadyCondition,
+				corev1.ConditionTrue,
+			)
+		})
+
+		It("should not create a config map", func() {
+			Eventually(func() []corev1.ConfigMap {
+				return th.ListConfigMaps(fmt.Sprintf("%s-%s", heatName.Name, "config-data")).Items
+			}, timeout, interval).Should(BeEmpty())
+		})
+	})
+
+	When("keystoneAPI instance is not available", func() {
+		BeforeEach(func() {
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      SecretName,
+					Namespace: namespace,
+				},
+				Data: map[string][]byte{
+					"HeatPassword": []byte("12345678"),
+				},
+			}
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+			DeferCleanup(k8sClient.Delete, ctx, secret)
+			SimulateTransportURLReady(heatTransportURLName)
+		})
+		It("should not create a config map", func() {
+			Eventually(func() []corev1.ConfigMap {
+				return th.ListConfigMaps(fmt.Sprintf("%s-%s", heatName.Name, "config-data")).Items
+			}, timeout, interval).Should(BeEmpty())
 		})
 	})
 
 	When("keystoneAPI instance is available", func() {
-		It("should create a ConfigMap for local_settings.py with some config options set based on the KeystoneAPI", func() {
-			secret = &corev1.Secret{
+		BeforeEach(func() {
+			secret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      SecretName,
-					Namespace: TestNamespace,
+					Namespace: namespace,
+				},
+				Data: map[string][]byte{
+					"HeatPassword": []byte("12345678"),
 				},
 			}
-			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-
-			keystoneAPI = NewTestKeystoneAPI(TestNamespace)
-			keystoneAPI.Create()
-
-			configData := th.GetConfigMap(
-				types.NamespacedName{
-					Namespace: heat.LookupKey.Namespace,
-					Name:      fmt.Sprintf("%s-%s", heat.LookupKey.Name, "config-data"),
+			rmqSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      heatTransportURLName.Name,
+					Namespace: namespace,
 				},
-			)
+				Data: map[string][]byte{
+					"transport_url": []byte("rabbit://fake"),
+				},
+			}
+			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
+			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
+			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+			DeferCleanup(k8sClient.Delete, ctx, secret)
+			SimulateTransportURLReady(heatTransportURLName)
+		})
 
-			Eventually(configData).ShouldNot(BeNil())
+		It("should create a ConfigMap for heat.conf with the heat_domain_admin config option set", func() {
+			keystoneAPI := CreateKeystoneAPI(namespace)
+			DeferCleanup(DeleteKeystoneAPI, keystoneAPI)
+
+			configataCM := types.NamespacedName{
+				Namespace: heatName.Namespace,
+				Name:      fmt.Sprintf("%s-%s", heatName.Name, "config-data"),
+			}
+
+			Eventually(func() corev1.ConfigMap {
+				return *th.GetConfigMap(configataCM)
+			}, timeout, interval).ShouldNot(BeNil())
+
+			//keystone := GetKeystoneAPI(keystoneAPI)
+			Expect(th.GetConfigMap(configataCM).Data["heat.conf"]).Should(
+				ContainSubstring("stack_domain_admin=heat_stack_domain_admin"))
+
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.DBReadyCondition,
+				corev1.ConditionFalse,
+			)
+		})
+
+		When("DB is created", func() {
+			BeforeEach(func() {
+				DeferCleanup(
+					DeleteDBService,
+					CreateDBService(
+						namespace,
+						GetHeat(heatName).Spec.DatabaseInstance,
+						corev1.ServiceSpec{
+							Ports: []corev1.ServicePort{{Port: 3306}},
+						},
+					),
+				)
+				SimulateTransportURLReady(heatTransportURLName)
+				DeferCleanup(DeleteKeystoneAPI, CreateKeystoneAPI(namespace))
+			})
+			It("Should set DBReady Condition and set DatabaseHostname Status when DB is Created", func() {
+				SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: "heat"})
+				th.SimulateJobSuccess(types.NamespacedName{Namespace: namespace, Name: "heat-db-sync"})
+				Heat := GetHeat(heatName)
+				Expect(Heat.Status.DatabaseHostname).To(Equal("hostname-for-" + Heat.Spec.DatabaseInstance))
+				th.ExpectCondition(
+					heatName,
+					ConditionGetterFunc(HeatConditionGetter),
+					condition.DBReadyCondition,
+					corev1.ConditionTrue,
+				)
+				th.ExpectCondition(
+					heatName,
+					ConditionGetterFunc(HeatConditionGetter),
+					condition.DBSyncReadyCondition,
+					corev1.ConditionFalse,
+				)
+			})
+		})
+
+		When("Keystone Resources are created", func() {
+			BeforeEach(func() {
+				DeferCleanup(
+					DeleteDBService,
+					CreateDBService(
+						namespace,
+						GetHeat(heatName).Spec.DatabaseInstance,
+						corev1.ServiceSpec{
+							Ports: []corev1.ServicePort{{Port: 3306}},
+						},
+					),
+				)
+				SimulateTransportURLReady(heatTransportURLName)
+				DeferCleanup(DeleteKeystoneAPI, CreateKeystoneAPI(namespace))
+				SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: "heat"})
+				th.SimulateJobSuccess(types.NamespacedName{Namespace: namespace, Name: "heat-db-sync"})
+				SimulateKeystoneServiceReady(types.NamespacedName{Namespace: namespace, Name: "heat"})
+				SimulateKeystoneEndpointReady(types.NamespacedName{Namespace: namespace, Name: "heat"})
+			})
+			It("Should set ExposeServiceReadyCondition Condition", func() {
+
+				th.ExpectCondition(
+					heatName,
+					ConditionGetterFunc(HeatConditionGetter),
+					condition.ExposeServiceReadyCondition,
+					corev1.ConditionTrue,
+				)
+			})
+
+			It("Assert Services are created", func() {
+				AssertServiceExists(types.NamespacedName{Namespace: namespace, Name: "heat-public"})
+				AssertServiceExists(types.NamespacedName{Namespace: namespace, Name: "heat-internal"})
+			})
+
+			It("Assert Routes are created", func() {
+				AssertRouteExists(types.NamespacedName{Namespace: namespace, Name: "heat-public"})
+			})
+
+			It("Endpoints are created", func() {
+
+				th.ExpectCondition(
+					heatName,
+					ConditionGetterFunc(HeatConditionGetter),
+					condition.KeystoneEndpointReadyCondition,
+					corev1.ConditionTrue,
+				)
+				keystoneEndpoint := GetKeystoneEndpoint(types.NamespacedName{Namespace: namespace, Name: "heat"})
+				endpoints := keystoneEndpoint.Spec.Endpoints
+				regexp := `http:.*:?\d*$`
+				Expect(endpoints).To(HaveKeyWithValue("public", MatchRegexp(regexp)))
+				Expect(endpoints).To(HaveKeyWithValue("internal", MatchRegexp(regexp)))
+			})
+
+			It("Deployment is created as expected", func() {
+				deployment := th.GetDeployment(
+					types.NamespacedName{
+						Namespace: heatName.Namespace,
+						Name:      "heat",
+					},
+				)
+				Expect(int(*deployment.Spec.Replicas)).To(Equal(1))
+				Expect(deployment.Spec.Template.Spec.Volumes).To(HaveLen(5))
+				Expect(deployment.Spec.Template.Spec.Containers).To(HaveLen(1))
+
+				container := deployment.Spec.Template.Spec.Containers[0]
+				Expect(container.LivenessProbe.HTTPGet.Port.IntVal).To(Equal(int32(9696)))
+				Expect(container.ReadinessProbe.HTTPGet.Port.IntVal).To(Equal(int32(9696)))
+				Expect(container.VolumeMounts).To(HaveLen(4))
+				Expect(container.Image).To(Equal("test-heat-container-image"))
+
+				Expect(container.LivenessProbe.HTTPGet.Port.IntVal).To(Equal(int32(9696)))
+				Expect(container.ReadinessProbe.HTTPGet.Port.IntVal).To(Equal(int32(9696)))
+			})
+		})
+
+		When("Heat CR is deleted", func() {
+			BeforeEach(func() {
+				SimulateTransportURLReady(heatTransportURLName)
+			})
+
+			It("removes the Config MAP", func() {
+				keystoneAPI := CreateKeystoneAPI(namespace)
+				DeferCleanup(DeleteKeystoneAPI, keystoneAPI)
+				configataCM := types.NamespacedName{
+					Namespace: heatName.Namespace,
+					Name:      fmt.Sprintf("%s-%s", heatName.Name, "config-data"),
+				}
+
+				scriptsCM := types.NamespacedName{
+					Namespace: heatName.Namespace,
+					Name:      fmt.Sprintf("%s-%s", heatName.Name, "scripts"),
+				}
+
+				Eventually(func() corev1.ConfigMap {
+					return *th.GetConfigMap(configataCM)
+				}, timeout, interval).ShouldNot(BeNil())
+				Eventually(func() corev1.ConfigMap {
+					return *th.GetConfigMap(scriptsCM)
+				}, timeout, interval).ShouldNot(BeNil())
+
+				DeleteHeat(heatName)
+
+				Eventually(func() []corev1.ConfigMap {
+					return th.ListConfigMaps(configataCM.Name).Items
+				}, timeout, interval).Should(BeEmpty())
+				Eventually(func() []corev1.ConfigMap {
+					return th.ListConfigMaps(scriptsCM.Name).Items
+				}, timeout, interval).Should(BeEmpty())
+			})
 		})
 	})
 })
