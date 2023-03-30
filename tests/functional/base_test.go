@@ -43,29 +43,18 @@ func GetTransportURL(name types.NamespacedName) *rabbitmqv1.TransportURL {
 	return instance
 }
 
-func SimulateTransportURLReady(name types.NamespacedName) {
-	Eventually(func(g Gomega) {
-		transport := GetTransportURL(name)
-		// To avoid another secret creation and cleanup
-		transport.Status.SecretName = name.Name
-		transport.Status.Conditions.MarkTrue("TransportURLReady", "Ready")
-		g.Expect(k8sClient.Status().Update(ctx, transport)).To(Succeed())
-
-	}, timeout, interval).Should(Succeed())
-	logger.Info("Simulated TransportURL ready", "on", name)
-}
-
-func CreateUnstructured(rawObj map[string]interface{}) {
+func CreateUnstructured(rawObj map[string]interface{}) *unstructured.Unstructured {
 	logger.Info("Creating", "raw", rawObj)
 	unstructuredObj := &unstructured.Unstructured{Object: rawObj}
 	_, err := controllerutil.CreateOrPatch(
 		ctx, k8sClient, unstructuredObj, func() error { return nil })
 	Expect(err).ShouldNot(HaveOccurred())
+	return unstructuredObj
 }
 
 func GetDefaultHeatSpec() map[string]interface{} {
 	return map[string]interface{}{
-		"databaseInstance": "test-heat-db-instance",
+		"databaseInstance": "openstack",
 		"secret":           SecretName,
 		"heatEngine":       GetDefaultHeatEngineSpec(),
 		"heatAPI":          GetDefaultHeatAPISpec(),
@@ -74,48 +63,51 @@ func GetDefaultHeatSpec() map[string]interface{} {
 
 func GetDefaultHeatAPISpec() map[string]interface{} {
 	return map[string]interface{}{
-		"secret":   SecretName,
-		"replicas": 1,
+		"secret":         SecretName,
+		"replicas":       1,
+		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified",
 	}
 }
 
 func GetDefaultHeatEngineSpec() map[string]interface{} {
 	return map[string]interface{}{
-		"secret":   SecretName,
-		"replicas": 1,
+		"secret":         SecretName,
+		"replicas":       1,
+		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified",
 	}
 }
 
-func CreateHeat(namespace string, HeatName string, spec map[string]interface{}) types.NamespacedName {
+func CreateHeat(name types.NamespacedName, spec map[string]interface{}) client.Object {
 
 	raw := map[string]interface{}{
 		"apiVersion": "heat.openstack.org/v1beta1",
 		"kind":       "Heat",
 		"metadata": map[string]interface{}{
-			"name":      HeatName,
-			"namespace": namespace,
+			"name":      name.Name,
+			"namespace": name.Namespace,
 		},
 		"spec": spec,
 	}
-	CreateUnstructured(raw)
+	return CreateUnstructured(raw)
 
-	return types.NamespacedName{Name: HeatName, Namespace: namespace}
+	// return types.NamespacedName{Name: HeatName, Namespace: namespace}
 }
 
-func DeleteHeat(name types.NamespacedName) {
+func DeleteInstance(instance client.Object) {
 	// We have to wait for the controller to fully delete the instance
+	logger.Info("Deleting", "Name", instance.GetName(), "Namespace", instance.GetNamespace(), "Kind", instance.GetObjectKind().GroupVersionKind().Kind)
 	Eventually(func(g Gomega) {
-		Heat := &heatv1.Heat{}
-		err := k8sClient.Get(ctx, name, Heat)
+		name := types.NamespacedName{Name: instance.GetName(), Namespace: instance.GetNamespace()}
+		err := k8sClient.Get(ctx, name, instance)
 		// if it is already gone that is OK
 		if k8s_errors.IsNotFound(err) {
 			return
 		}
-		g.Expect(err).Should(BeNil())
+		g.Expect(err).ShouldNot(HaveOccurred())
 
-		g.Expect(k8sClient.Delete(ctx, Heat)).Should(Succeed())
+		g.Expect(k8sClient.Delete(ctx, instance)).Should(Succeed())
 
-		err = k8sClient.Get(ctx, name, Heat)
+		err = k8sClient.Get(ctx, name, instance)
 		g.Expect(k8s_errors.IsNotFound(err)).To(BeTrue())
 	}, timeout, interval).Should(Succeed())
 }
@@ -126,6 +118,37 @@ func GetHeat(name types.NamespacedName) *heatv1.Heat {
 		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
 	}, timeout, interval).Should(Succeed())
 	return instance
+}
+
+func CreateSecret(name types.NamespacedName, data map[string][]byte) *corev1.Secret {
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name.Name,
+			Namespace: name.Namespace,
+		},
+		Data: data,
+	}
+	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
+	return secret
+}
+
+func CreateHeatSecret(namespace string, name string) *corev1.Secret {
+	return CreateSecret(
+		types.NamespacedName{Namespace: namespace, Name: name},
+		map[string][]byte{
+			"HeatPassword":         []byte("12345678"),
+			"HeatDatabasePassword": []byte("12345678"),
+		},
+	)
+}
+
+func CreateHeatMessageBusSecret(namespace string, name string) *corev1.Secret {
+	return CreateSecret(
+		types.NamespacedName{Namespace: namespace, Name: name},
+		map[string][]byte{
+			"transport_url": []byte("rabbit://fake"),
+		},
+	)
 }
 
 func HeatConditionGetter(name types.NamespacedName) condition.Conditions {
@@ -174,7 +197,7 @@ func DeleteKeystoneAPI(name types.NamespacedName) {
 		if k8s_errors.IsNotFound(err) {
 			return
 		}
-		g.Expect(err).Should(BeNil())
+		g.Expect(err).ShouldNot(HaveOccurred())
 
 		g.Expect(k8sClient.Delete(ctx, keystone)).Should(Succeed())
 
@@ -200,30 +223,12 @@ func GetKeystoneService(name types.NamespacedName) *keystonev1.KeystoneService {
 	return instance
 }
 
-func SimulateKeystoneServiceReady(name types.NamespacedName) {
-	Eventually(func(g Gomega) {
-		service := GetKeystoneService(name)
-		service.Status.Conditions.MarkTrue(condition.ReadyCondition, "Ready")
-		g.Expect(k8sClient.Status().Update(ctx, service)).To(Succeed())
-	}, timeout, interval).Should(Succeed())
-	logger.Info("Simulated KeystoneService ready", "on", name)
-}
-
 func GetKeystoneEndpoint(name types.NamespacedName) *keystonev1.KeystoneEndpoint {
 	instance := &keystonev1.KeystoneEndpoint{}
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
 	}, timeout, interval).Should(Succeed())
 	return instance
-}
-
-func SimulateKeystoneEndpointReady(name types.NamespacedName) {
-	Eventually(func(g Gomega) {
-		endpoint := GetKeystoneEndpoint(name)
-		endpoint.Status.Conditions.MarkTrue(condition.ReadyCondition, "Ready")
-		g.Expect(k8sClient.Status().Update(ctx, endpoint)).To(Succeed())
-	}, timeout, interval).Should(Succeed())
-	logger.Info("Simulated KeystoneEndpoint ready", "on", name)
 }
 
 func AssertServiceExists(name types.NamespacedName) *corev1.Service {
@@ -248,7 +253,8 @@ func CreateDBService(namespace string, mariadbCRName string, spec corev1.Service
 	// The Name is used as the hostname to access the service. So
 	// we generate something unique for the MariaDB CR it represents
 	// so we can assert that the correct Service is selected.
-	serviceName := "hostname-for-" + mariadbCRName
+	//serviceName := "mariadb-" + mariadbCRName
+	serviceName := "heat"
 	service := &corev1.Service{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      serviceName,
@@ -275,7 +281,7 @@ func DeleteDBService(name types.NamespacedName) {
 		if k8s_errors.IsNotFound(err) {
 			return
 		}
-		g.Expect(err).Should(BeNil())
+		g.Expect(err).ShouldNot(HaveOccurred())
 
 		g.Expect(k8sClient.Delete(ctx, service)).Should(Succeed())
 
@@ -296,16 +302,4 @@ func ListMariaDBDatabase(namespace string) *mariadbv1.MariaDBDatabaseList {
 	mariaDBDatabases := &mariadbv1.MariaDBDatabaseList{}
 	Expect(k8sClient.List(ctx, mariaDBDatabases, client.InNamespace(namespace))).Should(Succeed())
 	return mariaDBDatabases
-}
-
-func SimulateMariaDBDatabaseCompleted(name types.NamespacedName) {
-	Eventually(func(g Gomega) {
-		db := GetMariaDBDatabase(name)
-		db.Status.Completed = true
-		// This can return conflict so we have the Eventually block to retry
-		g.Expect(k8sClient.Status().Update(ctx, db)).To(Succeed())
-
-	}, timeout, interval).Should(Succeed())
-
-	logger.Info("Simulated DB completed", "on", name)
 }
