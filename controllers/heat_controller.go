@@ -152,6 +152,14 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			}
 		}
 	}()
+
+	// If the service object doesn't have our finalizer, add it.
+	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
+	// Register the finalizer immediately to avoid orphaning resources on delete
+	if err := r.Update(ctx, instance); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, instance, helper)
