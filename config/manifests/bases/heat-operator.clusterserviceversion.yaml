@@ -39,12 +39,14 @@ spec:
     - supported: true
       type: AllNamespaces
   keywords:
-    - fkjdasf
+    - OpenStack
+    - Orchestration
+    - Heat
   links:
-    - name: heat Operator
-      url: https://heat-operator.domain
+  - name: Heat Operator
+    url: https://github.com/openstack-k8s-operators/heat-operator
   maturity: alpha
   provider:
-    name: anything
-    url: fsadfl
+    name: Red Hat Inc.
+    url: https://redhat.com/
   version: 0.0.0
