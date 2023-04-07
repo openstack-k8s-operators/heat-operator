@@ -10,18 +10,23 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-      - description: heat is the Schema for the heats API
-        displayName: heat
-        kind: Heat
-        name: heats.heat.openstack.org
-        version: v1alpha1
       - description: Heat is the Schema for the heats API
         displayName: Heat
         kind: Heat
         name: heats.heat.openstack.org
         version: v1beta1
-  description: heat operator
-  displayName: heat-operator-bundle
+      - description: HeatAPI is the Schema for the heatapis API
+        displayName: Heat API
+        kind: HeatAPI
+        name: heatapis.heat.openstack.org
+        version: v1beta1
+      - description: HeatEngine is the Schema for the heatengines API
+        displayName: Heat Engine
+        kind: HeatEngine
+        name: heatengines.heat.openstack.org
+        version: v1beta1
+  description: Heat Operator
+  displayName: Heat Operator
   icon:
     - base64data: ""
       mediatype: ""
