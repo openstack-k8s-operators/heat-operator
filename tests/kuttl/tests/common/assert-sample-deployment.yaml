@@ -1,0 +1,176 @@
+#
+# Check for:
+#
+# Heat
+# HeatAPI
+# HeatConductor
+# HeatEngine
+# apiEndpoints
+# service port connectivity
+#
+apiVersion: heat.openstack.org/v1beta1
+kind: Heat
+metadata:
+  name: heat
+spec:
+  customServiceConfig: "# add your customization here"
+  databaseInstance: openstack
+  databaseUser: "heat"
+  rabbitMqClusterName: rabbitmq
+  debug:
+    bootstrap: false
+    dbSync:
+    service: false
+  heatAPI:
+    containerImage: "quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo"
+    customServiceConfig: "# add your customization here"
+    databaseUser: "heat"
+    debug:
+      bootstrap: false
+      dbSync: false
+      service: false
+    passwordSelectors:
+      service: AdminPassword
+      database: AdminPassword
+    replicas: 1
+    resources: {}
+    secret: "osp-secret"
+    serviceUser: ""
+  heatEngine:
+    containerImage: "quay.io/tripleozedcentos9/openstack-heat-engine:current-tripleo"
+    customServiceConfig: "# add your customization here"
+    databaseUser: "heat"
+    debug:
+      bootstrap: false
+      dbSync: false
+      service: false
+    passwordSelectors:
+      service: AdminPassword
+      database: AdminPassword
+    replicas: 1
+    resources: {}
+    secret: "osp-secret"
+    serviceUser: ""
+  passwordSelectors:
+    service: AdminPassword
+    database: AdminPassword
+  preserveJobs: false
+  secret: osp-secret
+  serviceUser: "heat"
+status:
+  databaseHostname: openstack
+  heatAPIReadyCount: 1
+  heatConductorReadyCount:
+    null_conductor_group_null: 1
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatAPI
+metadata:
+  finalizers:
+    - HeatAPI
+  name: heat-api
+  namespace: openstack
+  ownerReferences:
+    - apiVersion: heat.openstack.org/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Heat
+      name: heat
+spec:
+  containerImage: quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo
+  customServiceConfig: "# add your customization here"
+  databaseHostname: openstack
+  debug:
+    bootstrap: false
+    dbSync: false
+    service: false
+  passwordSelectors:
+    database: HeatDatabasePassword
+    service: HeatPassword
+  replicas: 1
+  resources: {}
+  rpcTransport: json-rpc
+  secret: osp-secret
+  serviceUser: heat
+  standalone: false
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatAPI
+metadata:
+  finalizers:
+    - HeatAPI
+  name: heat-api
+  namespace: openstack
+  ownerReferences:
+    - apiVersion: heat.openstack.org/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Heat
+      name: heat
+spec:
+  containerImage: quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo
+  customServiceConfig: "# add your customization here"
+  databaseHostname: openstack
+  databaseUser: heat
+  debug:
+    bootstrap: false
+    dbSync: false
+    service: false
+  passwordSelectors:
+    database: AdminPassword
+    service: AdminPassword
+  replicas: 1
+  resources: {}
+  secret: osp-secret
+  serviceUser: heat
+  transportURLSecret: rabbitmq-transport-url-heat-heat-transport
+status:
+  readyCount: 1
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatEngine
+metadata:
+  finalizers:
+    - HeatEngine
+  name: heat-engine
+  namespace: openstack
+  ownerReferences:
+    - apiVersion: heat.openstack.org/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Heat
+      name: heat
+spec:
+  containerImage: quay.io/tripleozedcentos9/openstack-heat-engine:current-tripleo
+  customServiceConfig: "# add your customization here"
+  databaseHostname: openstack
+  databaseUser: heat
+  debug:
+    bootstrap: false
+    dbSync: false
+    service: false
+  passwordSelectors:
+    database: AdminPassword
+    service: AdminPassword
+  replicas: 1
+  resources: {}
+  secret: osp-secret
+  serviceUser: heat
+  transportURLSecret: rabbitmq-transport-url-heat-heat-transport
+---
+# Test the status code is correct for each endpoint
+# This test is for heat endpoints
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+namespaced: true
+commands:
+  - script: |
+      set -x
+      RETURN_CODE=0
+      PUBLIC_URL=$(oc get route heat-public -o jsonpath='{.status.ingress[0].host}')
+      STATUSCODE=$(curl --silent --output /dev/stderr --head --write-out "%{http_code}" $PUBLIC_URL)
+      if test $STATUSCODE -ne 200; then
+          RETURN_CODE=1
+          echo "${PUBLIC_URL} status code expected is 200 but was ${STATUSCODE}"
+      fi
+      exit $RETURN_CODE
