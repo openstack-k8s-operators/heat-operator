@@ -3,6 +3,8 @@
 # It should be run by config/default
 resources:
 - bases/heat.openstack.org_heats.yaml
+- bases/heat.openstack.org_heatapis.yaml
+- bases/heat.openstack.org_heatengines.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 patchesStrategicMerge:
