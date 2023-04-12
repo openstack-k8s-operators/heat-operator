@@ -5,7 +5,7 @@ go 1.19
 replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 
 require (
-	github.com/go-logr/logr v1.2.3
+	github.com/go-logr/logr v1.2.4
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230322092715-eb887e4e80bc
 	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230220203606-fedb77ed9233
