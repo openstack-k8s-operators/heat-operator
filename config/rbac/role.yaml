@@ -11,6 +11,19 @@ rules:
   - deployments
   verbs:
   - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
   - get
   - list
   - patch
@@ -22,6 +35,7 @@ rules:
   - configmaps
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
@@ -50,6 +64,32 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatapis
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatapis/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatapis/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - heat.openstack.org
   resources:
@@ -141,8 +181,48 @@ rules:
   resources:
   - keystoneendpoints
   verbs:
+  - create
+  - delete
   - get
   - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - keystone.openstack.org
+  resources:
+  - keystoneservices
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - mariadb.openstack.org
+  resources:
+  - mariadbdatabases
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - rabbitmq.openstack.org
+  resources:
+  - transporturls
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
   - watch
 - apiGroups:
   - route.openshift.io
@@ -150,6 +230,7 @@ rules:
   - routes
   verbs:
   - create
+  - delete
   - get
   - list
   - patch
