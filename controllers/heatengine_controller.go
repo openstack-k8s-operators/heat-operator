@@ -43,7 +43,6 @@ import (
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	configmap "github.com/openstack-k8s-operators/lib-common/modules/common/configmap"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/deployment"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/labels"
@@ -68,7 +67,6 @@ type HeatEngineReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;
-// +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneendpoints,verbs=get;list;watch;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -444,7 +442,7 @@ func (r *HeatEngineReconciler) generateServiceConfigMaps(
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
 
 	// customData hold any customization for the service.
-	// custom.conf is going to be merged into /etc/heat/heat.conf
+	// custom.conf is going to /etc/heat/heat.conf.d
 	// TODO: make sure custom.conf can not be overwritten
 	customData := map[string]string{common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig}
 
@@ -454,41 +452,19 @@ func (r *HeatEngineReconciler) generateServiceConfigMaps(
 
 	customData[common.CustomServiceConfigFileName] = instance.Spec.CustomServiceConfig
 
-	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
-	if err != nil {
-		return err
-	}
-	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
-	if err != nil {
-		return err
-	}
-
-	templateParameters := map[string]interface{}{
-		"KeystonePublicURL":        authURL,
-		"ServiceUser":              instance.Spec.ServiceUser,
-		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
-		"StackDomainName":          heat.StackDomainName,
-	}
-
 	cms := []util.Template{
 		// Custom ConfigMap
 		{
-			Name:          fmt.Sprintf("%s-config-data", instance.Name),
-			Namespace:     instance.Namespace,
-			Type:          util.TemplateTypeConfig,
-			InstanceType:  instance.Kind,
-			CustomData:    customData,
-			ConfigOptions: templateParameters,
-			Labels:        cmLabels,
+			Name:         fmt.Sprintf("%s-config-data", instance.Name),
+			Namespace:    instance.Namespace,
+			Type:         util.TemplateTypeConfig,
+			InstanceType: instance.Kind,
+			CustomData:   customData,
+			Labels:       cmLabels,
 		},
 	}
 
-	err = configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
-	if err != nil {
-		return nil
-	}
-
-	return nil
+	return configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 }
 
 // createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart

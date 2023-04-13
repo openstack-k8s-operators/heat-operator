@@ -688,8 +688,10 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	}
 
 	templateParameters := map[string]interface{}{
-		"KeystonePublicURL": authURL,
-		"ServiceUser":       instance.Spec.ServiceUser,
+		"KeystonePublicURL":        authURL,
+		"ServiceUser":              instance.Spec.ServiceUser,
+		"StackdomainAdminUsername": heat.StackDomainAdminUsername,
+		"StackdomainName":          heat.StackDomainName,
 	}
 
 	cms := []util.Template{
@@ -713,12 +715,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 			Labels:        cmLabels,
 		},
 	}
-	err = configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
-	if err != nil {
-		return nil
-	}
-
-	return nil
+	return configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 }
 
 func (r *HeatReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
