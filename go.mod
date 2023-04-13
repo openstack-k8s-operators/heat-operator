@@ -14,9 +14,9 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230216124714-dd23df83ccb7
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230327081958-ea3a766f017d
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230216151116-2ff4f7be323b
-	k8s.io/api v0.26.3
+	k8s.io/api v0.27.0
 	k8s.io/apimachinery v0.27.0
-	k8s.io/client-go v0.26.3
+	k8s.io/client-go v0.27.0
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
@@ -52,7 +52,6 @@ require (
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
 	github.com/prometheus/procfs v0.9.0 // indirect
-	github.com/rogpeppe/go-internal v1.10.0 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
