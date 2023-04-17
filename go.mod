@@ -14,9 +14,9 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230216124714-dd23df83ccb7
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230327081958-ea3a766f017d
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230216151116-2ff4f7be323b
-	k8s.io/api v0.26.3
-	k8s.io/apimachinery v0.27.0
-	k8s.io/client-go v0.26.3
+	k8s.io/api v0.27.1
+	k8s.io/apimachinery v0.27.1
+	k8s.io/client-go v0.27.1
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
