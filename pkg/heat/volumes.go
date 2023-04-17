@@ -23,6 +23,7 @@ import (
 func GetVolumes(name string) []corev1.Volume {
 	var scriptsVolumeDefaultMode int32 = 0755
 	var config0640AccessMode int32 = 0640
+	var config0600AccessMode int32 = 0600
 
 	return []corev1.Volume{
 		{
@@ -53,6 +54,15 @@ func GetVolumes(name string) []corev1.Volume {
 				EmptyDir: &corev1.EmptyDirVolumeSource{Medium: ""},
 			},
 		},
+		{
+			Name: "config-data-secrets",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  ServiceName,
+					DefaultMode: &config0600AccessMode,
+				},
+			},
+		},
 	}
 }
 
@@ -74,6 +84,11 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 			MountPath: "/var/lib/config-data/merged",
 			ReadOnly:  false,
 		},
+		{
+			Name:      "config-data-secrets",
+			MountPath: "/var/lib/config-data/secrets",
+			ReadOnly:  true,
+		},
 	}
 
 }
@@ -90,6 +105,11 @@ func GetVolumeMounts() []corev1.VolumeMount {
 			Name:      "config-data-merged",
 			MountPath: "/var/lib/config-data/merged",
 			ReadOnly:  false,
+		},
+		{
+			Name:      "config-data-secrets",
+			MountPath: "/var/lib/config-data/secrets",
+			ReadOnly:  true,
 		},
 	}
 }

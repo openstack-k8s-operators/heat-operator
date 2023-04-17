@@ -16,6 +16,13 @@
       "perm": "0644"
     },
     {
+      "source": "/var/lib/config-data/secrets/heat.conf",
+      "dest": "/etc/heat/heat.conf.d/secrets.conf",
+      "merge": false,
+      "preserve_properties": true,
+      "perm": "0600"
+    },
+    {
       "source": "/var/lib/config-data/merged/heat-api-httpd.conf",
       "dest": "/etc/httpd/conf/httpd.conf",
       "merge": false,

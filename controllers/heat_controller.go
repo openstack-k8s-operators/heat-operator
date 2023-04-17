@@ -26,6 +26,7 @@ import (
 
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/rand"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -326,6 +327,21 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
+	err = r.ensureHeatSecret(ctx, instance, helper, &configMapVars)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.ServiceConfigReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.ServiceConfigReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+
+	//
+	// create hash over all the different input resources to identify if any those changed
+	// and a restart/recreate is required.
+	//
 	_, err = r.createHashOfInputHashes(ctx, instance, configMapVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -337,9 +353,9 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
-	// Create ConfigMaps and Secrets - end
-
 	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
+
+	// Create ConfigMaps and Secrets - end
 
 	//
 	// TODO check when/if Init, Update, or Upgrade should/could be skipped
@@ -718,7 +734,46 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	return configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 }
 
-func (r *HeatReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
+// ensureHeatSecret - Creats a k8s secret to hold the heat secrets
+func (r *HeatReconciler) ensureHeatSecret(
+	ctx context.Context,
+	instance *heatv1beta1.Heat,
+	h *helper.Helper,
+	envVars *map[string]env.Setter,
+) error {
+	Labels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
+	//
+	// check if secret already exist
+	//
+	scrt, _, err := oko_secret.GetSecret(ctx, h, horizon.ServiceName, instance.Namespace)
+	if err != nil {
+		if !k8s_errors.IsNotFound(err) {
+			return err
+		}
+
+		r.Log.Info("Creating Heat Secret")
+		tmpl := []util.Template{
+			Name:               heat.ServiceName,
+			Namespace:          instance.Namespace,
+			Type:               util.TemplateTypeNone,
+			AdditionalTemplate: map[string]string{
+				"heat-secrets.conf": "/secrets/heat.conf",
+			},
+			CustomData: map[string]string{
+				"AuthEncryptionKey": rand.String(32),
+			},
+			Labels: Labels,
+		}
+		err := oko_secret.EnsureSecrets(ctx, h, instance, tmpl, envVars)
+	}
+	return err
+}
+
+func (r *HeatReconciler) reconcileUpgrade(
+	ctx context.Context,
+	instance *heatv1beta1.Heat,
+	helper *helper.Helper,
+) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Heat upgrade")
 
 	// TODO(bshephar): should have major version upgrade tasks
@@ -750,7 +805,9 @@ func (r *HeatReconciler) createHashOfInputHashes(
 	return hash, nil
 }
 
-func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
+func (r *HeatReconciler) transportURLCreateOrUpdate(
+	instance *heatv1beta1.Heat,
+) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
 	transportURL := &rabbitmqv1.TransportURL{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-heat-transport", instance.Name),
@@ -778,7 +835,13 @@ func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os *openstack
 	return domainID, nil
 }
 
-func (r *HeatReconciler) ensureHeatUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, keystoneAPI *keystonev1.KeystoneAPI, os *openstack.OpenStack) (string, error) {
+func (r *HeatReconciler) ensureHeatUser(
+	ctx context.Context,
+	helper *helper.Helper,
+	instance *heatv1beta1.Heat,
+	keystoneAPI *keystonev1.KeystoneAPI,
+	os *openstack.OpenStack,
+) (string, error) {
 
 	// get the password of the service user from the secret
 	password, _, err := oko_secret.GetDataFromSecret(
@@ -804,7 +867,11 @@ func (r *HeatReconciler) ensureHeatUser(ctx context.Context, helper *helper.Help
 	return userID, nil
 }
 
-func (r *HeatReconciler) addUserToDomain(userID string, domainID string, os *openstack.OpenStack) error {
+func (r *HeatReconciler) addUserToDomain(
+	userID string,
+	domainID string,
+	os *openstack.OpenStack,
+) error {
 	//
 	// add user to admin role
 	//
