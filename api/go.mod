@@ -3,17 +3,18 @@ module github.com/openstack-k8s-operators/heat-operator/api
 go 1.19
 
 require (
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230317112218-d5812b757909
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230327081958-ea3a766f017d
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.27.0
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
 require (
-	github.com/go-logr/logr v1.2.3 // indirect
+	github.com/go-logr/logr v1.2.4 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/kr/text v0.2.0 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
 	github.com/modern-go/reflect2 v1.0.2 // indirect
 	github.com/rogpeppe/go-internal v1.10.0 // indirect

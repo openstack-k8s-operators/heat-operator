@@ -280,3 +280,4 @@ gowork: ## Generate go.work file
 	test -f go.work || go work init
 	go work use .
 	go work use ./api
+	go work sync
