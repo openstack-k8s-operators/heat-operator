@@ -22,7 +22,7 @@ spec:
     dbSync:
     service: false
   heatAPI:
-    containerImage: "quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo"
+    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
@@ -37,7 +37,7 @@ spec:
     secret: "osp-secret"
     serviceUser: ""
   heatEngine:
-    containerImage: "quay.io/tripleozedcentos9/openstack-heat-engine:current-tripleo"
+    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
@@ -77,7 +77,7 @@ metadata:
       kind: Heat
       name: heat
 spec:
-  containerImage: quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo
+  containerImage: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
   customServiceConfig: "# add your customization here"
   databaseHostname: openstack
   debug:
@@ -108,7 +108,7 @@ metadata:
       kind: Heat
       name: heat
 spec:
-  containerImage: quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo
+  containerImage: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
   customServiceConfig: "# add your customization here"
   databaseHostname: openstack
   databaseUser: heat
@@ -141,7 +141,7 @@ metadata:
       kind: Heat
       name: heat
 spec:
-  containerImage: quay.io/tripleozedcentos9/openstack-heat-engine:current-tripleo
+  containerImage: quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified
   customServiceConfig: "# add your customization here"
   databaseHostname: openstack
   databaseUser: heat

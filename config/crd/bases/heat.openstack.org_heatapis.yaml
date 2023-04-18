@@ -36,7 +36,7 @@ spec:
             description: HeatAPISpec defines the desired state of Heat
             properties:
               containerImage:
-                default: quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo
+                default: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
                 description: ContainerImage - Heat API Container Image URL
                 type: string
               customServiceConfig:

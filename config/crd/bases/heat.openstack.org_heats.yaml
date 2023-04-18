@@ -85,7 +85,7 @@ spec:
                   Heat deployment
                 properties:
                   containerImage:
-                    default: quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo
+                    default: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
                     description: ContainerImage - Heat API Container Image URL
                     type: string
                   customServiceConfig:
@@ -228,7 +228,7 @@ spec:
                   Heat deployment
                 properties:
                   containerImage:
-                    default: quay.io/tripleozedcentos9/openstack-heat-engine:current-tripleo
+                    default: quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified
                     description: ContainerImage - Heat API Container Image URL
                     type: string
                   customServiceConfig:
