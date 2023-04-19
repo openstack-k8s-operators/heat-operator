@@ -22,15 +22,13 @@ spec:
   databaseUser: "heat"
   rabbitMqClusterName: rabbitmq
   debug:
-    bootstrap: false
-    dbSync:
+    dbSync: false
     service: false
   heatAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      bootstrap: false
       dbSync: false
       service: false
     passwordSelectors:
@@ -45,7 +43,6 @@ spec:
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      bootstrap: false
       dbSync: false
       service: false
     passwordSelectors:
@@ -74,7 +71,6 @@ spec:
   databaseInstance: openstack
   databaseUser: heat
   debug:
-    bootstrap: false
     dbSync: false
     service: false
 ```
@@ -116,15 +112,13 @@ heat:
     databaseUser: "heat"
     rabbitMqClusterName: rabbitmq
     debug:
-      bootstrap: false
-      dbSync:
+      dbSync: false
       service: false
     heatAPI:
       containerImage: "quay.io/tripleozedcentos9/openstack-heat-api:current-tripleo"
       customServiceConfig: "# add your customization here"
       databaseUser: "heat"
       debug:
-        bootstrap: false
         dbSync: false
         service: false
       passwordSelectors:
@@ -139,7 +133,6 @@ heat:
       customServiceConfig: "# add your customization here"
       databaseUser: "heat"
       debug:
-        bootstrap: false
         dbSync: false
         service: false
       passwordSelectors:
