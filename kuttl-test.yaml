@@ -19,7 +19,7 @@ kind: TestSuite
 reportFormat: JSON
 reportName: kuttl-test-heat
 namespace: openstack
-timeout: 450
+timeout: 400
 parallel: 1
 suppress:
   - events
