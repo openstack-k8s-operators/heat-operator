@@ -8,7 +8,6 @@ spec:
   databaseUser: "heat"
   rabbitMqClusterName: rabbitmq
   debug:
-    bootstrap: false
     dbSync:
     service: false
   heatAPI:
@@ -16,7 +15,6 @@ spec:
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      bootstrap: false
       dbSync: false
       service: false
     passwordSelectors:
@@ -31,7 +29,6 @@ spec:
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      bootstrap: false
       dbSync: false
       service: false
     passwordSelectors:
