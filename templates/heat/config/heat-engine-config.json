@@ -21,11 +21,6 @@
       "path": "/etc/heat/heat.conf.d",
       "owner": "heat:heat",
       "recurse": true
-    },
-    {
-      "path": "/var/log/heat",
-      "owner": "heat:heat",
-      "recurse": true
     }
   ]
 }
