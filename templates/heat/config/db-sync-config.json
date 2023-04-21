@@ -13,12 +13,5 @@
       "owner": "heat",
       "perm": "0600"
     }
-  ],
-  "permissions": [
-    {
-      "path": "/var/log/heat",
-      "owner": "heat:heat",
-      "recurse": true
-    }
   ]
 }
