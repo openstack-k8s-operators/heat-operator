@@ -2,5 +2,4 @@ apiVersion: kuttl.dev/v1beta1
 kind: TestStep
 commands:
   - script: |
-      PWD=$INSTALL_YAMLS
-      make -C $INSTALL_YAMLS heat_deploy
+      oc apply -n openstack -f ../../../../config/samples/heat_v1beta1_heat.yaml
