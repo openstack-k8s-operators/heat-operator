@@ -37,11 +37,6 @@
       "recurse": true
     },
     {
-      "path": "/var/log/heat",
-      "owner": "heat:heat",
-      "recurse": true
-    },
-    {
       "path": "/etc/httpd/",
       "owner": "apache:apache",
       "recurse": true

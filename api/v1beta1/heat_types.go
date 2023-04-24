@@ -123,10 +123,6 @@ type HeatDebug struct {
 	DBSync bool `json:"dbSync,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
-	// ReadyCount enable debug
-	Bootstrap bool `json:"bootstrap,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
 	// Service enable debug
 	Service bool `json:"service,omitempty"`
 }
