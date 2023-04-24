@@ -7,13 +7,13 @@ replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 require (
 	github.com/go-logr/logr v1.2.4
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230322092715-eb887e4e80bc
-	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230220203606-fedb77ed9233
-	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230217165024-22a34597a601
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230327081958-ea3a766f017d
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230216124714-dd23df83ccb7
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230327081958-ea3a766f017d
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230216151116-2ff4f7be323b
+	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230424000227-62883ba8f5f4
+	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230420195930-f71e24e80596
+	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230412125711-203185e59d89
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230420182422-a15a0625dc00
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230420182422-a15a0625dc00
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230420182422-a15a0625dc00
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230421100625-87c509d03c93
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.27.0
 	k8s.io/client-go v0.26.3
@@ -56,11 +56,11 @@ require (
 	go.uber.org/atomic v1.10.0 // indirect
 	go.uber.org/multierr v1.9.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/net v0.8.0 // indirect
+	golang.org/x/net v0.9.0 // indirect
 	golang.org/x/oauth2 v0.6.0 // indirect
-	golang.org/x/sys v0.6.0 // indirect
-	golang.org/x/term v0.6.0 // indirect
-	golang.org/x/text v0.8.0 // indirect
+	golang.org/x/sys v0.7.0 // indirect
+	golang.org/x/term v0.7.0 // indirect
+	golang.org/x/text v0.9.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
