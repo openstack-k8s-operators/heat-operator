@@ -240,24 +240,24 @@ func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv
 	for _, ksSvc := range keystoneServices {
 		keystoneEndpoint, err := keystonev1.GetKeystoneEndpointWithName(ctx, helper, ksSvc["name"], instance.Namespace)
 		if err != nil && !k8s_errors.IsNotFound(err) {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("Failed to get Keystone endpoint: %w", err)
 		}
 		if err == nil {
 			controllerutil.RemoveFinalizer(keystoneEndpoint, helper.GetFinalizer())
 			if err = helper.GetClient().Update(ctx, keystoneEndpoint); err != nil && !k8s_errors.IsNotFound(err) {
-				return ctrl.Result{}, err
+				return ctrl.Result{}, fmt.Errorf("Failed to remove finalizer: %w", err)
 			}
 			util.LogForObject(helper, "Removed finalizer from KeystoneEndpoint", instance)
 		}
 
 		keystoneService, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, ksSvc["name"], instance.Namespace)
 		if err != nil && !k8s_errors.IsNotFound(err) {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("Failed to get Keystone service: %w", err)
 		}
 		if err == nil {
 			controllerutil.RemoveFinalizer(keystoneService, helper.GetFinalizer())
 			if err = helper.GetClient().Update(ctx, keystoneService); err != nil && !k8s_errors.IsNotFound(err) {
-				return ctrl.Result{}, err
+				return ctrl.Result{}, fmt.Errorf("Failed to remove finalizer from Keystone Service: %w", err)
 			}
 			util.LogForObject(helper, "Removed finalizer from our KeystoneService", instance)
 		}
@@ -266,7 +266,7 @@ func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	r.Log.Info("Reconciled API delete successfully")
 	if err := r.Update(ctx, instance); err != nil && !k8s_errors.IsNotFound(err) {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Failed to update %s instance: %w", instance.Name, err)
 	}
 	return ctrl.Result{}, nil
 }
@@ -314,7 +314,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 			condition.SeverityWarning,
 			condition.ExposeServiceReadyErrorMessage,
 			err.Error()))
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Failed tpo expose %s endpoint: %w", instance.Name, err)
 	} else if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ExposeServiceReadyCondition,
@@ -361,7 +361,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 		ksSvcObj := keystonev1.NewKeystoneService(ksSvcSpec, instance.Namespace, serviceLabels, time.Duration(10)*time.Second)
 		ctrlResult, err = ksSvcObj.CreateOrPatch(ctx, helper)
 		if err != nil {
-			return ctrlResult, err
+			return ctrlResult, fmt.Errorf("Failed to create KeystoneService for %s: %w", instance.Name, err)
 		}
 
 		// mirror the Status, Reason, Severity and Message of the latest keystoneservice condition
@@ -392,7 +392,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 			time.Duration(10)*time.Second)
 		ctrlResult, err = ksEndpt.CreateOrPatch(ctx, helper)
 		if err != nil {
-			return ctrlResult, err
+			return ctrlResult, fmt.Errorf("Failed to create KeystoneEndpoint: %w", err)
 		}
 		// mirror the Status, Reason, Severity and Message of the latest keystoneendpoint condition
 		// into a local condition with the type condition.KeystoneEndpointReadyCondition
@@ -417,7 +417,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
 	// Register the finalizer immediately to avoid orphaning resources on delete
 	if err := r.Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Failed to update instance with finalizer: %w", err)
 	}
 	// ConfigMap
 	configMapVars := make(map[string]env.Setter)
@@ -441,7 +441,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			condition.SeverityWarning,
 			condition.InputReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Failed to get OpenStack Secret: %w", err)
 	}
 	configMapVars[ospSecret.Name] = env.SetValue(hash)
 	// run check OpenStack secret - end
@@ -473,7 +473,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			condition.SeverityWarning,
 			condition.InputReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Failed to get config map: %w", err)
 	}
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 	// run check parent Heat CR config maps - end
@@ -493,7 +493,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			condition.SeverityWarning,
 			condition.ServiceConfigReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Failed to generate config map for %s: %w", instance.Name, err)
 	}
 	// Create ConfigMaps - end
 	// Create ConfigMaps and Secrets - end
@@ -509,7 +509,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			condition.SeverityWarning,
 			condition.ServiceConfigReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Failed to create hash of config inputs: %w", err)
 	}
 	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
 	//
@@ -524,7 +524,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	// Handle service init
 	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
 	if err != nil {
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Failed to initialize %s service: %w", instance.Name, err)
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
@@ -532,7 +532,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	// Handle service update
 	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
 	if err != nil {
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Failed to update %s: %w", instance.Name, err)
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
@@ -540,7 +540,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	// Handle service upgrade
 	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
 	if err != nil {
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Failed to upgrade %s: %w", instance.Name, err)
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
@@ -563,7 +563,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			condition.SeverityWarning,
 			condition.DeploymentReadyErrorMessage,
 			err.Error()))
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Failed to create %s deployment: %w", instance.Name, err)
 	} else if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,
@@ -653,12 +653,12 @@ func (r *HeatAPIReconciler) createHashOfInputHashes(
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
 	hash, err := util.ObjectHash(mergedMapVars)
 	if err != nil {
-		return hash, err
+		return hash, fmt.Errorf("Failed to create Hash of inputs: %w", err)
 	}
 	if hashMap, changed := util.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
 		instance.Status.Hash = hashMap
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
-			return hash, err
+			return hash, fmt.Errorf("Failed to update %s status with config hash: %w", instance.Name, err)
 		}
 		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
