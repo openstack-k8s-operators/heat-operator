@@ -118,7 +118,6 @@ spec:
   resources: {}
   secret: osp-secret
   serviceUser: heat
-  transportURLSecret: rabbitmq-transport-url-heat-heat-transport
 status:
   readyCount: 1
 ---
@@ -150,7 +149,6 @@ spec:
   resources: {}
   secret: osp-secret
   serviceUser: heat
-  transportURLSecret: rabbitmq-transport-url-heat-heat-transport
 ---
 # Test the status code is correct for each endpoint
 # This test is for heat endpoints

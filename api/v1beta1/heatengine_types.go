@@ -83,10 +83,6 @@ type HeatEngineSpec struct {
 	// Resources - Compute Resources required by this service (Limits/Requests).
 	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
 	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// TransportURLSecret - Secret containing RabbitMQ transportURL
-	TransportURLSecret string `json:"transportURLSecret,omitempty"`
 }
 
 // HeatEngineStatus defines the observed state of Heat

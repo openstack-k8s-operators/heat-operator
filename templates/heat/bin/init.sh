@@ -21,9 +21,6 @@ export DBHOST=${DatabaseHost:?"Please specify a DatabaseHost variable."}
 export DBUSER=${DatabaseUser:-"heat"}
 export DBPASSWORD=${DatabasePassword:?"Please specify a DatabasePassword variable."}
 export heatPASSWORD=${HeatPassword:?"Please specify a HeatPassword variable."}
-# TODO: nova password
-#export NOVAPASSWORD=${NovaPassword:?"Please specify a NovaPassword variable."}
-# TODO: transportURL
 export TRANSPORTURL=${TransportURL:-""}
 
 export CUSTOMCONF=${CustomConf:-""}
@@ -66,7 +63,6 @@ if [ -n "$CUSTOMCONF" ]; then
 fi
 
 # set secrets
-# TODO: transportURL
 if [ -n "$TRANSPORTURL" ]; then
     crudini --set ${SVC_CFG_MERGED} DEFAULT transport_url $TRANSPORTURL
 fi
@@ -75,5 +71,3 @@ crudini --set ${SVC_CFG_MERGED} database connection mysql+pymysql://${DBUSER}:${
 crudini --set ${SVC_CFG_MERGED} keystone_authtoken password $heatPASSWORD
 crudini --set ${SVC_CFG_MERGED} DEFAULT stack_domain_admin_password $heatPASSWORD
 crudini --set ${SVC_CFG_MERGED} trustee password $heatPASSWORD
-# TODO: service token
-#crudini --set ${SVC_CFG_MERGED} service_user password $HeatPassword

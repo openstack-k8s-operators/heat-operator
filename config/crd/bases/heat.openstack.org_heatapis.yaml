@@ -161,9 +161,6 @@ spec:
                 description: ServiceUser - optional username used for this service
                   to register in heat
                 type: string
-              transportURLSecret:
-                description: TransportURLSecret - Secret containing RabbitMQ transportURL
-                type: string
             required:
             - containerImage
             - secret
