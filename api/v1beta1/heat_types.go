@@ -92,7 +92,7 @@ type HeatSpec struct {
 	HeatAPI HeatAPISpec `json:"heatAPI"`
 
 	// +kubebuilder:validation:Required
-	// HeatEngine - Spec definition for the API service of this Heat deployment
+	// HeatEngine - Spec definition for the Engine service of this Heat deployment
 	HeatEngine HeatEngineSpec `json:"heatEngine"`
 
 	// +kubebuilder:validation:Required
@@ -153,7 +153,7 @@ type HeatStatus struct {
 	// ReadyCount of Heat API instance
 	HeatAPIReadyCount int32 `json:"heatApiReadyCount,omitempty"`
 
-	// ReadyCount of Heat API instance
+	// ReadyCount of Heat Engine instance
 	HeatEngineReadyCount int32 `json:"heatEngineReadyCount,omitempty"`
 }
 
