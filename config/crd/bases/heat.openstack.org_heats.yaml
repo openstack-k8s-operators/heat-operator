@@ -216,8 +216,8 @@ spec:
                 - secret
                 type: object
               heatEngine:
-                description: HeatEngine - Spec definition for the API service of this
-                  Heat deployment
+                description: HeatEngine - Spec definition for the Engine service of
+                  this Heat deployment
                 properties:
                   containerImage:
                     default: quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified
@@ -470,7 +470,7 @@ spec:
                 format: int32
                 type: integer
               heatEngineReadyCount:
-                description: ReadyCount of Heat API instance
+                description: ReadyCount of Heat Engine instance
                 format: int32
                 type: integer
               readyCount:
