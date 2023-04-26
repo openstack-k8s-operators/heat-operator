@@ -85,7 +85,6 @@ spec:
     service: HeatPassword
   replicas: 1
   resources: {}
-  rpcTransport: json-rpc
   secret: osp-secret
   serviceUser: heat
   standalone: false
