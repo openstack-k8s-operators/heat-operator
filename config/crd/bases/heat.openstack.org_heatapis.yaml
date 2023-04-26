@@ -85,8 +85,11 @@ spec:
                   the API service
                 type: object
               passwordSelectors:
+                default:
+                  database: HeatDatabasePassword
+                  service: HeatPassword
                 description: PasswordSelectors - Selectors to identify the DB and
-                  AdminUser password from the Secret
+                  ServiceUser password from the Secret
                 properties:
                   database:
                     default: heatDatabasePassword
@@ -154,7 +157,7 @@ spec:
                 type: object
               secret:
                 description: Secret containing OpenStack password information for
-                  heat HeatDatabasePassword, AdminPassword
+                  heat HeatDatabasePassword, HeatPassword
                 type: string
               serviceUser:
                 default: heat

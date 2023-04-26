@@ -28,8 +28,8 @@ spec:
       dbSync: false
       service: false
     passwordSelectors:
-      service: AdminPassword
-      database: AdminPassword
+      service: HeatPassword
+      database: HeatDatabasePassword
     replicas: 1
     resources: {}
     secret: "osp-secret"
@@ -42,15 +42,15 @@ spec:
       dbSync: false
       service: false
     passwordSelectors:
-      service: AdminPassword
-      database: AdminPassword
+      service: HeatPassword
+      database: HeatDatabasePassword
     replicas: 1
     resources: {}
     secret: "osp-secret"
     serviceUser: ""
   passwordSelectors:
-    service: AdminPassword
-    database: AdminPassword
+    service: HeatPassword
+    database: HeatDatabasePassword
   preserveJobs: false
   secret: osp-secret
   serviceUser: "heat"
@@ -111,8 +111,8 @@ spec:
     dbSync: false
     service: false
   passwordSelectors:
-    database: AdminPassword
-    service: AdminPassword
+    database: HeatDatabasePassword
+    service: HeatPassword
   replicas: 1
   resources: {}
   secret: osp-secret
@@ -143,8 +143,8 @@ spec:
     dbSync: false
     service: false
   passwordSelectors:
-    database: AdminPassword
-    service: AdminPassword
+    database: HeatDatabasePassword
+    service: HeatPassword
   replicas: 1
   resources: {}
   secret: osp-secret

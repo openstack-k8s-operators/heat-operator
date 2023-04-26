@@ -50,11 +50,12 @@ type HeatSpec struct {
 	DatabaseUser string `json:"databaseUser"`
 
 	// +kubebuilder:validation:Required
-	// Secret containing OpenStack password information for heat HeatDatabasePassword, AdminPassword
+	// Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
-	// PasswordSelectors - Selectors to identify the DB and AdminUser password from the Secret
+	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword}
+	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
 
 	// +kubebuilder:validation:Optional

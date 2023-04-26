@@ -32,8 +32,8 @@ spec:
       dbSync: false
       service: false
     passwordSelectors:
-      service: AdminPassword
-      database: AdminPassword
+      service: HeatPassword
+      database: HeatDatabasePassword
     replicas: 1
     resources: {}
     secret: "osp-secret"
@@ -46,15 +46,15 @@ spec:
       dbSync: false
       service: false
     passwordSelectors:
-      service: AdminPassword
-      database: AdminPassword
+      service: HeatPassword
+      database: HeatDatabasePassword
     replicas: 1
     resources: {}
     secret: "osp-secret"
     serviceUser: ""
   passwordSelectors:
-    service: AdminPassword
-    database: AdminPassword
+    service: HeatPassword
+    database: HeatDatabasePassword
   preserveJobs: false
   secret: osp-secret
   serviceUser: "heat"
@@ -122,8 +122,8 @@ heat:
         dbSync: false
         service: false
       passwordSelectors:
-        service: AdminPassword
-        database: AdminPassword
+        service: HeatPassword
+        database: HeatDatabasePassword
       replicas: 1
       resources: {}
       secret: "osp-secret"
@@ -136,15 +136,15 @@ heat:
         dbSync: false
         service: false
       passwordSelectors:
-        service: AdminPassword
-        database: AdminPassword
+        service: HeatPassword
+        database: HeatDatabasePassword
       replicas: 1
       resources: {}
       secret: "osp-secret"
       serviceUser: ""
     passwordSelectors:
-      service: AdminPassword
-      database: AdminPassword
+      service: HeatPassword
+      database: HeatDatabasePassword
     preserveJobs: false
     secret: osp-secret
     serviceUser: "heat"
@@ -166,13 +166,13 @@ heat:
     rabbitMqClusterName: rabbitmq
 ```
 
-The `AdminPassword` defined in the examples here are user defined and contained within the provided secret:
+The `HeatPassword` and `HeatDatabasePassword` defined in the examples here are user defined and contained within the provided secret:
 
 ```yaml
 [...]
     passwordSelectors:
-      service: AdminPassword
-      database: AdminPassword
+      service: HeatPassword
+      database: HeatDatabasePassword
     [...]
     secret: osp-secret
 ```
@@ -180,10 +180,10 @@ The `AdminPassword` defined in the examples here are user defined and contained 
 The `osp-secret` contains the base64 encoded password string:
 
 ```sh
-❯ oc get secret osp-secret -o jsonpath={.data.AdminPassword}
+❯ oc get secret osp-secret -o jsonpath={.data.HeatPassword}
 MTIzNDU2Nzg=
 
-❯ oc get secret osp-secret -o jsonpath={.data.AdminPassword} | base64 -d
+❯ oc get secret osp-secret -o jsonpath={.data.HeatPassword} | base64 -d
 12345678
 ```
 
