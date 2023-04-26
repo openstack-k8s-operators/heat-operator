@@ -3,6 +3,7 @@
 #
 # Heat
 # HeatAPI
+# HeatCfnAPI
 # HeatEngine
 # apiEndpoints
 # service port connectivity
@@ -21,6 +22,21 @@ spec:
     service: false
   heatAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
+    customServiceConfig: "# add your customization here"
+    databaseUser: "heat"
+    debug:
+      dbSync: false
+      service: false
+    passwordSelectors:
+      authEncryptionKey: HeatAuthEncryptionKey
+      service: HeatPassword
+      database: HeatDatabasePassword
+    replicas: 1
+    resources: {}
+    secret: "osp-secret"
+    serviceUser: ""
+  heatCfnAPI:
+    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
@@ -59,6 +75,7 @@ spec:
 status:
   databaseHostname: openstack
   heatApiReadyCount: 1
+  heatCfnApiReadyCount: 1
   heatEngineReadyCount: 1
   transportURLSecret: rabbitmq-transport-url-heat-heat-transport
 ---
@@ -77,6 +94,39 @@ metadata:
       name: heat
 spec:
   containerImage: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
+  customServiceConfig: "# add your customization here"
+  databaseHostname: openstack
+  databaseUser: heat
+  debug:
+    dbSync: false
+    service: false
+  passwordSelectors:
+    authEncryptionKey: HeatAuthEncryptionKey
+    database: HeatDatabasePassword
+    service: HeatPassword
+  replicas: 1
+  resources: {}
+  secret: osp-secret
+  serviceUser: heat
+  transportURLSecret: rabbitmq-transport-url-heat-heat-transport
+status:
+  readyCount: 1
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatCfnAPI
+metadata:
+  finalizers:
+    - HeatCfnAPI
+  name: heat-cfnapi
+  namespace: openstack
+  ownerReferences:
+    - apiVersion: heat.openstack.org/v1beta1
+      blockOwnerDeletion: true
+      controller: true
+      kind: Heat
+      name: heat
+spec:
+  containerImage: quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified
   customServiceConfig: "# add your customization here"
   databaseHostname: openstack
   databaseUser: heat

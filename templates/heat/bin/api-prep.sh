@@ -19,4 +19,3 @@ set -ex
 /usr/local/bin/kolla_httpd_setup
 
 mkdir -p /var/www/cgi-bin/heat
-cp -a /usr/bin/heat-wsgi-api /var/www/cgi-bin/heat

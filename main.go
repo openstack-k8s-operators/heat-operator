@@ -136,6 +136,16 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err = (&controllers.HeatCfnAPIReconciler{
+		Client:  mgr.GetClient(),
+		Scheme:  mgr.GetScheme(),
+		Kclient: kclient,
+		Log:     ctrl.Log.WithName("controllers").WithName("HeatCfnAPI"),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "HeatCfnAPI")
+		os.Exit(1)
+	}
+
 	if err = (&controllers.HeatEngineReconciler{
 		Client:  mgr.GetClient(),
 		Scheme:  mgr.GetScheme(),

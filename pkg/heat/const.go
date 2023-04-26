@@ -22,6 +22,10 @@ const (
 	ServiceType = "orchestration"
 	// ServiceAccount -
 	ServiceAccount = "heat-operator-heat"
+	// CfnServiceName -
+	CfnServiceName = "heat-cfn"
+	// CfnServiceType -
+	CfnServiceType = "cloudformation"
 	// StackDomainAdminUsername -
 	StackDomainAdminUsername = "heat_stack_domain_admin"
 	// StackDomainName -
@@ -32,12 +36,18 @@ const (
 	HeatPublicPort int32 = 8004
 	// HeatInternalPort -
 	HeatInternalPort int32 = 8004
+	// HeatCfnPublicPort -
+	HeatCfnPublicPort int32 = 8000
+	// HeatCfnInternalPort -
+	HeatCfnInternalPort int32 = 8000
 	// KollaConfigDbSync -
 	KollaConfigDbSync = "/var/lib/config-data/merged/db-sync-config.json"
 	// ComponentSelector - used by operators to specify pod labels
 	ComponentSelector = "component"
 	// APIComponent -
 	APIComponent = "api"
+	// CfnAPIComponent -
+	CfnAPIComponent = "cfnapi"
 	// EngineComponent -
 	EngineComponent = "engine"
 )

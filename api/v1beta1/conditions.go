@@ -23,6 +23,9 @@ const (
 	// HeatAPIReadyCondition ...
 	HeatAPIReadyCondition condition.Type = "HeatAPIReady"
 
+	// HeatCfnAPIReadyCondition ...
+	HeatCfnAPIReadyCondition condition.Type = "HeatCfnAPIReady"
+
 	// HeatEngineReadyCondition ...
 	HeatEngineReadyCondition condition.Type = "HeatEngineReady"
 )
@@ -36,6 +39,15 @@ const (
 
 	// HeatAPIReadyErrorMessage ...
 	HeatAPIReadyErrorMessage = "HeatAPI error occured %s"
+
+	// HeatCfnAPIReadyInitMessage ...
+	//
+	// HeatCfnAPIReady condition messages
+	//
+	HeatCfnAPIReadyInitMessage = "HeatCfnAPI not started"
+
+	// HeatCfnAPIReadyErrorMessage ...
+	HeatCfnAPIReadyErrorMessage = "HeatCfnAPI error occured %s"
 
 	// HeatEngineReadyInitMessage ...
 	//

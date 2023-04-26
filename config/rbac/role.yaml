@@ -119,6 +119,32 @@ rules:
 - apiGroups:
   - heat.openstack.org
   resources:
+  - heatcfnapis
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatcfnapis/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - heat.openstack.org
+  resources:
+  - heatcfnapis/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - heat.openstack.org
+  resources:
   - heatengines
   verbs:
   - create

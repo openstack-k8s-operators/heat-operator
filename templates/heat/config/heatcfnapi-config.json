@@ -16,7 +16,7 @@
       "perm": "0644"
     },
     {
-      "source": "/var/lib/config-data/merged/heat-api-httpd.conf",
+      "source": "/var/lib/config-data/merged/heat-cfnapi-httpd.conf",
       "dest": "/etc/httpd/conf/httpd.conf",
       "merge": false,
       "preserve_properties": true,

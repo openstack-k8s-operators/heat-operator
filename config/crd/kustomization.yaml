@@ -4,6 +4,7 @@
 resources:
 - bases/heat.openstack.org_heats.yaml
 - bases/heat.openstack.org_heatapis.yaml
+- bases/heat.openstack.org_heatcfnapis.yaml
 - bases/heat.openstack.org_heatengines.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
