@@ -28,6 +28,7 @@ spec:
       dbSync: false
       service: false
     passwordSelectors:
+      authEncryptionKey: HeatAuthEncryptionKey
       service: HeatPassword
       database: HeatDatabasePassword
     replicas: 1
@@ -42,6 +43,7 @@ spec:
       dbSync: false
       service: false
     passwordSelectors:
+      authEncryptionKey: HeatAuthEncryptionKey
       service: HeatPassword
       database: HeatDatabasePassword
     replicas: 1
@@ -49,6 +51,7 @@ spec:
     secret: "osp-secret"
     serviceUser: ""
   passwordSelectors:
+    authEncryptionKey: HeatAuthEncryptionKey
     service: HeatPassword
     database: HeatDatabasePassword
   preserveJobs: false
@@ -81,6 +84,7 @@ spec:
     dbSync: false
     service: false
   passwordSelectors:
+    authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword
     service: HeatPassword
   replicas: 1
@@ -111,6 +115,7 @@ spec:
     dbSync: false
     service: false
   passwordSelectors:
+    authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword
     service: HeatPassword
   replicas: 1
@@ -143,6 +148,7 @@ spec:
     dbSync: false
     service: false
   passwordSelectors:
+    authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword
     service: HeatPassword
   replicas: 1

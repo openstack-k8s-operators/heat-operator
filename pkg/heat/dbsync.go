@@ -83,14 +83,15 @@ func DBSyncJob(
 	job.Spec.Template.Spec.Volumes = GetVolumes(ServiceName)
 
 	initContainerDetails := APIDetails{
-		ContainerImage:       instance.Spec.HeatAPI.ContainerImage,
-		DatabaseHost:         instance.Status.DatabaseHostname,
-		DatabaseUser:         instance.Spec.DatabaseUser,
-		DatabaseName:         DatabaseName,
-		OSPSecret:            instance.Spec.Secret,
-		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
-		UserPasswordSelector: instance.Spec.PasswordSelectors.Service,
-		VolumeMounts:         GetInitVolumeMounts(),
+		ContainerImage:            instance.Spec.HeatAPI.ContainerImage,
+		DatabaseHost:              instance.Status.DatabaseHostname,
+		DatabaseUser:              instance.Spec.DatabaseUser,
+		DatabaseName:              DatabaseName,
+		OSPSecret:                 instance.Spec.Secret,
+		DBPasswordSelector:        instance.Spec.PasswordSelectors.Database,
+		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
+		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
+		VolumeMounts:              GetInitVolumeMounts(),
 	}
 	job.Spec.Template.Spec.InitContainers = InitContainer(initContainerDetails)
 

@@ -142,15 +142,16 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	}
 
 	initContainerDetails := heat.APIDetails{
-		ContainerImage:       instance.Spec.ContainerImage,
-		DatabaseHost:         instance.Spec.DatabaseHostname,
-		DatabaseUser:         instance.Spec.DatabaseUser,
-		DatabaseName:         heat.DatabaseName,
-		OSPSecret:            instance.Spec.Secret,
-		DBPasswordSelector:   instance.Spec.PasswordSelectors.Database,
-		UserPasswordSelector: instance.Spec.PasswordSelectors.Service,
-		VolumeMounts:         GetInitVolumeMounts(),
-		TransportURL:         instance.Spec.TransportURLSecret,
+		ContainerImage:            instance.Spec.ContainerImage,
+		DatabaseHost:              instance.Spec.DatabaseHostname,
+		DatabaseUser:              instance.Spec.DatabaseUser,
+		DatabaseName:              heat.DatabaseName,
+		OSPSecret:                 instance.Spec.Secret,
+		DBPasswordSelector:        instance.Spec.PasswordSelectors.Database,
+		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
+		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
+		VolumeMounts:              GetInitVolumeMounts(),
+		TransportURL:              instance.Spec.TransportURLSecret,
 	}
 	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
 
