@@ -690,8 +690,8 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	templateParameters := map[string]interface{}{
 		"KeystonePublicURL":        authURL,
 		"ServiceUser":              instance.Spec.ServiceUser,
-		"StackdomainAdminUsername": heat.StackDomainAdminUsername,
-		"StackdomainName":          heat.StackDomainName,
+		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
+		"StackDomainName":          heat.StackDomainName,
 	}
 
 	cms := []util.Template{
