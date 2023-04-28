@@ -19,7 +19,6 @@ import (
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
-	configmap "github.com/openstack-k8s-operators/lib-common/modules/common/configmap"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/job"
@@ -315,7 +314,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// - %-config configmap holding minimal heat config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars)
+	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, KeystoneAPIGetterImpl{}, EndpointGetterImpl{}, &ConfigMapEnsurerImpl{})
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -659,7 +658,9 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	instance *heatv1beta1.Heat,
 	h *helper.Helper,
 	envVars *map[string]env.Setter,
-) error {
+	keystoneAPIGetter KeystoneAPIGetter,
+	endpointGetter EndpointGetter,
+	configMapEnsurer ConfigMapEnsurer) error {
 	//
 	// create Configmap/Secret required for heat input
 	// - %-scripts configmap holding scripts to e.g. bootstrap the service
@@ -678,11 +679,11 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		customData[key] = data
 	}
 
-	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
+	keystoneAPI, err := keystoneAPIGetter.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
 	if err != nil {
 		return err
 	}
-	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
+	authURL, err := endpointGetter.GetEndpoint(keystoneAPI, endpoint.EndpointPublic)
 	if err != nil {
 		return err
 	}
@@ -715,7 +716,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 			Labels:        cmLabels,
 		},
 	}
-	return configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
+	return configMapEnsurer.EnsureConfigMaps(ctx, h, instance, cms, envVars)
 }
 
 func (r *HeatReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
