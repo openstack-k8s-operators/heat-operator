@@ -96,7 +96,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		if k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
 		}
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error getting instance: %w", err)
 	}
 
 	if instance.Status.Conditions == nil {
@@ -116,7 +116,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		instance.Status.Conditions.Init(&cl)
 
 		if err := r.Status().Update(ctx, instance); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("Error updating status: %w", err)
 		}
 	}
 	if instance.Status.Hash == nil {
@@ -135,7 +135,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	)
 
 	if err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error initialising new helper: %w", err)
 	}
 	// Always patch the instance status when exiting this function so we can persist any changes.
 	defer func() {
@@ -186,12 +186,12 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 	// remove db finalizer first
 	db, err := database.GetDatabaseByName(ctx, helper, instance.Name)
 	if err != nil && !k8s_errors.IsNotFound(err) {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error retrieving database: %w", err)
 	}
 
 	if !k8s_errors.IsNotFound(err) {
 		if err := db.DeleteFinalizer(ctx, helper); err != nil {
-			return ctrl.Result{}, err
+			return ctrl.Result{}, fmt.Errorf("Error removing DB finalizer: %w", err)
 		}
 	}
 
@@ -199,7 +199,7 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	r.Log.Info("Reconciled Heat delete successfully")
 	if err := r.Update(ctx, instance); err != nil && !k8s_errors.IsNotFound(err) {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error removing finalizer: %w", err)
 	}
 
 	return ctrl.Result{}, nil
@@ -223,7 +223,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.SeverityWarning,
 			heatv1beta1.HeatRabbitMqTransportURLReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error creating transportURL: %w", err)
 	}
 
 	if op != controllerutil.OperationResultNone {
@@ -264,7 +264,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.SeverityWarning,
 			condition.InputReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error looking up transportURL secret: %w", err)
 	}
 	configMapVars[transportURLSecret.Name] = env.SetValue(hash)
 
@@ -276,7 +276,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
 	// Register the finalizer immediately to avoid orphaning resources on delete
 	if err := r.Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error adding finalizer: %w", err)
 	}
 
 	//
@@ -298,7 +298,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.SeverityWarning,
 			condition.InputReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error looking up OpenStack Secret: %w", err)
 	}
 	configMapVars[ospSecret.Name] = env.SetValue(hash)
 
@@ -323,7 +323,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.SeverityWarning,
 			condition.ServiceConfigReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error creating ConfigMap for service: %w", err)
 	}
 
 	_, err = r.createHashOfInputHashes(ctx, instance, configMapVars)
@@ -334,7 +334,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.SeverityWarning,
 			condition.ServiceConfigReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error updating status with config hash: %w", err)
 	}
 
 	// Create ConfigMaps and Secrets - end
@@ -352,7 +352,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// Handle service init
 	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
 	if err != nil {
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Error initializing service: %w", err)
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
@@ -360,7 +360,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// Handle service update
 	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
 	if err != nil {
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Error updating service: %w", err)
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
@@ -368,7 +368,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// Handle service upgrade
 	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
 	if err != nil {
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Error upgrading service: %w", err)
 	} else if (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, nil
 	}
@@ -423,7 +423,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.ErrorReason,
 			condition.SeverityWarning,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error creating Heat Engine deployment: %w", err)
 	}
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
@@ -447,7 +447,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.SeverityWarning,
 			heatv1beta1.HeatAPIReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error creating Heat API deployment: %w", err)
 	}
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
@@ -501,7 +501,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 			condition.SeverityWarning,
 			condition.DBReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error creating Heat DB: %w", err)
 	}
 	if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -520,7 +520,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 			condition.SeverityWarning,
 			condition.DBReadyErrorMessage,
 			err.Error()))
-		return ctrlResult, err
+		return ctrlResult, fmt.Errorf("Error while initializing database: %w", err)
 	}
 	if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -567,7 +567,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 			condition.SeverityWarning,
 			condition.DBSyncReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrl.Result{}, fmt.Errorf("Error during DB sync: %w", err)
 	}
 	if dbSyncjob.HasChanged() {
 		instance.Status.Hash[heatv1beta1.DbSyncHash] = dbSyncjob.GetHash()
@@ -614,13 +614,13 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(instance *heatv1beta1.Heat)
 
 		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error setting Owner Reference: %w", err)
 		}
 
 		return nil
 	})
 
-	return deployment, op, err
+	return deployment, op, fmt.Errorf("Heat API deployment failed: %w", err)
 }
 
 func (r *HeatReconciler) engineDeploymentCreateOrUpdate(instance *heatv1beta1.Heat) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
@@ -643,13 +643,13 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(instance *heatv1beta1.He
 
 		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 		if err != nil {
-			return err
+			return fmt.Errorf("Error setting Owner Reference: %w", err)
 		}
 
 		return nil
 	})
 
-	return deployment, op, err
+	return deployment, op, fmt.Errorf("Heat Engine deployment failed: %w", err)
 }
 
 // generateServiceConfigMaps - create create configmaps which hold scripts and service configuration
@@ -680,11 +680,11 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 
 	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
 	if err != nil {
-		return err
+		return fmt.Errorf("Error getting Keystone API: %w", err)
 	}
 	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
 	if err != nil {
-		return err
+		return fmt.Errorf("Error getting Keystone Endpoint: %w", err)
 	}
 
 	templateParameters := map[string]interface{}{
@@ -738,12 +738,12 @@ func (r *HeatReconciler) createHashOfInputHashes(
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
 	hash, err := util.ObjectHash(mergedMapVars)
 	if err != nil {
-		return hash, err
+		return hash, fmt.Errorf("Error generating Object Hash: %w", err)
 	}
 	if hashMap, changed := util.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
 		instance.Status.Hash = hashMap
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
-			return hash, err
+			return hash, fmt.Errorf("Error while adding Hash to status: %w", err)
 		}
 		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
@@ -762,10 +762,10 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 		transportURL.Spec.RabbitmqClusterName = instance.Spec.RabbitMqClusterName
 
 		err := controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
-		return err
+		return fmt.Errorf("Error setting Owner Reference for TransportURL: %w", err)
 	})
 
-	return transportURL, op, err
+	return transportURL, op, fmt.Errorf("Error while creating TransportURL: %w", err)
 }
 
 func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os *openstack.OpenStack) (string, error) {
