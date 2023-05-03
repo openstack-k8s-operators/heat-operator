@@ -30,7 +30,6 @@ type HeatEngineSpec struct {
 	ServiceUser string `json:"serviceUser"`
 
 	// +kubebuilder:validation:Required
-	// +kubebuilder:default="quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
 	// ContainerImage - Heat API Container Image URL
 	ContainerImage string `json:"containerImage"`
 

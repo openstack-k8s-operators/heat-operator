@@ -123,8 +123,10 @@ build: generate fmt vet ## Build manager binary.
 	go build -o bin/manager main.go
 
 .PHONY: run
+run: export ENABLE_WEBHOOKS?=false
 run: manifests generate fmt vet ## Run a controller from your host.
-	OPERATOR_TEMPLATES=./templates go run ./main.go
+	/bin/bash hack/clean_local_webhook.sh
+	go run ./main.go
 
 # If you wish built the manager image targeting other platforms you can use the --platform flag.
 # (i.e. podman build --platform linux/arm64 ). However, you must enable podman buildKit for it.
@@ -281,3 +283,16 @@ gowork: ## Generate go.work file
 	go work use .
 	go work use ./api
 	go work sync
+
+# Used for webhook testing
+# Please ensure the heat-controller-manager deployment and
+# webhook definitions are removed from the csv before running
+# this. Also, cleanup the webhook configuration for local testing
+# before deplying with olm again.
+# $oc delete -n openstack validatingwebhookconfiguration/vheat.kb.io
+# $oc delete -n openstack mutatingwebhookconfiguration/mheat.kb.io
+SKIP_CERT ?=false
+.PHONY: run-with-webhook
+run-with-webhook: manifests generate fmt vet ## Run a controller from your host.
+	/bin/bash hack/configure_local_webhook.sh
+	go run ./main.go

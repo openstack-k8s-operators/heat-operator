@@ -36,7 +36,6 @@ spec:
             description: HeatEngineSpec defines the desired state of Heat
             properties:
               containerImage:
-                default: quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified
                 description: ContainerImage - Heat API Container Image URL
                 type: string
               customServiceConfig:

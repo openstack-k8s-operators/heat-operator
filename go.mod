@@ -10,7 +10,7 @@ require (
 	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230424000227-62883ba8f5f4
 	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230420195930-f71e24e80596
 	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230412125711-203185e59d89
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230420182422-a15a0625dc00
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230503164357-0616fa9f7f61
 	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230420182422-a15a0625dc00
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230420182422-a15a0625dc00
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230421100625-87c509d03c93

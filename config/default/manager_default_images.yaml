@@ -1,0 +1,17 @@
+# This patch inject custom ENV settings to the manager container
+# Used to set our default image locations
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: controller-manager
+  namespace: system
+spec:
+  template:
+    spec:
+      containers:
+      - name: manager
+        env:
+        - name: HEAT_API_IMAGE_URL_DEFAULT
+          value: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
+        - name: HEAT_ENGINE_IMAGE_URL_DEFAULT
+          value: quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified

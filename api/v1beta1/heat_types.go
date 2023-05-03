@@ -18,6 +18,7 @@ package v1beta1
 
 import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -28,6 +29,11 @@ const (
 
 	// DeploymentHash hash used to detect changes
 	DeploymentHash = "deployment"
+
+	// HeatAPIContainerImage - default fall-back container image for HeatAPI if associated env var not provided
+	HeatAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
+	// HeatEngineContainerImage - default fall-back container image for HeatEngine if associated env var not provided
+	HeatEngineContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
 )
 
 // HeatSpec defines the desired state of Heat
@@ -190,4 +196,15 @@ func (instance Heat) IsReady() bool {
 	ready = ready && instance.Status.HeatEngineReadyCount > 0
 
 	return ready
+}
+
+// SetupDefaults - initializes any CRD field defaults based on environment variables (the defaulting mechanism itself is implemented via webhooks)
+func SetupDefaults() {
+	// Acquire environmental defaults and initialize Heat defaults with them
+	heatDefaults := HeatDefaults{
+		APIContainerImageURL:    util.GetEnvVar("HEAT_API_IMAGE_URL_DEFAULT", HeatAPIContainerImage),
+		EngineContainerImageURL: util.GetEnvVar("HEAT_ENGINE_IMAGE_URL_DEFAULT", HeatEngineContainerImage),
+	}
+
+	SetupHeatDefaults(heatDefaults)
 }
