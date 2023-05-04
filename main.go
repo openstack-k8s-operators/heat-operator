@@ -19,6 +19,7 @@ package main
 import (
 	"flag"
 	"os"
+	"strings"
 
 	// Import all Kubernetes client auth plugins (e.g. Azure, GCP, OIDC, etc.)
 	// to ensure that exec-entrypoint and run can make use of them.
@@ -34,11 +35,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
-	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
-	"github.com/openstack-k8s-operators/heat-operator/controllers"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1beta1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	mariadbv1beta1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
+
+	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/heat-operator/controllers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -142,6 +144,17 @@ func main() {
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "HeatEngine")
 		os.Exit(1)
+	}
+
+	// Acquire environmental defaults and initialize operator defaults with them
+	heatv1beta1.SetupDefaults()
+
+	// Setup webhooks if requested
+	if strings.ToLower(os.Getenv("ENABLE_WEBHOOKS")) != "false" {
+		if err = (&heatv1beta1.Heat{}).SetupWebhookWithManager(mgr); err != nil {
+			setupLog.Error(err, "unable to create webhook", "webhook", "Heat")
+			os.Exit(1)
+		}
 	}
 	//+kubebuilder:scaffold:builder
 

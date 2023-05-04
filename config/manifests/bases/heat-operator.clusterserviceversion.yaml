@@ -2,7 +2,7 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    alm-examples: "[]"
+    alm-examples: '[]'
     capabilities: Basic Install
   name: heat-operator.v0.0.1
   namespace: openstack
@@ -10,43 +10,43 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-      - description: Heat is the Schema for the heats API
-        displayName: Heat
-        kind: Heat
-        name: heats.heat.openstack.org
-        version: v1beta1
-      - description: HeatAPI is the Schema for the heatapis API
-        displayName: Heat API
-        kind: HeatAPI
-        name: heatapis.heat.openstack.org
-        version: v1beta1
-      - description: HeatEngine is the Schema for the heatengines API
-        displayName: Heat Engine
-        kind: HeatEngine
-        name: heatengines.heat.openstack.org
-        version: v1beta1
+    - description: HeatAPI is the Schema for the heatapis API
+      displayName: Heat API
+      kind: HeatAPI
+      name: heatapis.heat.openstack.org
+      version: v1beta1
+    - description: HeatEngine is the Schema for the heatengines API
+      displayName: Heat Engine
+      kind: HeatEngine
+      name: heatengines.heat.openstack.org
+      version: v1beta1
+    - description: Heat is the Schema for the heats API
+      displayName: Heat
+      kind: Heat
+      name: heats.heat.openstack.org
+      version: v1beta1
   description: Heat Operator
   displayName: Heat Operator
   icon:
-    - base64data: ""
-      mediatype: ""
+  - base64data: ""
+    mediatype: ""
   install:
     spec:
       deployments: null
     strategy: ""
   installModes:
-    - supported: true
-      type: OwnNamespace
-    - supported: true
-      type: SingleNamespace
-    - supported: false
-      type: MultiNamespace
-    - supported: true
-      type: AllNamespaces
+  - supported: true
+    type: OwnNamespace
+  - supported: true
+    type: SingleNamespace
+  - supported: false
+    type: MultiNamespace
+  - supported: true
+    type: AllNamespaces
   keywords:
-    - OpenStack
-    - Orchestration
-    - Heat
+  - OpenStack
+  - Orchestration
+  - Heat
   links:
   - name: Heat Operator
     url: https://github.com/openstack-k8s-operators/heat-operator
