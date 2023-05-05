@@ -30,8 +30,6 @@ const (
 	DatabaseName = "heat"
 	// HeatPublicPort -
 	HeatPublicPort int32 = 8004
-	// HeatAdminPort -
-	HeatAdminPort int32 = 8004
 	// HeatInternalPort -
 	HeatInternalPort int32 = 8004
 	// KollaConfigDbSync -
