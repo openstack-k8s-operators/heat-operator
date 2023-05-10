@@ -20,11 +20,9 @@ export DB=${DatabaseName:-"heat"}
 export DBHOST=${DatabaseHost:?"Please specify a DatabaseHost variable."}
 export DBUSER=${DatabaseUser:-"heat"}
 export DBPASSWORD=${DatabasePassword:?"Please specify a DatabasePassword variable."}
-export heatPASSWORD=${HeatPassword:?"Please specify a HeatPassword variable."}
-# TODO: nova password
-#export NOVAPASSWORD=${NovaPassword:?"Please specify a NovaPassword variable."}
-# TODO: transportURL
-export TRANSPORTURL=${TransportURL:-""}
+export PASSWORD=${HeatPassword:?"Please specify a HeatPassword variable."}
+export TRANSPORT_URL=${TransportURL:-""}
+export AUTH_ENCRYPTION_KEY=${AuthEncryptionKey:-""}
 
 export CUSTOMCONF=${CustomConf:-""}
 
@@ -66,14 +64,16 @@ if [ -n "$CUSTOMCONF" ]; then
 fi
 
 # set secrets
-# TODO: transportURL
-if [ -n "$TRANSPORTURL" ]; then
-    crudini --set ${SVC_CFG_MERGED} DEFAULT transport_url $TRANSPORTURL
+if [ -n "$TRANSPORT_URL" ]; then
+    crudini --set ${SVC_CFG_MERGED} DEFAULT transport_url $TRANSPORT_URL
+fi
+
+# set auth_encryption_key
+if [ -n "$AUTH_ENCRYPTION_KEY" ]; then
+    crudini --set ${SVC_CFG_MERGED} DEFAULT auth_encryption_key $AUTH_ENCRYPTION_KEY
 fi
 
 crudini --set ${SVC_CFG_MERGED} database connection mysql+pymysql://${DBUSER}:${DBPASSWORD}@${DBHOST}/${DB}
-crudini --set ${SVC_CFG_MERGED} keystone_authtoken password $heatPASSWORD
-crudini --set ${SVC_CFG_MERGED} DEFAULT stack_domain_admin_password $heatPASSWORD
-crudini --set ${SVC_CFG_MERGED} trustee password $heatPASSWORD
-# TODO: service token
-#crudini --set ${SVC_CFG_MERGED} service_user password $HeatPassword
+crudini --set ${SVC_CFG_MERGED} keystone_authtoken password $PASSWORD
+crudini --set ${SVC_CFG_MERGED} DEFAULT stack_domain_admin_password $PASSWORD
+crudini --set ${SVC_CFG_MERGED} trustee password $PASSWORD

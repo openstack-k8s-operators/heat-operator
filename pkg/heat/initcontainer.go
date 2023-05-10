@@ -23,16 +23,17 @@ import (
 
 // APIDetails ..
 type APIDetails struct {
-	ContainerImage       string
-	DatabaseHost         string
-	DatabaseUser         string
-	DatabaseName         string
-	TransportURL         string
-	OSPSecret            string
-	DBPasswordSelector   string
-	UserPasswordSelector string
-	VolumeMounts         []corev1.VolumeMount
-	Privileged           bool
+	ContainerImage            string
+	DatabaseHost              string
+	DatabaseUser              string
+	DatabaseName              string
+	TransportURL              string
+	OSPSecret                 string
+	DBPasswordSelector        string
+	UserPasswordSelector      string
+	AuthEncryptionKeySelector string
+	VolumeMounts              []corev1.VolumeMount
+	Privileged                bool
 }
 
 // InitContainerCommand is
@@ -78,6 +79,17 @@ func InitContainer(init APIDetails) []corev1.Container {
 						Name: init.OSPSecret,
 					},
 					Key: init.UserPasswordSelector,
+				},
+			},
+		},
+		{
+			Name: "AuthEncryptionKey",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: init.OSPSecret,
+					},
+					Key: init.AuthEncryptionKeySelector,
 				},
 			},
 		},

@@ -57,10 +57,11 @@ type HeatSpec struct {
 
 	// +kubebuilder:validation:Required
 	// Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
+	// and HeatAuthEncryptionKey
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword}
+	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
 	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
 
@@ -118,8 +119,12 @@ type PasswordSelector struct {
 	Database string `json:"database,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="HeatPassword"
-	// Database - Selector to get the heat service password from the Secret
+	// Service - Selector to get the heat service password from the Secret
 	Service string `json:"service,omitempty"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="HeatAuthEncryptionKey"
+	// AuthEncryptionKey - Selector to get the heat auth encryption key from the Secret
+	AuthEncryptionKey string `json:"authEncryptionKey,omitempty"`
 }
 
 // HeatDebug ...
@@ -145,7 +150,7 @@ type HeatStatus struct {
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
 
-	// Neutron Database Hostname
+	// Heat Database Hostname
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
 
 	// ServiceID - the ID of the registered service in keystone

@@ -130,11 +130,17 @@ spec:
                     type: object
                   passwordSelectors:
                     default:
+                      authEncryptionKey: HeatAuthEncryptionKey
                       database: HeatDatabasePassword
                       service: HeatPassword
                     description: PasswordSelectors - Selectors to identify the DB
                       and ServiceUser password from the Secret
                     properties:
+                      authEncryptionKey:
+                        default: HeatAuthEncryptionKey
+                        description: AuthEncryptionKey - Selector to get the heat
+                          auth encryption key from the Secret
+                        type: string
                       database:
                         default: heatDatabasePassword
                         description: 'Database - Selector to get the heat Database
@@ -143,7 +149,7 @@ spec:
                         type: string
                       service:
                         default: HeatPassword
-                        description: Database - Selector to get the heat service password
+                        description: Service - Selector to get the heat service password
                           from the Secret
                         type: string
                     type: object
@@ -203,7 +209,7 @@ spec:
                     type: object
                   secret:
                     description: Secret containing OpenStack password information
-                      for heat HeatDatabasePassword, HeatPassword
+                      for heat HeatDatabasePassword, HeatPassword and HeatAuthEncryptionKey
                     type: string
                   serviceUser:
                     default: heat
@@ -271,11 +277,17 @@ spec:
                     type: object
                   passwordSelectors:
                     default:
+                      authEncryptionKey: HeatAuthEncryptionKey
                       database: HeatDatabasePassword
                       service: HeatPassword
                     description: PasswordSelectors - Selectors to identify the DB
                       and ServiceUser password from the Secret
                     properties:
+                      authEncryptionKey:
+                        default: HeatAuthEncryptionKey
+                        description: AuthEncryptionKey - Selector to get the heat
+                          auth encryption key from the Secret
+                        type: string
                       database:
                         default: heatDatabasePassword
                         description: 'Database - Selector to get the heat Database
@@ -284,7 +296,7 @@ spec:
                         type: string
                       service:
                         default: HeatPassword
-                        description: Database - Selector to get the heat service password
+                        description: Service - Selector to get the heat service password
                           from the Secret
                         type: string
                     type: object
@@ -344,7 +356,7 @@ spec:
                     type: object
                   secret:
                     description: Secret containing OpenStack password information
-                      for heat HeatDatabasePassword, HeatPassword
+                      for heat HeatDatabasePassword, HeatPassword and HeatAuthEncryptionKey
                     type: string
                   serviceUser:
                     default: heat
@@ -369,11 +381,17 @@ spec:
                 type: integer
               passwordSelectors:
                 default:
+                  authEncryptionKey: HeatAuthEncryptionKey
                   database: HeatDatabasePassword
                   service: HeatPassword
                 description: PasswordSelectors - Selectors to identify the DB and
                   ServiceUser password from the Secret
                 properties:
+                  authEncryptionKey:
+                    default: HeatAuthEncryptionKey
+                    description: AuthEncryptionKey - Selector to get the heat auth
+                      encryption key from the Secret
+                    type: string
                   database:
                     default: heatDatabasePassword
                     description: 'Database - Selector to get the heat Database user
@@ -381,7 +399,7 @@ spec:
                     type: string
                   service:
                     default: HeatPassword
-                    description: Database - Selector to get the heat service password
+                    description: Service - Selector to get the heat service password
                       from the Secret
                     type: string
                 type: object
@@ -397,7 +415,7 @@ spec:
                 type: string
               secret:
                 description: Secret containing OpenStack password information for
-                  heat HeatDatabasePassword, HeatPassword
+                  heat HeatDatabasePassword, HeatPassword and HeatAuthEncryptionKey
                 type: string
               serviceUser:
                 default: heat
@@ -465,7 +483,7 @@ spec:
                   type: object
                 type: array
               databaseHostname:
-                description: Neutron Database Hostname
+                description: Heat Database Hostname
                 type: string
               hash:
                 additionalProperties:
