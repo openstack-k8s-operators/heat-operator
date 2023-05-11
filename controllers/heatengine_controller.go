@@ -391,9 +391,21 @@ func (r *HeatEngineReconciler) reconcileNormal(
 			condition.DeploymentReadyRunningMessage))
 		return ctrlResult, nil
 	}
-	instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
-	if instance.Status.ReadyCount > 0 {
-		instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
+
+	_, err = controllerutil.CreateOrPatch(context.TODO(), r.Client, instance, func() error {
+
+		instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
+		if instance.Status.ReadyCount > 0 {
+			instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
+		}
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+	if err != nil {
+		return ctrl.Result{}, err
 	}
 
 	r.Log.Info("Reconciled Engine successfully")
