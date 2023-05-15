@@ -167,8 +167,8 @@ commands:
       set -x
       RETURN_CODE=0
       PUBLIC_URL=$(oc get route heat-public -o jsonpath='{.status.ingress[0].host}')
-      STATUSCODE=$(curl --silent --output /dev/stderr --head --write-out "%{http_code}" $PUBLIC_URL)
-      if test $STATUSCODE -ne 200; then
+      STATUSCODE=$(curl --silent --output /dev/stderr --head --write-out "%{http_code}" $PUBLIC_URL/healthcheck)
+      if test $STATUSCODE -ne 204; then
           RETURN_CODE=1
           echo "${PUBLIC_URL} status code expected is 200 but was ${STATUSCODE}"
       fi
