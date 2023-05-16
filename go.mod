@@ -7,13 +7,13 @@ replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 require (
 	github.com/go-logr/logr v1.2.4
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230510035849-548089bb623f
-	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230505165400-46c5e7325f0d
-	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230508152039-4d8f35e8b317
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230509160151-f9e64d8f4f38
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230509160151-f9e64d8f4f38
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230509160151-f9e64d8f4f38
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230505124740-6d38a5ee77b8
+	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230516010331-e6fb0e7bbff7
+	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230515135008-28b4b15c5915
+	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230515212624-62d8100c3ead
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230510145530-3c8e9179fb6e
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230510145530-3c8e9179fb6e
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230510145530-3c8e9179fb6e
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230515195124-f5d912595564
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.27.0
 	k8s.io/client-go v0.26.3
