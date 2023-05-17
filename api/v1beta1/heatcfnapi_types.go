@@ -35,6 +35,8 @@ type HeatCfnAPISpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1
+	// +kubebuilder:validation:Maximum=32
+	// +kubebuilder:validation:Minimum=0
 	// Replicas - Heat API Replicas
 	Replicas int32 `json:"replicas"`
 
