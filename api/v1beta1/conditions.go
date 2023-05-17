@@ -25,9 +25,6 @@ const (
 
 	// HeatEngineReadyCondition ...
 	HeatEngineReadyCondition condition.Type = "HeatEngineReady"
-
-	// HeatEngineReadyErrorMessage ...
-	HeatEngineReadyErrorMessage condition.Type = "HeatEngineError"
 )
 
 const (
@@ -40,14 +37,14 @@ const (
 	// HeatAPIReadyErrorMessage ...
 	HeatAPIReadyErrorMessage = "HeatAPI error occured %s"
 
-	// HeatConductorReadyInitMessage ...
+	// HeatEngineReadyInitMessage ...
 	//
-	// HeatConductorReady condition messages
+	// HeatEngineReady condition messages
 	//
-	HeatConductorReadyInitMessage = "HeatConductor not started"
+	HeatEngineReadyInitMessage = "HeatEngine not started"
 
-	// HeatConductorReadyErrorMessage ...
-	HeatConductorReadyErrorMessage = "HeatConductor error occured %s"
+	// HeatEngineReadyErrorMessage ...
+	HeatEngineReadyErrorMessage = "HeatEngine error occured %s"
 )
 
 const (
