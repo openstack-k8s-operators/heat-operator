@@ -87,24 +87,6 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		return ctrl.Result{}, err
 	}
 
-	if instance.Status.Conditions == nil {
-		instance.Status.Conditions = condition.Conditions{}
-
-		cl := condition.CreateList(
-			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
-			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
-			condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
-		)
-
-		instance.Status.Conditions.Init(&cl)
-		if err := r.Status().Update(ctx, instance); err != nil {
-			return ctrl.Result{}, err
-		}
-	}
-	if instance.Status.Hash == nil {
-		instance.Status.Hash = map[string]string{}
-	}
-
 	helper, err := helper.NewHelper(
 		instance,
 		r.Client,
@@ -128,10 +110,35 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		}
 	}()
 
+	// If we're not deleting this and the service object doesn't have our finalizer, add it.
+	if instance.DeletionTimestamp.IsZero() && controllerutil.AddFinalizer(instance, helper.GetFinalizer()) {
+		return ctrl.Result{}, nil
+	}
+
+	if instance.Status.Conditions == nil {
+		instance.Status.Conditions = condition.Conditions{}
+
+		cl := condition.CreateList(
+			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
+			condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
+		)
+
+		instance.Status.Conditions.Init(&cl)
+
+		// Register overall status immediately to have an early feedback e.g. in the cli
+		return ctrl.Result{}, nil
+	}
+	if instance.Status.Hash == nil {
+		instance.Status.Hash = map[string]string{}
+	}
+
+	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
 		return r.reconcileDelete(ctx, instance, helper)
 	}
 
+	// Handle non-deleted clusters
 	return r.reconcileNormal(ctx, instance, helper)
 }
 
@@ -208,11 +215,10 @@ func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *he
 		}
 	}
 
+	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	r.Log.Info("Reconciled API delete successfully")
-	if err := r.Update(ctx, instance); err != nil && !k8s_errors.IsNotFound(err) {
-		return ctrl.Result{}, err
-	}
+
 	return ctrl.Result{}, nil
 }
 
@@ -236,11 +242,6 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	helper *helper.Helper) (ctrl.Result, error) {
 
 	r.Log.Info("Reconciling Heat Engine")
-	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
-
-	if err := r.Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
-	}
 
 	// TODO(bshephar) Write the reconcile logic for Heat engine. Let's just create
 	// the deployment. We don't need to expose Heat engine, it will just talk to the
