@@ -83,7 +83,7 @@ type HeatReconciler struct {
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
-func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
 	_ = log.FromContext(ctx)
 
 	instance := &heatv1beta1.Heat{}
@@ -95,6 +95,40 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		return ctrl.Result{}, err
 	}
 
+	helper, err := helper.NewHelper(
+		instance,
+		r.Client,
+		r.Kclient,
+		r.Scheme,
+		r.Log,
+	)
+
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Always patch the instance status when exiting this function so we can persist any changes.
+	defer func() {
+		// update the overall status condition if service is ready
+		if instance.IsReady() {
+			instance.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
+		}
+
+		err := helper.PatchInstance(ctx, instance)
+		if err != nil {
+			_err = err
+			return
+		}
+	}()
+
+	// If we're not deleting this and the service object doesn't have our finalizer, add it.
+	if instance.DeletionTimestamp.IsZero() && controllerutil.AddFinalizer(instance, helper.GetFinalizer()) {
+		return ctrl.Result{}, nil
+	}
+
+	//
+	// initialize status
+	//
 	if instance.Status.Conditions == nil {
 		instance.Status.Conditions = condition.Conditions{}
 
@@ -111,9 +145,8 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 
 		instance.Status.Conditions.Init(&cl)
 
-		if err := r.Status().Update(ctx, instance); err != nil {
-			return ctrl.Result{}, err
-		}
+		// Register overall status immediately to have an early feedback e.g. in the cli
+		return ctrl.Result{}, nil
 	}
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = make(map[string]string)
@@ -123,44 +156,6 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 	if instance.Status.ServiceIDs == nil {
 		instance.Status.ServiceIDs = make(map[string]string)
-	}
-
-	helper, err := helper.NewHelper(
-		instance,
-		r.Client,
-		r.Kclient,
-		r.Scheme,
-		r.Log,
-	)
-
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	// Always patch the instance status when exiting this function so we can persist any changes.
-	defer func() {
-		// update the overall status condition if service is ready
-		if instance.IsReady() {
-			instance.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
-		}
-
-		if err := helper.SetAfter(instance); err != nil {
-			util.LogErrorForObject(helper, err, "Set after and calc patch/diff", instance)
-		}
-
-		if changed := helper.GetChanges()["status"]; changed {
-			patch := client.MergeFrom(helper.GetBeforeObject())
-
-			if err := r.Status().Patch(ctx, instance, patch); err != nil && !k8s_errors.IsNotFound(err) {
-				util.LogErrorForObject(helper, err, "Update status", instance)
-			}
-		}
-	}()
-
-	// If the service object doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
-	// Register the finalizer immediately to avoid orphaning resources on delete
-	if err := r.Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
 	}
 
 	// Handle service delete
@@ -206,9 +201,6 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	r.Log.Info("Reconciled Heat delete successfully")
-	if err := r.Update(ctx, instance); err != nil && !k8s_errors.IsNotFound(err) {
-		return ctrl.Result{}, err
-	}
 
 	return ctrl.Result{}, nil
 }
@@ -279,13 +271,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// run check TransportURL secret - end
 
 	instance.Status.Conditions.MarkTrue(heatv1beta1.HeatRabbitMqTransportURLReadyCondition, heatv1beta1.HeatRabbitMqTransportURLReadyMessage)
-
-	// If the service object doesn't have our finalizer, add it.
-	controllerutil.AddFinalizer(instance, helper.GetFinalizer())
-	// Register the finalizer immediately to avoid orphaning resources on delete
-	if err := r.Update(ctx, instance); err != nil {
-		return ctrl.Result{}, err
-	}
 
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
