@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// HeatAPISpec defines the desired state of Heat
-type HeatAPISpec struct {
+// HeatCfnAPISpec defines the desired state of Heat
+type HeatCfnAPISpec struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=heat
 	// ServiceUser - optional username used for this service to register in heat
@@ -52,11 +52,10 @@ type HeatAPISpec struct {
 
 	// +kubebuilder:validation:Required
 	// Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
-	// and HeatAuthEncryptionKey
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
+	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword}
 	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
 
@@ -92,8 +91,8 @@ type HeatAPISpec struct {
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`
 }
 
-// HeatAPIStatus defines the observed state of Heat
-type HeatAPIStatus struct {
+// HeatCfnAPIStatus defines the observed state of Heat
+type HeatCfnAPIStatus struct {
 	// Map of hashes to track e.g. job status
 	Hash map[string]string `json:"hash,omitempty"`
 
@@ -113,29 +112,29 @@ type HeatAPIStatus struct {
 //+kubebuilder:object:root=true
 //+kubebuilder:subresource:status
 
-// HeatAPI ...
-type HeatAPI struct {
+// HeatCfnAPI ...
+type HeatCfnAPI struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   HeatAPISpec   `json:"spec,omitempty"`
-	Status HeatAPIStatus `json:"status,omitempty"`
+	Spec   HeatCfnAPISpec   `json:"spec,omitempty"`
+	Status HeatCfnAPIStatus `json:"status,omitempty"`
 }
 
 //+kubebuilder:object:root=true
 
-// HeatAPIList contains a list of Heat
-type HeatAPIList struct {
+// HeatCfnAPIList contains a list of Heat
+type HeatCfnAPIList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []HeatAPI `json:"items"`
+	Items           []HeatCfnAPI `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&HeatAPI{}, &HeatAPIList{})
+	SchemeBuilder.Register(&HeatCfnAPI{}, &HeatCfnAPIList{})
 }
 
 // IsReady ...
-func (instance HeatAPI) IsReady() bool {
+func (instance HeatCfnAPI) IsReady() bool {
 	return instance.Status.ReadyCount >= 1
 }

@@ -35,6 +35,8 @@ type HeatEngineSpec struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1
+	// +kubebuilder:validation:Maximum=32
+	// +kubebuilder:validation:Minimum=0
 	// Replicas - Heat API Replicas
 	Replicas int32 `json:"replicas"`
 
@@ -95,14 +97,8 @@ type HeatEngineStatus struct {
 	// Map of hashes to track e.g. job status
 	Hash map[string]string `json:"hash,omitempty"`
 
-	// API endpoint
-	APIEndpoints map[string]map[string]string `json:"apiEndpoint,omitempty"`
-
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
-
-	// ServiceID - the ID of the registered service in keystone
-	ServiceIDs map[string]string `json:"serviceID,omitempty"`
 
 	// ReadyCount of Heat instances
 	ReadyCount int32 `json:"readyCount,omitempty"`

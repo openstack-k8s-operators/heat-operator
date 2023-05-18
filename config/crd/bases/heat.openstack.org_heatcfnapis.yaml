@@ -5,20 +5,20 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.10.0
   creationTimestamp: null
-  name: heatapis.heat.openstack.org
+  name: heatcfnapis.heat.openstack.org
 spec:
   group: heat.openstack.org
   names:
-    kind: HeatAPI
-    listKind: HeatAPIList
-    plural: heatapis
-    singular: heatapi
+    kind: HeatCfnAPI
+    listKind: HeatCfnAPIList
+    plural: heatcfnapis
+    singular: heatcfnapi
   scope: Namespaced
   versions:
   - name: v1beta1
     schema:
       openAPIV3Schema:
-        description: HeatAPI ...
+        description: HeatCfnAPI ...
         properties:
           apiVersion:
             description: 'APIVersion defines the versioned schema of this representation
@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: HeatAPISpec defines the desired state of Heat
+            description: HeatCfnAPISpec defines the desired state of Heat
             properties:
               containerImage:
                 description: ContainerImage - Heat API Container Image URL
@@ -85,7 +85,6 @@ spec:
                 type: object
               passwordSelectors:
                 default:
-                  authEncryptionKey: HeatAuthEncryptionKey
                   database: HeatDatabasePassword
                   service: HeatPassword
                 description: PasswordSelectors - Selectors to identify the DB and
@@ -164,7 +163,7 @@ spec:
                 type: object
               secret:
                 description: Secret containing OpenStack password information for
-                  heat HeatDatabasePassword, HeatPassword and HeatAuthEncryptionKey
+                  heat HeatDatabasePassword, HeatPassword
                 type: string
               serviceUser:
                 default: heat
@@ -179,7 +178,7 @@ spec:
             - secret
             type: object
           status:
-            description: HeatAPIStatus defines the observed state of Heat
+            description: HeatCfnAPIStatus defines the observed state of Heat
             properties:
               apiEndpoint:
                 additionalProperties:

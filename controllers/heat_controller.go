@@ -104,6 +104,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
 			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatAPIReadyCondition, condition.InitReason, heatv1beta1.HeatAPIReadyInitMessage),
+			condition.UnknownCondition(heatv1beta1.HeatCfnAPIReadyCondition, condition.InitReason, heatv1beta1.HeatCfnAPIReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatEngineReadyCondition, condition.InitReason, heatv1beta1.HeatEngineReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatRabbitMqTransportURLReadyCondition, condition.InitReason, heatv1beta1.HeatRabbitMqTransportURLReadyInitMessage),
 		)
@@ -119,6 +120,9 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 	}
 	if instance.Status.APIEndpoints == nil {
 		instance.Status.APIEndpoints = map[string]map[string]string{}
+	}
+	if instance.Status.ServiceIDs == nil {
+		instance.Status.ServiceIDs = map[string]string{}
 	}
 
 	helper, err := helper.NewHelper(
@@ -174,6 +178,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.Heat{}).
 		Owns(&heatv1beta1.HeatAPI{}).
+		Owns(&heatv1beta1.HeatCfnAPI{}).
 		Owns(&heatv1beta1.HeatEngine{}).
 		Owns(&mariadbv1.MariaDBDatabase{}).
 		Owns(&batchv1.Job{}).
@@ -456,13 +461,47 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
-	// Mirror HeatAPI status' APIEndpoints and ReadyCount to this parent CR
-	instance.Status.APIEndpoints = heatAPI.Status.APIEndpoints
-	instance.Status.ServiceIDs = heatAPI.Status.ServiceIDs
+	// Mirror HeatAPI status' APIEndpoints, ServiceIDs and ReadyCount to this parent CR
+	for k, v := range heatAPI.Status.APIEndpoints {
+		instance.Status.APIEndpoints[k] = v
+	}
+	for k, v := range heatAPI.Status.ServiceIDs {
+		instance.Status.ServiceIDs[k] = v
+	}
 	instance.Status.HeatAPIReadyCount = heatAPI.Status.ReadyCount
 
 	// Mirror HeatAPI's condition status
 	c = heatAPI.Status.Conditions.Mirror(heatv1beta1.HeatAPIReadyCondition)
+	if c != nil {
+		instance.Status.Conditions.Set(c)
+	}
+
+	// deploy heat-api-cfn
+	heatCfnAPI, op, err := r.cfnapiDeploymentCreateOrUpdate(instance)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			heatv1beta1.HeatCfnAPIReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			heatv1beta1.HeatAPIReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	if op != controllerutil.OperationResultNone {
+		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	}
+
+	// Mirror HeatAPI status' APIEndpoints, ServiceIDs and ReadyCount to this parent CR
+	for k, v := range heatCfnAPI.Status.APIEndpoints {
+		instance.Status.APIEndpoints[k] = v
+	}
+	for k, v := range heatCfnAPI.Status.ServiceIDs {
+		instance.Status.ServiceIDs[k] = v
+	}
+	instance.Status.HeatCfnAPIReadyCount = heatCfnAPI.Status.ReadyCount
+
+	// Mirror HeatCfnAPI's condition status
+	c = heatCfnAPI.Status.Conditions.Mirror(heatv1beta1.HeatCfnAPIReadyCondition)
 	if c != nil {
 		instance.Status.Conditions.Set(c)
 	}
@@ -597,7 +636,9 @@ func (r *HeatReconciler) reconcileUpdate(ctx context.Context, instance *heatv1be
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatReconciler) apiDeploymentCreateOrUpdate(instance *heatv1beta1.Heat) (*heatv1beta1.HeatAPI, controllerutil.OperationResult, error) {
+func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
+	instance *heatv1beta1.Heat,
+) (*heatv1beta1.HeatAPI, controllerutil.OperationResult, error) {
 	deployment := &heatv1beta1.HeatAPI{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-api", instance.Name),
@@ -626,7 +667,40 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(instance *heatv1beta1.Heat)
 	return deployment, op, err
 }
 
-func (r *HeatReconciler) engineDeploymentCreateOrUpdate(instance *heatv1beta1.Heat) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
+func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
+	instance *heatv1beta1.Heat,
+) (*heatv1beta1.HeatCfnAPI, controllerutil.OperationResult, error) {
+	deployment := &heatv1beta1.HeatCfnAPI{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-cfnapi", instance.Name),
+			Namespace: instance.Namespace,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, deployment, func() error {
+		deployment.Spec = instance.Spec.HeatCfnAPI
+		// TODO: Add logic to determine when to set/overwrite, etc
+		deployment.Spec.ServiceUser = instance.Spec.ServiceUser
+		deployment.Spec.DatabaseHostname = instance.Status.DatabaseHostname
+		deployment.Spec.DatabaseUser = instance.Spec.DatabaseUser
+		deployment.Spec.Secret = instance.Spec.Secret
+		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
+		deployment.Spec.PasswordSelectors = instance.Spec.PasswordSelectors
+
+		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
+		if err != nil {
+			return err
+		}
+
+		return nil
+	})
+
+	return deployment, op, err
+}
+
+func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
+	instance *heatv1beta1.Heat,
+) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
 	deployment := &heatv1beta1.HeatEngine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-engine", instance.Name),

@@ -104,9 +104,6 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = map[string]string{}
 	}
-	if instance.Status.ServiceIDs == nil {
-		instance.Status.ServiceIDs = map[string]string{}
-	}
 
 	helper, err := helper.NewHelper(
 		instance,

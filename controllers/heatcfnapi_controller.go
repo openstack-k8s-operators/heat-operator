@@ -38,7 +38,7 @@ import (
 	"github.com/go-logr/logr"
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
-	heatapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatapi"
+	heatcfnapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatcfnapi"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
@@ -53,27 +53,27 @@ import (
 )
 
 // GetClient -
-func (r *HeatAPIReconciler) GetClient() client.Client {
+func (r *HeatCfnAPIReconciler) GetClient() client.Client {
 	return r.Client
 }
 
 // GetKClient -
-func (r *HeatAPIReconciler) GetKClient() kubernetes.Interface {
+func (r *HeatCfnAPIReconciler) GetKClient() kubernetes.Interface {
 	return r.Kclient
 }
 
 // GetLogger -
-func (r *HeatAPIReconciler) GetLogger() logr.Logger {
+func (r *HeatCfnAPIReconciler) GetLogger() logr.Logger {
 	return r.Log
 }
 
 // GetScheme -
-func (r *HeatAPIReconciler) GetScheme() *runtime.Scheme {
+func (r *HeatCfnAPIReconciler) GetScheme() *runtime.Scheme {
 	return r.Scheme
 }
 
-// HeatAPIReconciler reconciles a Heat object
-type HeatAPIReconciler struct {
+// HeatCfnAPIReconciler reconciles a Heat object
+type HeatCfnAPIReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
 	Log     logr.Logger
@@ -81,18 +81,18 @@ type HeatAPIReconciler struct {
 }
 
 var (
-	keystoneServices = []map[string]string{
+	keystoneCfnServices = []map[string]string{
 		{
-			"type": heat.ServiceType,
-			"name": heat.ServiceName,
-			"desc": "Heat API service",
+			"type": heat.CfnServiceType,
+			"name": heat.CfnServiceName,
+			"desc": "Heat Cloudformation API service",
 		},
 	}
 )
 
-// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/finalizers,verbs=update
+// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatcfnapis,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatcfnapis/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatcfnapis/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;
@@ -104,10 +104,14 @@ var (
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
+// TODO(user): Modify the Reconcile function to compare the state specified by
+// the Heat object against the actual cluster state, and then
+// perform operations to make the cluster state reflect the state specified by
+// the user.
 //
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
-func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
+func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
 	_ = log.FromContext(ctx)
 
 	// TODO(bshephar): your logic here
@@ -115,7 +119,7 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	// We just need to initialise the API in a deployment here, and allow scaling of the ReplicaSet.
 	// Updates and Upgrades can be handled by the heat_controller.
 
-	instance := &heatv1beta1.HeatAPI{}
+	instance := &heatv1beta1.HeatCfnAPI{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -181,17 +185,17 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
 	configMapFn := func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
-		apis := &heatv1beta1.HeatAPIList{}
+		apis := &heatv1beta1.HeatCfnAPIList{}
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
 		if err := r.Client.List(context.Background(), apis, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to get API CRs %v")
+			r.Log.Error(err, "Unable to get CfnAPI CRs %v")
 			return nil
 		}
 
@@ -216,7 +220,7 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
-		For(&heatv1beta1.HeatAPI{}).
+		For(&heatv1beta1.HeatCfnAPI{}).
 		Owns(&keystonev1.KeystoneService{}).
 		Owns(&keystonev1.KeystoneEndpoint{}).
 		Owns(&appsv1.Deployment{}).
@@ -229,10 +233,10 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Complete(r)
 }
 
-func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API Delete")
+func (r *HeatCfnAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
+	r.Log.Info("Reconciling CfnAPI Delete")
 
-	for _, ksSvc := range keystoneServices {
+	for _, ksSvc := range keystoneCfnServices {
 		keystoneEndpoint, err := keystonev1.GetKeystoneEndpointWithName(ctx, helper, ksSvc["name"], instance.Namespace)
 		if err != nil && !k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, err
@@ -259,20 +263,20 @@ func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv
 	}
 
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled API delete successfully")
+	r.Log.Info("Reconciled CfnAPI delete successfully")
 	if err := r.Update(ctx, instance); err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatAPIReconciler) reconcileInit(
+func (r *HeatCfnAPIReconciler) reconcileInit(
 	ctx context.Context,
-	instance *heatv1beta1.HeatAPI,
+	instance *heatv1beta1.HeatCfnAPI,
 	helper *helper.Helper,
 	serviceLabels map[string]string,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API init")
+	r.Log.Info("Reconciling CfnAPI init")
 
 	//
 	// expose the service (create service, route and return the created endpoint URLs)
@@ -281,19 +285,19 @@ func (r *HeatAPIReconciler) reconcileInit(
 	// V1
 	data := map[endpoint.Endpoint]endpoint.Data{
 		endpoint.EndpointPublic: {
-			Port: heat.HeatPublicPort,
-			Path: "/v1/%(tenant_id)s",
+			Port: heat.HeatCfnPublicPort,
+			Path: "/v1",
 		},
 		endpoint.EndpointInternal: {
-			Port: heat.HeatInternalPort,
-			Path: "/v1/%(tenant_id)s",
+			Port: heat.HeatCfnInternalPort,
+			Path: "/v1",
 		},
 	}
 
 	apiEndpoints, ctrlResult, err := endpoint.ExposeEndpoints(
 		ctx,
 		helper,
-		heatapi.ServiceName,
+		heatcfnapi.ServiceName,
 		serviceLabels,
 		data,
 		time.Duration(5)*time.Second,
@@ -322,7 +326,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 	if instance.Status.APIEndpoints == nil {
 		instance.Status.APIEndpoints = map[string]map[string]string{}
 	}
-	instance.Status.APIEndpoints[heatapi.ServiceName] = apiEndpoints
+	instance.Status.APIEndpoints[heatcfnapi.ServiceName] = apiEndpoints
 	// V1 - end
 
 	instance.Status.Conditions.MarkTrue(condition.ExposeServiceReadyCondition, condition.ExposeServiceReadyMessage)
@@ -337,8 +341,8 @@ func (r *HeatAPIReconciler) reconcileInit(
 		instance.Status.ServiceIDs = map[string]string{}
 	}
 
-	for _, ksSvc := range keystoneServices {
-		r.Log.Info("Reconciled API init successfully")
+	for _, ksSvc := range keystoneCfnServices {
+		r.Log.Info("Reconciled CfnAPI init successfully")
 		ksSvcSpec := keystonev1.KeystoneServiceSpec{
 			ServiceType:        ksSvc["type"],
 			ServiceName:        ksSvc["name"],
@@ -373,7 +377,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 		//
 		ksEndptSpec := keystonev1.KeystoneEndpointSpec{
 			ServiceName: ksSvc["name"],
-			Endpoints:   instance.Status.APIEndpoints[heatapi.ServiceName],
+			Endpoints:   instance.Status.APIEndpoints[heatcfnapi.ServiceName],
 		}
 		ksEndpt := keystonev1.NewKeystoneEndpoint(
 			ksSvc["name"],
@@ -397,11 +401,11 @@ func (r *HeatAPIReconciler) reconcileInit(
 		}
 	}
 
-	r.Log.Info("Reconciled API init successfully")
+	r.Log.Info("Reconciled CfnAPI init successfully")
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Service")
 
 	// If the service object doesn't have our finalizer, add it.
@@ -542,7 +546,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 
 	// Define a new Deployment object
 	depl := deployment.NewDeployment(
-		heatapi.Deployment(instance, inputHash, serviceLabels),
+		heatcfnapi.Deployment(instance, inputHash, serviceLabels),
 		time.Duration(5)*time.Second,
 	)
 
@@ -569,36 +573,36 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	}
 	// create Deployment - end
 
-	r.Log.Info("Reconciled API successfully")
+	r.Log.Info("Reconciled CfnAPI successfully")
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatAPIReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API update")
+func (r *HeatCfnAPIReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
+	r.Log.Info("Reconciling CfnAPI update")
 
 	// TODO: should have minor update tasks if required
 	// - delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled API update successfully")
+	r.Log.Info("Reconciled CfnAPI update successfully")
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatAPIReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API upgrade")
+func (r *HeatCfnAPIReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
+	r.Log.Info("Reconciling CfnAPI upgrade")
 
 	// TODO: should have major version upgrade tasks
 	// -delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled API upgrade successfully")
+	r.Log.Info("Reconciled CfnAPI upgrade successfully")
 	return ctrl.Result{}, nil
 }
 
 // generateServiceConfigMaps - create custom configmap to hold service-specific config
 // TODO add DefaultConfigOverwrite
-func (r *HeatAPIReconciler) generateServiceConfigMaps(
+func (r *HeatCfnAPIReconciler) generateServiceConfigMaps(
 	ctx context.Context,
 	h *helper.Helper,
-	instance *heatv1beta1.HeatAPI,
+	instance *heatv1beta1.HeatCfnAPI,
 	envVars *map[string]env.Setter,
 ) error {
 	//
@@ -606,7 +610,7 @@ func (r *HeatAPIReconciler) generateServiceConfigMaps(
 	// - %-config-data configmap holding custom config for the service's heat.conf
 	//
 
-	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
+	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.CfnServiceName), map[string]string{})
 
 	// customData hold any customization for the service.
 	// custom.conf is going to /etc/heat/heat.conf.d
@@ -636,9 +640,9 @@ func (r *HeatAPIReconciler) generateServiceConfigMaps(
 
 // createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart
 // if any of the input resources change, like configs, passwords, ...
-func (r *HeatAPIReconciler) createHashOfInputHashes(
+func (r *HeatCfnAPIReconciler) createHashOfInputHashes(
 	ctx context.Context,
-	instance *heatv1beta1.HeatAPI,
+	instance *heatv1beta1.HeatCfnAPI,
 	envVars map[string]env.Setter,
 ) (string, error) {
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)

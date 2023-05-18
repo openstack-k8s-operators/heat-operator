@@ -13,5 +13,7 @@ spec:
         env:
         - name: HEAT_API_IMAGE_URL_DEFAULT
           value: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
+        - name: HEAT_CFNAPI_IMAGE_URL_DEFAULT
+          value: quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified
         - name: HEAT_ENGINE_IMAGE_URL_DEFAULT
           value: quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified

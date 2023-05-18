@@ -32,6 +32,7 @@ import (
 // HeatDefaults -
 type HeatDefaults struct {
 	APIContainerImageURL    string
+	CfnAPIContainerImageURL string
 	EngineContainerImageURL string
 }
 
@@ -68,6 +69,9 @@ func (r *Heat) Default() {
 func (spec *HeatSpec) Default() {
 	if spec.HeatAPI.ContainerImage == "" {
 		spec.HeatAPI.ContainerImage = heatDefaults.APIContainerImageURL
+	}
+	if spec.HeatCfnAPI.ContainerImage == "" {
+		spec.HeatCfnAPI.ContainerImage = heatDefaults.CfnAPIContainerImageURL
 	}
 	if spec.HeatEngine.ContainerImage == "" {
 		spec.HeatEngine.ContainerImage = heatDefaults.EngineContainerImageURL

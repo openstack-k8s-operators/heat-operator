@@ -111,6 +111,8 @@ spec:
                 default: 1
                 description: Replicas - Heat API Replicas
                 format: int32
+                maximum: 32
+                minimum: 0
                 type: integer
               resources:
                 description: Resources - Compute Resources required by this service
@@ -179,13 +181,6 @@ spec:
           status:
             description: HeatEngineStatus defines the observed state of Heat
             properties:
-              apiEndpoint:
-                additionalProperties:
-                  additionalProperties:
-                    type: string
-                  type: object
-                description: API endpoint
-                type: object
               conditions:
                 description: Conditions
                 items:
@@ -238,11 +233,6 @@ spec:
                 description: ReadyCount of Heat instances
                 format: int32
                 type: integer
-              serviceID:
-                additionalProperties:
-                  type: string
-                description: ServiceID - the ID of the registered service in keystone
-                type: object
             type: object
         type: object
     served: true

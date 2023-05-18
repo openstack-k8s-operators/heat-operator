@@ -32,6 +32,8 @@ const (
 
 	// HeatAPIContainerImage - default fall-back container image for HeatAPI if associated env var not provided
 	HeatAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
+	// HeatCfnAPIContainerImage - default fall-back container image for HeatCfnAPI if associated env var not provided
+	HeatCfnAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
 	// HeatEngineContainerImage - default fall-back container image for HeatEngine if associated env var not provided
 	HeatEngineContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
 )
@@ -100,6 +102,10 @@ type HeatSpec struct {
 	HeatAPI HeatAPISpec `json:"heatAPI"`
 
 	// +kubebuilder:validation:Required
+	// HeatCfnAPI - Spec definition for the CfnAPI service of this Heat deployment
+	HeatCfnAPI HeatCfnAPISpec `json:"heatCfnAPI"`
+
+	// +kubebuilder:validation:Required
 	// HeatEngine - Spec definition for the Engine service of this Heat deployment
 	HeatEngine HeatEngineSpec `json:"heatEngine"`
 
@@ -165,6 +171,9 @@ type HeatStatus struct {
 	// ReadyCount of Heat API instance
 	HeatAPIReadyCount int32 `json:"heatApiReadyCount,omitempty"`
 
+	// ReadyCount of Heat CfnAPI instance
+	HeatCfnAPIReadyCount int32 `json:"heatCfnApiReadyCount,omitempty"`
+
 	// ReadyCount of Heat Engine instance
 	HeatEngineReadyCount int32 `json:"heatEngineReadyCount,omitempty"`
 }
@@ -198,6 +207,8 @@ func init() {
 func (instance Heat) IsReady() bool {
 	ready := instance.Status.HeatAPIReadyCount > 0
 
+	ready = ready && instance.Status.HeatCfnAPIReadyCount > 0
+
 	ready = ready && instance.Status.HeatEngineReadyCount > 0
 
 	return ready
@@ -208,6 +219,7 @@ func SetupDefaults() {
 	// Acquire environmental defaults and initialize Heat defaults with them
 	heatDefaults := HeatDefaults{
 		APIContainerImageURL:    util.GetEnvVar("HEAT_API_IMAGE_URL_DEFAULT", HeatAPIContainerImage),
+		CfnAPIContainerImageURL: util.GetEnvVar("HEAT_CFNAPI_IMAGE_URL_DEFAULT", HeatCfnAPIContainerImage),
 		EngineContainerImageURL: util.GetEnvVar("HEAT_ENGINE_IMAGE_URL_DEFAULT", HeatEngineContainerImage),
 	}
 
