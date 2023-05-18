@@ -96,7 +96,7 @@ spec:
                       encryption key from the Secret
                     type: string
                   database:
-                    default: heatDatabasePassword
+                    default: HeatDatabasePassword
                     description: 'Database - Selector to get the heat Database user
                       password from the Secret TODO: not used, need change in mariadb-operator'
                     type: string
