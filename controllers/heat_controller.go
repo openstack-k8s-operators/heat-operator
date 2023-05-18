@@ -116,13 +116,13 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.
 		}
 	}
 	if instance.Status.Hash == nil {
-		instance.Status.Hash = map[string]string{}
+		instance.Status.Hash = make(map[string]string)
 	}
 	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]map[string]string{}
+		instance.Status.APIEndpoints = make(map[string]map[string]string)
 	}
 	if instance.Status.ServiceIDs == nil {
-		instance.Status.ServiceIDs = map[string]string{}
+		instance.Status.ServiceIDs = make(map[string]string)
 	}
 
 	helper, err := helper.NewHelper(
