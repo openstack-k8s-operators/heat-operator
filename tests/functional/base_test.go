@@ -58,6 +58,7 @@ func GetDefaultHeatSpec() map[string]interface{} {
 		"secret":           SecretName,
 		"heatEngine":       GetDefaultHeatEngineSpec(),
 		"heatAPI":          GetDefaultHeatAPISpec(),
+		"heatCfnAPI":       GetDefaultHeatCFNAPISpec(),
 	}
 }
 
@@ -74,6 +75,14 @@ func GetDefaultHeatEngineSpec() map[string]interface{} {
 		"secret":         SecretName,
 		"replicas":       1,
 		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified",
+	}
+}
+
+func GetDefaultHeatCFNAPISpec() map[string]interface{} {
+	return map[string]interface{}{
+		"secret":         SecretName,
+		"replicas":       1,
+		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-cfn:current-podified",
 	}
 }
 
