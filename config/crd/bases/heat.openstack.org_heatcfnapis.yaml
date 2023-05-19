@@ -180,7 +180,7 @@ spec:
           status:
             description: HeatCfnAPIStatus defines the observed state of Heat
             properties:
-              apiEndpoint:
+              apiEndpoints:
                 additionalProperties:
                   additionalProperties:
                     type: string
