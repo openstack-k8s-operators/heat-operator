@@ -165,9 +165,6 @@ type HeatStatus struct {
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`
 
-	// ReadyCount of Heat instances
-	ReadyCount int32 `json:"readyCount,omitempty"`
-
 	// ReadyCount of Heat API instance
 	HeatAPIReadyCount int32 `json:"heatApiReadyCount,omitempty"`
 

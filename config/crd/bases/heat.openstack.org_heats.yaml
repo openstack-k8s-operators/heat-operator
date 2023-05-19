@@ -655,10 +655,6 @@ spec:
                 description: ReadyCount of Heat Engine instance
                 format: int32
                 type: integer
-              readyCount:
-                description: ReadyCount of Heat instances
-                format: int32
-                type: integer
               serviceIDs:
                 additionalProperties:
                   type: string

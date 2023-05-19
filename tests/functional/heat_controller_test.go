@@ -70,7 +70,9 @@ var _ = Describe("Heat controller", func() {
 			Expect(Heat.Status.DatabaseHostname).To(Equal(""))
 			Expect(Heat.Status.TransportURLSecret).To(Equal(""))
 			Expect(Heat.Status.APIEndpoints).To(BeEmpty())
-			Expect(Heat.Status.ReadyCount).To(Equal(int32(0)))
+			Expect(Heat.Status.HeatAPIReadyCount).To(Equal(int32(0)))
+			Expect(Heat.Status.HeatCfnAPIReadyCount).To(Equal(int32(0)))
+			Expect(Heat.Status.HeatEngineReadyCount).To(Equal(int32(0)))
 		})
 
 		It("should have Unknown Conditions initialized as transporturl not created", func() {
