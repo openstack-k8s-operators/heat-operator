@@ -10,14 +10,15 @@ require (
 	github.com/onsi/ginkgo/v2 v2.9.5
 	github.com/onsi/gomega v1.27.7
 	github.com/openshift/api v3.9.0+incompatible
-	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230516010331-e6fb0e7bbff7
+	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230522034944-3701672d14cb
 	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230515135008-28b4b15c5915
-	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230515212624-62d8100c3ead
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230510145530-3c8e9179fb6e
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230510145530-3c8e9179fb6e
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230510145530-3c8e9179fb6e
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.0.0-20230427065458-ec1b923df88c
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230515195124-f5d912595564
+	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230519193353-09694c267b18
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230516091855-e51abe875764
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230516091855-e51abe875764
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230516091855-e51abe875764
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.0.0-20230516091855-e51abe875764
+	github.com/openstack-k8s-operators/lib-common/modules/test-operators v0.0.0-20230516091855-e51abe875764
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230517052836-8478be8b3aaa
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.26.3
 	k8s.io/client-go v0.26.3
@@ -47,6 +48,7 @@ require (
 	github.com/imdario/mergo v0.3.15 // indirect
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
+	github.com/k8snetworkplumbingwg/network-attachment-definition-client v1.4.0 // indirect
 	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
