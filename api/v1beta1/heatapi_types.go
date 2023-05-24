@@ -135,7 +135,7 @@ func init() {
 	SchemeBuilder.Register(&HeatAPI{}, &HeatAPIList{})
 }
 
-// IsReady ...
+// IsReady - returns true if HeatAPI is reconciled successfully
 func (instance HeatAPI) IsReady() bool {
-	return instance.Status.ReadyCount >= 1
+	return instance.Status.Conditions.IsTrue(condition.ReadyCondition)
 }
