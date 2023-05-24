@@ -129,7 +129,7 @@ func init() {
 	SchemeBuilder.Register(&HeatEngine{}, &HeatEngineList{})
 }
 
-// IsReady ..
+// IsReady - returns true if HeatEngine is reconciled successfully
 func (instance HeatEngine) IsReady() bool {
-	return instance.Status.ReadyCount >= 1
+	return instance.Status.Conditions.IsTrue(condition.ReadyCondition)
 }

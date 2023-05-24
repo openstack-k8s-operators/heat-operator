@@ -200,15 +200,9 @@ func init() {
 	SchemeBuilder.Register(&Heat{}, &HeatList{})
 }
 
-// IsReady - returns true if service is ready to serve requests
+// IsReady - returns true if Heat is reconciled successfully
 func (instance Heat) IsReady() bool {
-	ready := instance.Status.HeatAPIReadyCount > 0
-
-	ready = ready && instance.Status.HeatCfnAPIReadyCount > 0
-
-	ready = ready && instance.Status.HeatEngineReadyCount > 0
-
-	return ready
+	return instance.Status.Conditions.IsTrue(condition.ReadyCondition)
 }
 
 // SetupDefaults - initializes any CRD field defaults based on environment variables (the defaulting mechanism itself is implemented via webhooks)
