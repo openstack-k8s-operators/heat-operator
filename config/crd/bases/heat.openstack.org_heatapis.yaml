@@ -181,13 +181,6 @@ spec:
           status:
             description: HeatAPIStatus defines the observed state of Heat
             properties:
-              apiEndpoints:
-                additionalProperties:
-                  additionalProperties:
-                    type: string
-                  type: object
-                description: API endpoint
-                type: object
               conditions:
                 description: Conditions
                 items:
@@ -240,11 +233,6 @@ spec:
                 description: ReadyCount of Heat instances
                 format: int32
                 type: integer
-              serviceIDs:
-                additionalProperties:
-                  type: string
-                description: ServiceID - the ID of the registered service in keystone
-                type: object
             type: object
         type: object
     served: true

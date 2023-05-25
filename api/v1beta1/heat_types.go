@@ -150,17 +150,11 @@ type HeatStatus struct {
 	// Map of hashes to track e.g. job status
 	Hash map[string]string `json:"hash,omitempty"`
 
-	// API endpoint
-	APIEndpoints map[string]map[string]string `json:"apiEndpoints,omitempty"`
-
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
 
 	// Heat Database Hostname
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
-
-	// ServiceID - the ID of the registered service in keystone
-	ServiceIDs map[string]string `json:"serviceIDs,omitempty"`
 
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`

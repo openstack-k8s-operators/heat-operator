@@ -180,12 +180,6 @@ func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = map[string]string{}
 	}
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]map[string]string{}
-	}
-	if instance.Status.ServiceIDs == nil {
-		instance.Status.ServiceIDs = map[string]string{}
-	}
 
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
@@ -333,11 +327,6 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 	//
 	// Update instance status with service endpoint url from route host information for v2
 	//
-	// TODO: need to support https default here
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]map[string]string{}
-	}
-	instance.Status.APIEndpoints[heatcfnapi.ServiceName] = apiEndpoints
 	// V1 - end
 
 	instance.Status.Conditions.MarkTrue(condition.ExposeServiceReadyCondition, condition.ExposeServiceReadyMessage)
@@ -346,12 +335,7 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 
 	//
 	// create users and endpoints
-	// TODO: rework this
 	//
-	if instance.Status.ServiceIDs == nil {
-		instance.Status.ServiceIDs = map[string]string{}
-	}
-
 	for _, ksSvc := range keystoneCfnServices {
 		r.Log.Info("Reconciled CfnAPI init successfully")
 		ksSvcSpec := keystonev1.KeystoneServiceSpec{
@@ -381,14 +365,12 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 			return ctrlResult, nil
 		}
 
-		instance.Status.ServiceIDs[ksSvc["name"]] = ksSvcObj.GetServiceID()
-
 		//
 		// register endpoints
 		//
 		ksEndptSpec := keystonev1.KeystoneEndpointSpec{
 			ServiceName: ksSvc["name"],
-			Endpoints:   instance.Status.APIEndpoints[heatcfnapi.ServiceName],
+			Endpoints:   apiEndpoints,
 		}
 		ksEndpt := keystonev1.NewKeystoneEndpoint(
 			ksSvc["name"],

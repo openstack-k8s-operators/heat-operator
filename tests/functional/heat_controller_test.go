@@ -69,7 +69,6 @@ var _ = Describe("Heat controller", func() {
 			Expect(Heat.Status.Hash).To(BeEmpty())
 			Expect(Heat.Status.DatabaseHostname).To(Equal(""))
 			Expect(Heat.Status.TransportURLSecret).To(Equal(""))
-			Expect(Heat.Status.APIEndpoints).To(BeEmpty())
 			Expect(Heat.Status.HeatAPIReadyCount).To(Equal(int32(0)))
 			Expect(Heat.Status.HeatCfnAPIReadyCount).To(Equal(int32(0)))
 			Expect(Heat.Status.HeatEngineReadyCount).To(Equal(int32(0)))
@@ -105,7 +104,6 @@ var _ = Describe("Heat controller", func() {
 			keystoneAPIName := th.CreateKeystoneAPI(namespace)
 			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPIName)
 			keystoneAPI := th.GetKeystoneAPI(keystoneAPIName)
-			keystoneAPI.Status.APIEndpoints["internal"] = "http://keystone-internal-openstack.testing"
 			Eventually(func(g Gomega) {
 				g.Expect(k8sClient.Status().Update(ctx, keystoneAPI.DeepCopy())).Should(Succeed())
 			}, timeout, interval).Should(Succeed())

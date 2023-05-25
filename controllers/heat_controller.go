@@ -159,12 +159,6 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = make(map[string]string)
 	}
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = make(map[string]map[string]string)
-	}
-	if instance.Status.ServiceIDs == nil {
-		instance.Status.ServiceIDs = make(map[string]string)
-	}
 
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
@@ -430,7 +424,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 	// Mirror HeatEngine status' ReadyCount to this parent CR
-	// instance.Status.ServiceIDs = heatEngine.Status.ServiceIDs
 	instance.Status.HeatEngineReadyCount = heatEngine.Status.ReadyCount
 
 	// Mirror HeatEngine's condition status
@@ -454,13 +447,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
-	// Mirror HeatAPI status' APIEndpoints, ServiceIDs and ReadyCount to this parent CR
-	for k, v := range heatAPI.Status.APIEndpoints {
-		instance.Status.APIEndpoints[k] = v
-	}
-	for k, v := range heatAPI.Status.ServiceIDs {
-		instance.Status.ServiceIDs[k] = v
-	}
+	// Mirror HeatAPI status' ReadyCount to this parent CR
 	instance.Status.HeatAPIReadyCount = heatAPI.Status.ReadyCount
 
 	// Mirror HeatAPI's condition status
@@ -484,13 +471,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
 
-	// Mirror HeatAPI status' APIEndpoints, ServiceIDs and ReadyCount to this parent CR
-	for k, v := range heatCfnAPI.Status.APIEndpoints {
-		instance.Status.APIEndpoints[k] = v
-	}
-	for k, v := range heatCfnAPI.Status.ServiceIDs {
-		instance.Status.ServiceIDs[k] = v
-	}
+	// Mirror HeatCfnAPI status' ReadyCount to this parent CR
 	instance.Status.HeatCfnAPIReadyCount = heatCfnAPI.Status.ReadyCount
 
 	// Mirror HeatCfnAPI's condition status
