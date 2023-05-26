@@ -585,13 +585,6 @@ spec:
           status:
             description: HeatStatus defines the observed state of Heat
             properties:
-              apiEndpoints:
-                additionalProperties:
-                  additionalProperties:
-                    type: string
-                  type: object
-                description: API endpoint
-                type: object
               conditions:
                 description: Conditions
                 items:
@@ -655,11 +648,6 @@ spec:
                 description: ReadyCount of Heat Engine instance
                 format: int32
                 type: integer
-              serviceIDs:
-                additionalProperties:
-                  type: string
-                description: ServiceID - the ID of the registered service in keystone
-                type: object
               transportURLSecret:
                 description: TransportURLSecret - Secret containing RabbitMQ transportURL
                 type: string

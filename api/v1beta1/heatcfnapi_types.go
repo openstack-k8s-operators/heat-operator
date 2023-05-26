@@ -96,14 +96,8 @@ type HeatCfnAPIStatus struct {
 	// Map of hashes to track e.g. job status
 	Hash map[string]string `json:"hash,omitempty"`
 
-	// API endpoint
-	APIEndpoints map[string]map[string]string `json:"apiEndpoints,omitempty"`
-
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
-
-	// ServiceID - the ID of the registered service in keystone
-	ServiceIDs map[string]string `json:"serviceIDs,omitempty"`
 
 	// ReadyCount of Heat instances
 	ReadyCount int32 `json:"readyCount,omitempty"`

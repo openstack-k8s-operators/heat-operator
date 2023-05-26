@@ -185,12 +185,6 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	if instance.Status.Hash == nil {
 		instance.Status.Hash = map[string]string{}
 	}
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]map[string]string{}
-	}
-	if instance.Status.ServiceIDs == nil {
-		instance.Status.ServiceIDs = map[string]string{}
-	}
 
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
@@ -335,28 +329,11 @@ func (r *HeatAPIReconciler) reconcileInit(
 		return ctrlResult, nil
 	}
 
-	//
-	// Update instance status with service endpoint url from route host information for v2
-	//
-	// TODO: need to support https default here
-	if instance.Status.APIEndpoints == nil {
-		instance.Status.APIEndpoints = map[string]map[string]string{}
-	}
-	instance.Status.APIEndpoints[heatapi.ServiceName] = apiEndpoints
-	// V1 - end
-
-	instance.Status.Conditions.MarkTrue(condition.ExposeServiceReadyCondition, condition.ExposeServiceReadyMessage)
-
 	// expose service - end
 
 	//
 	// create users and endpoints
-	// TODO: rework this
 	//
-	if instance.Status.ServiceIDs == nil {
-		instance.Status.ServiceIDs = map[string]string{}
-	}
-
 	for _, ksSvc := range keystoneServices {
 		r.Log.Info("Reconciled API init successfully")
 		ksSvcSpec := keystonev1.KeystoneServiceSpec{
@@ -386,14 +363,12 @@ func (r *HeatAPIReconciler) reconcileInit(
 			return ctrlResult, nil
 		}
 
-		instance.Status.ServiceIDs[ksSvc["name"]] = ksSvcObj.GetServiceID()
-
 		//
 		// register endpoints
 		//
 		ksEndptSpec := keystonev1.KeystoneEndpointSpec{
 			ServiceName: ksSvc["name"],
-			Endpoints:   instance.Status.APIEndpoints[heatapi.ServiceName],
+			Endpoints:   apiEndpoints,
 		}
 		ksEndpt := keystonev1.NewKeystoneEndpoint(
 			ksSvc["name"],
