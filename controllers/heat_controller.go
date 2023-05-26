@@ -29,7 +29,10 @@ import (
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -178,6 +181,52 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	// transportURLSecretFn - Watch for changes made to the secret associated with the RabbitMQ
+	// TransportURL created and used by Heat CRs.  Watch functions return a list of namespace-scoped
+	// CRs that then get fed  to the reconciler.  Hence, in this case, we need to know the name of the
+	// Heat CR associated with the secret we are examining in the function.  We could parse the name
+	// out of the "%s-heat-transport" secret label, which would be faster than getting the list of
+	// the Heat CRs and trying to match on each one.  The downside there, however, is that technically
+	// someone could randomly label a secret "something-heat-transport" where "something" actually
+	// matches the name of an existing Heat CR.  In that case changes to that secret would trigger
+	// reconciliation for a Heat CR that does not need it.
+	//
+	// TODO: We also need a watch func to monitor for changes to the secret referenced by Heat.Spec.Secret
+	transportURLSecretFn := func(o client.Object) []reconcile.Request {
+		result := []reconcile.Request{}
+
+		// get all Heat CRs
+		heats := &heatv1beta1.HeatList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(o.GetNamespace()),
+		}
+		if err := r.Client.List(context.Background(), heats, listOpts...); err != nil {
+			r.Log.Error(err, "Unable to retrieve Heat CRs %v")
+			return nil
+		}
+
+		for _, ownerRef := range o.GetOwnerReferences() {
+			if ownerRef.Kind == "TransportURL" {
+				for _, cr := range heats.Items {
+					if ownerRef.Name == fmt.Sprintf("%s-heat-transport", cr.Name) {
+						// return namespace and Name of CR
+						name := client.ObjectKey{
+							Namespace: o.GetNamespace(),
+							Name:      cr.Name,
+						}
+						r.Log.Info(fmt.Sprintf("TransportURL Secret %s belongs to TransportURL belonging to Heat CR %s", o.GetName(), cr.Name))
+						result = append(result, reconcile.Request{NamespacedName: name})
+					}
+				}
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.Heat{}).
 		Owns(&heatv1beta1.HeatAPI{}).
@@ -188,6 +237,9 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Secret{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&rabbitmqv1.TransportURL{}).
+		// Watch for TransportURL Secrets which belong to any TransportURLs created by Heat CRs
+		Watches(&source.Kind{Type: &corev1.Secret{}},
+			handler.EnqueueRequestsFromMapFunc(transportURLSecretFn)).
 		Complete(r)
 }
 
