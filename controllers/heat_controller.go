@@ -447,11 +447,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// Create domain for Heat stacks
-	heatDomain := openstack.Domain{
-		Name:        heat.StackDomainName,
-		Description: "Domain for Heat stacks",
-	}
-	domainID, err := r.ensureHeatDomain(heatDomain, os)
+	domainID, err := r.ensureHeatDomain(os)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -871,7 +867,11 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 	return transportURL, op, err
 }
 
-func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os *openstack.OpenStack) (string, error) {
+func (r *HeatReconciler) ensureHeatDomain(os *openstack.OpenStack) (string, error) {
+	domain := openstack.Domain{
+		Name:        heat.StackDomainName,
+		Description: "Domain for Heat stacks",
+	}
 	domainID, err := os.CreateDomain(r.Log, domain)
 
 	if err != nil {
