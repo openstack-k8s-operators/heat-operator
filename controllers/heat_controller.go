@@ -682,12 +682,7 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
 		deployment.Spec.PasswordSelectors = instance.Spec.PasswordSelectors
 
-		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
 	return deployment, op, err
@@ -713,12 +708,7 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
 		deployment.Spec.PasswordSelectors = instance.Spec.PasswordSelectors
 
-		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
 	return deployment, op, err
@@ -744,12 +734,7 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
 		deployment.Spec.PasswordSelectors = instance.Spec.PasswordSelectors
 
-		err := controllerutil.SetControllerReference(instance, deployment, r.Scheme)
-		if err != nil {
-			return err
-		}
-
-		return nil
+		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
 	return deployment, op, err
@@ -864,8 +849,7 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, transportURL, func() error {
 		transportURL.Spec.RabbitmqClusterName = instance.Spec.RabbitMqClusterName
 
-		err := controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
-		return err
+		return controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
 	})
 
 	return transportURL, op, err
