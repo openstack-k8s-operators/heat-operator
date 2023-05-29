@@ -441,7 +441,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// Create Heat user
-	userID, err := r.ensureHeatUser(ctx, helper, instance, keystoneAPI, os)
+	userID, err := r.ensureHeatUser(ctx, helper, instance, os)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -881,7 +881,7 @@ func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os *openstack
 	return domainID, nil
 }
 
-func (r *HeatReconciler) ensureHeatUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, keystoneAPI *keystonev1.KeystoneAPI, os *openstack.OpenStack) (string, error) {
+func (r *HeatReconciler) ensureHeatUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, os *openstack.OpenStack) (string, error) {
 
 	// get the password of the service user from the secret
 	password, _, err := oko_secret.GetDataFromSecret(
