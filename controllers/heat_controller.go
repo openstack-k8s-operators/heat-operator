@@ -448,7 +448,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 
 	// Create domain for Heat stacks
 	heatDomain := openstack.Domain{
-		Name:        "heat_stack",
+		Name:        heat.StackDomainName,
 		Description: "Domain for Heat stacks",
 	}
 	domainID, err := r.ensureHeatDomain(heatDomain, os)
