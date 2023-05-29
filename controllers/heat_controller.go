@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -187,7 +186,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// reconciliation for a Heat CR that does not need it.
 	//
 	// TODO: We also need a watch func to monitor for changes to the secret referenced by Heat.Spec.Secret
-	transportURLSecretFn := func(o client.Object) []reconcile.Request {
+	transportURLSecretFn := func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// get all Heat CRs
@@ -232,7 +231,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ConfigMap{}).
 		Owns(&rabbitmqv1.TransportURL{}).
 		// Watch for TransportURL Secrets which belong to any TransportURLs created by Heat CRs
-		Watches(&source.Kind{Type: &corev1.Secret{}},
+		Watches(&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(transportURLSecretFn)).
 		Complete(r)
 }

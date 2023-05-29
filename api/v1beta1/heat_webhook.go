@@ -27,6 +27,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
+	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 )
 
 // HeatDefaults -
@@ -84,25 +85,25 @@ func (spec *HeatSpec) Default() {
 var _ webhook.Validator = &Heat{}
 
 // ValidateCreate implements webhook.Validator so a webhook will be registered for the type
-func (r *Heat) ValidateCreate() error {
+func (r *Heat) ValidateCreate() (warnings admission.Warnings, err error) {
 	heatlog.Info("validate create", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object creation.
-	return nil
+	return nil, nil
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
-func (r *Heat) ValidateUpdate(old runtime.Object) error {
+func (r *Heat) ValidateUpdate(old runtime.Object) (warnings admission.Warnings, err error) {
 	heatlog.Info("validate update", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object update.
-	return nil
+	return nil, nil
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
-func (r *Heat) ValidateDelete() error {
+func (r *Heat) ValidateDelete() (warnings admission.Warnings, err error) {
 	heatlog.Info("validate delete", "name", r.Name)
 
 	// TODO(user): fill in your validation logic upon object deletion.
-	return nil
+	return nil, nil
 }

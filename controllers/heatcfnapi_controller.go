@@ -193,7 +193,7 @@ func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	configMapFn := func(o client.Object) []reconcile.Request {
+	configMapFn := func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		apis := &heatv1beta1.HeatCfnAPIList{}
@@ -234,7 +234,7 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&routev1.Route{}).
 		Owns(&corev1.Service{}).
 		// watch the config CMs we don't own
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
+		Watches(&corev1.ConfigMap{},
 			handler.EnqueueRequestsFromMapFunc(configMapFn)).
 		Complete(r)
 }

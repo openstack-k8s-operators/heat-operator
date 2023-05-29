@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
@@ -154,7 +153,7 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	configMapFn := func(o client.Object) []reconcile.Request {
+	configMapFn := func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		engines := &heatv1beta1.HeatEngineList{}
@@ -190,7 +189,7 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&heatv1beta1.HeatEngine{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Secret{}).
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
+		Watches(&corev1.ConfigMap{},
 			handler.EnqueueRequestsFromMapFunc(configMapFn)).
 		Complete(r)
 }
