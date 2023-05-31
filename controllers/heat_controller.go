@@ -441,17 +441,13 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// Create Heat user
-	userID, err := r.ensureHeatUser(ctx, helper, instance, keystoneAPI, os)
+	userID, err := r.ensureStackDomainAdminUser(ctx, helper, instance, os)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Create domain for Heat stacks
-	heatDomain := openstack.Domain{
-		Name:        "heat_stack",
-		Description: "Domain for Heat stacks",
-	}
-	domainID, err := r.ensureHeatDomain(heatDomain, os)
+	domainID, err := r.ensureStackDomain(os)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -855,7 +851,11 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 	return transportURL, op, err
 }
 
-func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os *openstack.OpenStack) (string, error) {
+func (r *HeatReconciler) ensureStackDomain(os *openstack.OpenStack) (string, error) {
+	domain := openstack.Domain{
+		Name:        heat.StackDomainName,
+		Description: "Domain for Heat stacks",
+	}
 	domainID, err := os.CreateDomain(r.Log, domain)
 
 	if err != nil {
@@ -865,7 +865,7 @@ func (r *HeatReconciler) ensureHeatDomain(domain openstack.Domain, os *openstack
 	return domainID, nil
 }
 
-func (r *HeatReconciler) ensureHeatUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, keystoneAPI *keystonev1.KeystoneAPI, os *openstack.OpenStack) (string, error) {
+func (r *HeatReconciler) ensureStackDomainAdminUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, os *openstack.OpenStack) (string, error) {
 
 	// get the password of the service user from the secret
 	password, _, err := oko_secret.GetDataFromSecret(
