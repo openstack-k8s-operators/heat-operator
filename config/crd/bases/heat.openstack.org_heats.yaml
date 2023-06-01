@@ -279,6 +279,7 @@ spec:
                     type: object
                   passwordSelectors:
                     default:
+                      authEncryptionKey: HeatAuthEncryptionKey
                       database: HeatDatabasePassword
                       service: HeatPassword
                     description: PasswordSelectors - Selectors to identify the DB
