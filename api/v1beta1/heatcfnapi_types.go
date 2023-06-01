@@ -50,7 +50,7 @@ type HeatCfnAPISpec struct {
 	// DatabaseHostname - Heat Database Hostname
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
 
-	// +kubebuilder:validation:Required
+	// +kubebuilder:validation:Optional
 	// Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
 	Secret string `json:"secret"`
 
