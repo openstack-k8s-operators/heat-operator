@@ -423,37 +423,9 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// normal reconcile tasks
 	//
-	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	//
-	// get admin authentication OpenStack
-	//
-	os, _, err := keystonev1.GetAdminServiceClient(
-		ctx,
-		helper,
-		keystoneAPI,
-	)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Create Heat user
-	userID, err := r.ensureStackDomainAdminUser(ctx, helper, instance, os)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
 
 	// Create domain for Heat stacks
-	domainID, err := r.ensureStackDomain(os)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Add the user to the domain
-	err = r.addUserToDomain(userID, domainID, os)
+	err = r.ensureStackDomain(ctx, helper, instance)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -766,6 +738,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	if err != nil {
 		return err
 	}
+
 	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
 	if err != nil {
 		return err
@@ -851,18 +824,45 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 	return transportURL, op, err
 }
 
-func (r *HeatReconciler) ensureStackDomain(os *openstack.OpenStack) (string, error) {
+func (r *HeatReconciler) ensureStackDomain(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat) error {
+	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
+	if err != nil {
+		return err
+	}
+	//
+	// get admin authentication OpenStack
+	//
+	os, _, err := keystonev1.GetAdminServiceClient(
+		ctx,
+		helper,
+		keystoneAPI,
+	)
+	if err != nil {
+		return err
+	}
+
 	domain := openstack.Domain{
 		Name:        heat.StackDomainName,
 		Description: "Domain for Heat stacks",
 	}
 	domainID, err := os.CreateDomain(r.Log, domain)
-
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	return domainID, nil
+	// Create Heat user
+	userID, err := r.ensureStackDomainAdminUser(ctx, helper, instance, os)
+	if err != nil {
+		return err
+	}
+
+	// Add the user to the domain
+	err = r.addUserToDomain(userID, domainID, os)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (r *HeatReconciler) ensureStackDomainAdminUser(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat, os *openstack.OpenStack) (string, error) {
