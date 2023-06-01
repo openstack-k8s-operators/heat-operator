@@ -18,6 +18,7 @@ spec:
       service: false
     replicas: 1
     resources: {}
+    secret: osp-secret
   heatCfnAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
     customServiceConfig: "# add your customization here"
@@ -26,6 +27,7 @@ spec:
       service: false
     replicas: 1
     resources: {}
+    secret: osp-secret
   heatEngine:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
     customServiceConfig: "# add your customization here"
@@ -34,6 +36,7 @@ spec:
       service: false
     replicas: 1
     resources: {}
+    secret: osp-secret
   passwordSelectors:
     service: HeatPassword
     database: HeatDatabasePassword
