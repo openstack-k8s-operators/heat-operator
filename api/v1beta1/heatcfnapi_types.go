@@ -55,7 +55,7 @@ type HeatCfnAPISpec struct {
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword}
+	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
 	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
 
