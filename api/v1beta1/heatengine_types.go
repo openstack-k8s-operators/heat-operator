@@ -18,81 +18,33 @@ package v1beta1
 
 import (
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// HeatEngineSpec defines the desired state of Heat
+// HeatEngineTemplate defines the input parameters for the Heat Engine service
+type HeatEngineTemplate struct {
+	// Common input parameters for all Heat services
+	HeatServiceTemplate `json:",inline"`
+}
+
+// HeatEngineSpec defines the desired state of HeatEngine
 type HeatEngineSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=heat
-	// ServiceUser - optional username used for this service to register in heat
-	ServiceUser string `json:"serviceUser"`
+	// Common input parameters for all Heat services
+	HeatTemplate `json:",inline"`
 
-	// +kubebuilder:validation:Required
-	// ContainerImage - Heat API Container Image URL
-	ContainerImage string `json:"containerImage"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=1
-	// +kubebuilder:validation:Maximum=32
-	// +kubebuilder:validation:Minimum=0
-	// Replicas - Heat API Replicas
-	Replicas int32 `json:"replicas"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=heat
-	// DatabaseUser - optional username used for heat DB, defaults to heat.
-	// TODO: -> implement needs work in mariadb-operator, right now only heat.
-	DatabaseUser string `json:"databaseUser"`
+	// Input parameters for the Heat Engine service
+	HeatEngineTemplate `json:",inline"`
 
 	// +kubebuilder:validation:Optional
 	// DatabaseHostname - Heat Database Hostname
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
-
-	// +kubebuilder:validation:Required
-	// Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
-	// and HeatAuthEncryptionKey
-	Secret string `json:"secret"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
-	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
-	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// Debug - enable debug for different deploy stages. If an init container is used, it runs and the
-	// actual action pod gets started with sleep infinity
-	Debug HeatDebug `json:"debug,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// NodeSelector to target subset of worker nodes for running the API service
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="# add your customization here"
-	// CustomServiceConfig - customize the service config using this parameter to change service defaults,
-	// or overwrite rendered information using raw OpenStack config format. The content gets added to
-	// to /etc/<service>/<service>.conf.d directory as custom.conf file.
-	CustomServiceConfig string `json:"customServiceConfig,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// ConfigOverwrite - interface to overwrite default config files like e.g. policy.json.
-	// But can also be used to add additional files. Those get added to the service config dir in /etc/<service> .
-	// TODO: -> implement
-	DefaultConfigOverwrite map[string]string `json:"defaultConfigOverwrite,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// Resources - Compute Resources required by this service (Limits/Requests).
-	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`
 }
 
-// HeatEngineStatus defines the observed state of Heat
+// HeatEngineStatus defines the observed state of HeatEngine
 type HeatEngineStatus struct {
 	// Map of hashes to track e.g. job status
 	Hash map[string]string `json:"hash,omitempty"`
@@ -100,7 +52,7 @@ type HeatEngineStatus struct {
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
 
-	// ReadyCount of Heat instances
+	// ReadyCount of HeatEngine instances
 	ReadyCount int32 `json:"readyCount,omitempty"`
 }
 
@@ -118,7 +70,7 @@ type HeatEngine struct {
 
 //+kubebuilder:object:root=true
 
-// HeatEngineList contains a list of Heat
+// HeatEngineList contains a list of HeatEngine
 type HeatEngineList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

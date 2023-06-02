@@ -33,7 +33,7 @@ spec:
           metadata:
             type: object
           spec:
-            description: HeatEngineSpec defines the desired state of Heat
+            description: HeatEngineSpec defines the desired state of HeatEngine
             properties:
               containerImage:
                 description: ContainerImage - Heat API Container Image URL
@@ -60,10 +60,6 @@ spec:
                   an init container is used, it runs and the actual action pod gets
                   started with sleep infinity
                 properties:
-                  dbSync:
-                    default: false
-                    description: DBSync enable debug
-                    type: boolean
                   service:
                     default: false
                     description: Service enable debug
@@ -109,7 +105,7 @@ spec:
                 type: object
               replicas:
                 default: 1
-                description: Replicas - Heat API Replicas
+                description: Replicas -
                 format: int32
                 maximum: 32
                 minimum: 0
@@ -179,7 +175,7 @@ spec:
             - secret
             type: object
           status:
-            description: HeatEngineStatus defines the observed state of Heat
+            description: HeatEngineStatus defines the observed state of HeatEngine
             properties:
               conditions:
                 description: Conditions
@@ -230,7 +226,7 @@ spec:
                 description: Map of hashes to track e.g. job status
                 type: object
               readyCount:
-                description: ReadyCount of Heat instances
+                description: ReadyCount of HeatEngine instances
                 format: int32
                 type: integer
             type: object
