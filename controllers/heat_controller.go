@@ -62,6 +62,8 @@ type HeatReconciler struct {
 	Scheme  *runtime.Scheme
 }
 
+var keystoneAPI *keystonev1.KeystoneAPI
+
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats/finalizers,verbs=update
@@ -734,7 +736,8 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		customData[key] = data
 	}
 
-	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
+	var err error
+	keystoneAPI, err = keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
 	if err != nil {
 		return err
 	}
@@ -824,11 +827,9 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 	return transportURL, op, err
 }
 
+// ensureStackDomain creates the OpenStack domain for Heat stacks. It then assigns the user to the Heat stacks domain.
+// This function relies on the keystoneAPI variable that is set globally in generateServiceConfigMaps().
 func (r *HeatReconciler) ensureStackDomain(ctx context.Context, helper *helper.Helper, instance *heatv1beta1.Heat) error {
-	keystoneAPI, err := keystonev1.GetKeystoneAPI(ctx, helper, instance.Namespace, map[string]string{})
-	if err != nil {
-		return err
-	}
 	//
 	// get admin authentication OpenStack
 	//
