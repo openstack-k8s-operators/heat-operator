@@ -431,7 +431,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// deploy heat-engine
-	heatEngine, op, err := r.engineDeploymentCreateOrUpdate(instance)
+	heatEngine, op, err := r.engineDeploymentCreateOrUpdate(ctx, instance)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatEngineReadyCondition,
@@ -453,7 +453,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// deploy heat-api
-	heatAPI, op, err := r.apiDeploymentCreateOrUpdate(instance)
+	heatAPI, op, err := r.apiDeploymentCreateOrUpdate(ctx, instance)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatAPIReadyCondition,
@@ -477,7 +477,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// deploy heat-api-cfn
-	heatCfnAPI, op, err := r.cfnapiDeploymentCreateOrUpdate(instance)
+	heatCfnAPI, op, err := r.cfnapiDeploymentCreateOrUpdate(ctx, instance)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatCfnAPIReadyCondition,
@@ -631,8 +631,17 @@ func (r *HeatReconciler) reconcileUpdate(ctx context.Context, instance *heatv1be
 }
 
 func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
+	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatAPI, controllerutil.OperationResult, error) {
+
+	heatAPISpec := heatv1beta1.HeatAPISpec{
+		HeatTemplate:       instance.Spec.HeatTemplate,
+		HeatAPITemplate:    instance.Spec.HeatAPI,
+		DatabaseHostname:   instance.Status.DatabaseHostname,
+		TransportURLSecret: instance.Status.TransportURLSecret,
+	}
+
 	deployment := &heatv1beta1.HeatAPI{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-api", instance.Name),
@@ -640,16 +649,11 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, deployment, func() error {
-		deployment.Spec = instance.Spec.HeatAPI
-		// TODO: Add logic to determine when to set/overwrite, etc
-		deployment.Spec.ServiceUser = instance.Spec.ServiceUser
-		deployment.Spec.DatabaseHostname = instance.Status.DatabaseHostname
-		deployment.Spec.DatabaseUser = instance.Spec.DatabaseUser
-		deployment.Spec.Secret = instance.Spec.Secret
-		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
-		deployment.Spec.PasswordSelectors = instance.Spec.PasswordSelectors
-
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		deployment.Spec = heatAPISpec
+		if len(deployment.Spec.NodeSelector) == 0 {
+			deployment.Spec.NodeSelector = instance.Spec.NodeSelector
+		}
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
@@ -657,8 +661,17 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 }
 
 func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
+	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatCfnAPI, controllerutil.OperationResult, error) {
+
+	heatCfnAPISpec := heatv1beta1.HeatCfnAPISpec{
+		HeatTemplate:       instance.Spec.HeatTemplate,
+		HeatCfnAPITemplate: instance.Spec.HeatCfnAPI,
+		DatabaseHostname:   instance.Status.DatabaseHostname,
+		TransportURLSecret: instance.Status.TransportURLSecret,
+	}
+
 	deployment := &heatv1beta1.HeatCfnAPI{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-cfnapi", instance.Name),
@@ -666,16 +679,11 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, deployment, func() error {
-		deployment.Spec = instance.Spec.HeatCfnAPI
-		// TODO: Add logic to determine when to set/overwrite, etc
-		deployment.Spec.ServiceUser = instance.Spec.ServiceUser
-		deployment.Spec.DatabaseHostname = instance.Status.DatabaseHostname
-		deployment.Spec.DatabaseUser = instance.Spec.DatabaseUser
-		deployment.Spec.Secret = instance.Spec.Secret
-		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
-		deployment.Spec.PasswordSelectors = instance.Spec.PasswordSelectors
-
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		deployment.Spec = heatCfnAPISpec
+		if len(deployment.Spec.NodeSelector) == 0 {
+			deployment.Spec.NodeSelector = instance.Spec.NodeSelector
+		}
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
@@ -683,8 +691,17 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 }
 
 func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
+	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
+
+	heatEngineSpec := heatv1beta1.HeatEngineSpec{
+		HeatTemplate:       instance.Spec.HeatTemplate,
+		HeatEngineTemplate: instance.Spec.HeatEngine,
+		DatabaseHostname:   instance.Status.DatabaseHostname,
+		TransportURLSecret: instance.Status.TransportURLSecret,
+	}
+
 	deployment := &heatv1beta1.HeatEngine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-engine", instance.Name),
@@ -692,16 +709,11 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 		},
 	}
 
-	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, deployment, func() error {
-		deployment.Spec = instance.Spec.HeatEngine
-		// TODO: Add logic to determine when to set/overwrite, etc
-		deployment.Spec.ServiceUser = instance.Spec.ServiceUser
-		deployment.Spec.DatabaseHostname = instance.Status.DatabaseHostname
-		deployment.Spec.DatabaseUser = instance.Spec.DatabaseUser
-		deployment.Spec.Secret = instance.Spec.Secret
-		deployment.Spec.TransportURLSecret = instance.Status.TransportURLSecret
-		deployment.Spec.PasswordSelectors = instance.Spec.PasswordSelectors
-
+	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		deployment.Spec = heatEngineSpec
+		if len(deployment.Spec.NodeSelector) == 0 {
+			deployment.Spec.NodeSelector = instance.Spec.NodeSelector
+		}
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 

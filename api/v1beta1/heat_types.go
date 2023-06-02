@@ -40,32 +40,14 @@ const (
 
 // HeatSpec defines the desired state of Heat
 type HeatSpec struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=heat
-	// ServiceUser - optional username used for this service to register in heat
-	ServiceUser string `json:"serviceUser"`
+	// Common input parameters for all Heat services
+	HeatTemplate `json:",inline"`
 
 	// +kubebuilder:validation:Required
 	// MariaDB instance name.
 	// Right now required by the maridb-operator to get the credentials from the instance to create the DB.
 	// Might not be required in future.
 	DatabaseInstance string `json:"databaseInstance"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=heat
-	// DatabaseUser - optional username used for heat DB, defaults to heat.
-	// TODO: -> implement needs work in mariadb-operator, right now only heat.
-	DatabaseUser string `json:"databaseUser"`
-
-	// +kubebuilder:validation:Required
-	// Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
-	// and HeatAuthEncryptionKey
-	Secret string `json:"secret"`
-
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
-	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
-	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// Debug - enable debug for different deploy stages. If an init container is used, it runs and the
@@ -91,58 +73,26 @@ type HeatSpec struct {
 	DefaultConfigOverwrite map[string]string `json:"defaultConfigOverwrite,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// HeatEngineCount - interface to overwrite default number of Heat engine pods. This will
-	// scale the number of Heat engine pods. Note that this shouldn't be confused with the heat.conf option
-	// for num_engine_workers: n. This option provides an alternative and allows the user to scale in a k8s native
-	// manner, while preseving the num_engine_workers option as well.
-	HeatEngineCount int32 `json:"heatEngineCount,omitempty"`
+	// NodeSelector to target subset of worker nodes for running the Heat services
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// +kubebuilder:validation:Required
 	// HeatAPI - Spec definition for the API service of this Heat deployment
-	HeatAPI HeatAPISpec `json:"heatAPI"`
+	HeatAPI HeatAPITemplate `json:"heatAPI"`
 
 	// +kubebuilder:validation:Required
 	// HeatCfnAPI - Spec definition for the CfnAPI service of this Heat deployment
-	HeatCfnAPI HeatCfnAPISpec `json:"heatCfnAPI"`
+	HeatCfnAPI HeatCfnAPITemplate `json:"heatCfnAPI"`
 
 	// +kubebuilder:validation:Required
 	// HeatEngine - Spec definition for the Engine service of this Heat deployment
-	HeatEngine HeatEngineSpec `json:"heatEngine"`
+	HeatEngine HeatEngineTemplate `json:"heatEngine"`
 
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default=rabbitmq
 	// RabbitMQ instance name
 	// Needed to request a transportURL that is created and used in Heat
 	RabbitMqClusterName string `json:"rabbitMqClusterName"`
-}
-
-// PasswordSelector ..
-type PasswordSelector struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="HeatDatabasePassword"
-	// Database - Selector to get the heat Database user password from the Secret
-	// TODO: not used, need change in mariadb-operator
-	Database string `json:"database,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="HeatPassword"
-	// Service - Selector to get the heat service password from the Secret
-	Service string `json:"service,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="HeatAuthEncryptionKey"
-	// AuthEncryptionKey - Selector to get the heat auth encryption key from the Secret
-	AuthEncryptionKey string `json:"authEncryptionKey,omitempty"`
-}
-
-// HeatDebug ...
-type HeatDebug struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// DBSync enable debug
-	DBSync bool `json:"dbSync,omitempty"`
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// Service enable debug
-	Service bool `json:"service,omitempty"`
 }
 
 // HeatStatus defines the observed state of Heat
