@@ -86,10 +86,11 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 
 	// Default oslo.service graceful_shutdown_timeout is 60, so align with that
 	terminationGracePeriod := int64(60)
+	serviceName := fmt.Sprintf("%s-%s", heat.ServiceName, heat.EngineComponent)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", heat.ServiceName, heat.EngineComponent),
+			Name:      instance.Name,
 			Namespace: instance.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -105,7 +106,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 					ServiceAccountName: heat.ServiceAccount,
 					Containers: []corev1.Container{
 						{
-							Name: fmt.Sprintf("%s-%s", heat.ServiceName, heat.EngineComponent),
+							Name: serviceName,
 							Command: []string{
 								"/bin/bash",
 							},
@@ -133,7 +134,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	deployment.Spec.Template.Spec.Affinity = affinity.DistributePods(
 		common.AppSelector,
 		[]string{
-			heat.ServiceName,
+			serviceName,
 		},
 		corev1.LabelHostname,
 	)
