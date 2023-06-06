@@ -67,7 +67,7 @@ func DBSyncJob(
 								"/bin/bash",
 							},
 							Args:  args,
-							Image: instance.Spec.HeatAPI.ContainerImage,
+							Image: instance.Spec.HeatEngine.ContainerImage,
 							SecurityContext: &corev1.SecurityContext{
 								RunAsUser: &runAsUser,
 							},
