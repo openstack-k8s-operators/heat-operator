@@ -16,6 +16,8 @@ limitations under the License.
 package heatapi
 
 import (
+	"fmt"
+
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
@@ -89,10 +91,11 @@ func Deployment(
 
 	// Default oslo.service graceful_shutdown_timeout is 60, so align with that
 	terminationGracePeriod := int64(60)
+	serviceName := fmt.Sprintf("%s-%s", heat.ServiceName, heat.APIComponent)
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      ServiceName,
+			Name:      serviceName,
 			Namespace: instance.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
@@ -108,7 +111,7 @@ func Deployment(
 					ServiceAccountName: heat.ServiceAccount,
 					Containers: []corev1.Container{
 						{
-							Name: heat.ServiceName + "-" + heat.APIComponent,
+							Name: serviceName,
 							Command: []string{
 								"/bin/bash",
 							},
@@ -136,7 +139,7 @@ func Deployment(
 	deployment.Spec.Template.Spec.Affinity = affinity.DistributePods(
 		common.AppSelector,
 		[]string{
-			heat.ServiceName,
+			labels[common.AppSelector],
 		},
 		corev1.LabelHostname,
 	)

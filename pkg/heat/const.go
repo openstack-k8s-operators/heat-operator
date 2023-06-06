@@ -42,8 +42,6 @@ const (
 	HeatCfnInternalPort int32 = 8000
 	// KollaConfigDbSync -
 	KollaConfigDbSync = "/var/lib/config-data/merged/db-sync-config.json"
-	// ComponentSelector - used by operators to specify pod labels
-	ComponentSelector = "component"
 	// APIComponent -
 	APIComponent = "api"
 	// CfnAPIComponent -
