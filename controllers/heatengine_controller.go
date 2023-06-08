@@ -346,8 +346,8 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	// Create ConfigMaps and Secrets - endv
 
 	serviceLabels := map[string]string{
-		common.AppSelector:     heat.ServiceName,
-		heat.ComponentSelector: heat.APIComponent,
+		common.AppSelector:       heat.ServiceName,
+		common.ComponentSelector: heat.APIComponent,
 	}
 
 	// Handle service init
