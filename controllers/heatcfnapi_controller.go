@@ -499,8 +499,8 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	//
 
 	serviceLabels := map[string]string{
-		common.AppSelector:     heat.ServiceName,
-		heat.ComponentSelector: heat.CfnAPIComponent,
+		common.AppSelector:       heat.ServiceName,
+		common.ComponentSelector: heat.CfnAPIComponent,
 	}
 
 	// Handle service init
