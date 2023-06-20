@@ -85,7 +85,6 @@ metadata:
   finalizers:
     - HeatAPI
   name: heat-api
-  namespace: openstack
   ownerReferences:
     - apiVersion: heat.openstack.org/v1beta1
       blockOwnerDeletion: true
@@ -118,7 +117,6 @@ metadata:
   finalizers:
     - HeatCfnAPI
   name: heat-cfnapi
-  namespace: openstack
   ownerReferences:
     - apiVersion: heat.openstack.org/v1beta1
       blockOwnerDeletion: true
@@ -151,7 +149,6 @@ metadata:
   finalizers:
     - HeatEngine
   name: heat-engine
-  namespace: openstack
   ownerReferences:
     - apiVersion: heat.openstack.org/v1beta1
       blockOwnerDeletion: true
