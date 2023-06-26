@@ -23,8 +23,14 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
+
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 )
@@ -95,7 +101,25 @@ func (r *Heat) ValidateCreate() error {
 func (r *Heat) ValidateUpdate(old runtime.Object) error {
 	heatlog.Info("validate update", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object update.
+	oldHeat, ok := old.(*Heat)
+	if !ok || oldHeat == nil {
+		return apierrors.NewInternalError(fmt.Errorf("unable to convert existing object"))
+	}
+
+	if r.Spec.DatabaseInstance != oldHeat.Spec.DatabaseInstance {
+		return apierrors.NewForbidden(
+			schema.GroupResource{
+				Group:    GroupVersion.WithKind("Heat").Group,
+				Resource: GroupVersion.WithKind("Heat").Kind,
+			}, r.GetName(), &field.Error{
+				Type:     field.ErrorTypeForbidden,
+				Field:    "*",
+				BadValue: r.Name,
+				Detail:   "Invalid value: \"databaseInstance\": Value is immutable",
+			},
+		)
+	}
+
 	return nil
 }
 

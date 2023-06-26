@@ -57,21 +57,21 @@ var _ = Describe("Heat controller", func() {
 		})
 
 		It("should have the Spec fields initialized", func() {
-			Heat := GetHeat(heatName)
-			Expect(Heat.Spec.DatabaseInstance).Should(Equal("openstack"))
-			Expect(Heat.Spec.DatabaseUser).Should(Equal("heat"))
-			Expect(Heat.Spec.RabbitMqClusterName).Should(Equal("rabbitmq"))
-			Expect(Heat.Spec.ServiceUser).Should(Equal("heat"))
+			heat := GetHeat(heatName)
+			Expect(heat.Spec.DatabaseInstance).Should(Equal("openstack"))
+			Expect(heat.Spec.DatabaseUser).Should(Equal("heat"))
+			Expect(heat.Spec.RabbitMqClusterName).Should(Equal("rabbitmq"))
+			Expect(heat.Spec.ServiceUser).Should(Equal("heat"))
 		})
 
 		It("should have the Status fields initialized", func() {
-			Heat := GetHeat(heatName)
-			Expect(Heat.Status.Hash).To(BeEmpty())
-			Expect(Heat.Status.DatabaseHostname).To(Equal(""))
-			Expect(Heat.Status.TransportURLSecret).To(Equal(""))
-			Expect(Heat.Status.HeatAPIReadyCount).To(Equal(int32(0)))
-			Expect(Heat.Status.HeatCfnAPIReadyCount).To(Equal(int32(0)))
-			Expect(Heat.Status.HeatEngineReadyCount).To(Equal(int32(0)))
+			heat := GetHeat(heatName)
+			Expect(heat.Status.Hash).To(BeEmpty())
+			Expect(heat.Status.DatabaseHostname).To(Equal(""))
+			Expect(heat.Status.TransportURLSecret).To(Equal(""))
+			Expect(heat.Status.HeatAPIReadyCount).To(Equal(int32(0)))
+			Expect(heat.Status.HeatCfnAPIReadyCount).To(Equal(int32(0)))
+			Expect(heat.Status.HeatEngineReadyCount).To(Equal(int32(0)))
 		})
 
 		It("should have Unknown Conditions initialized as transporturl not created", func() {
