@@ -64,7 +64,6 @@ func GetDefaultHeatSpec() map[string]interface{} {
 
 func GetDefaultHeatAPISpec() map[string]interface{} {
 	return map[string]interface{}{
-		"secret":         SecretName,
 		"replicas":       1,
 		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified",
 	}
@@ -72,7 +71,6 @@ func GetDefaultHeatAPISpec() map[string]interface{} {
 
 func GetDefaultHeatEngineSpec() map[string]interface{} {
 	return map[string]interface{}{
-		"secret":         SecretName,
 		"replicas":       1,
 		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified",
 	}
@@ -80,7 +78,6 @@ func GetDefaultHeatEngineSpec() map[string]interface{} {
 
 func GetDefaultHeatCFNAPISpec() map[string]interface{} {
 	return map[string]interface{}{
-		"secret":         SecretName,
 		"replicas":       1,
 		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-cfn:current-podified",
 	}
