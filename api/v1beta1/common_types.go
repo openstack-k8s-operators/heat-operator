@@ -33,10 +33,6 @@ type HeatTemplate struct {
 	// TODO: -> implement needs work in mariadb-operator, right now only heat.
 	DatabaseUser string `json:"databaseUser"`
 
-	// +kubebuilder:validation:Optional
-	// DatabaseHostname - Heat Database Hostname
-	DatabaseHostname string `json:"databaseHostname,omitempty"`
-
 	// +kubebuilder:validation:Required
 	// Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
 	// and HeatAuthEncryptionKey
