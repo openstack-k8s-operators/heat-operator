@@ -47,7 +47,7 @@ type HeatTemplate struct {
 // HeatServiceTemplate -
 type HeatServiceTemplate struct {
 	// +kubebuilder:validation:Required
-	// ContainerImage - Heat API Container Image URL
+	// ContainerImage - Container Image URL
 	ContainerImage string `json:"containerImage"`
 
 	// +kubebuilder:validation:Optional
@@ -63,7 +63,7 @@ type HeatServiceTemplate struct {
 	Replicas int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
-	// NodeSelector to target subset of worker nodes for running the API service
+	// NodeSelector to target subset of worker nodes for running the service
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// +kubebuilder:validation:Optional
