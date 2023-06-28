@@ -42,6 +42,10 @@ type HeatEngineSpec struct {
 	// +kubebuilder:validation:Optional
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`
+
+	// +kubebuilder:validation:Required
+	// ServiceAccount - service account name used internally to provide Heat services the default SA name
+	ServiceAccount string `json:"serviceAccount"`
 }
 
 // HeatEngineStatus defines the observed state of HeatEngine

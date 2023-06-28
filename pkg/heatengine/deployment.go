@@ -102,7 +102,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: heat.ServiceAccount,
+					ServiceAccountName: instance.Spec.ServiceAccount,
 					Containers: []corev1.Container{
 						{
 							Name: fmt.Sprintf("%s-%s", heat.ServiceName, heat.EngineComponent),

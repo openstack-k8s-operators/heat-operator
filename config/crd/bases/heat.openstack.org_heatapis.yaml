@@ -171,6 +171,10 @@ spec:
                 description: Secret containing OpenStack password information for
                   heat HeatDatabasePassword, HeatPassword and HeatAuthEncryptionKey
                 type: string
+              serviceAccount:
+                description: ServiceAccount - service account name used internally
+                  to provide Heat services the default SA name
+                type: string
               serviceUser:
                 default: heat
                 description: ServiceUser - optional username used for this service
@@ -182,6 +186,7 @@ spec:
             required:
             - containerImage
             - secret
+            - serviceAccount
             type: object
           status:
             description: HeatAPIStatus defines the observed state of HeatAPI
