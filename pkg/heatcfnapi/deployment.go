@@ -105,7 +105,7 @@ func Deployment(
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: heat.ServiceAccount,
+					ServiceAccountName: instance.Spec.ServiceAccount,
 					Containers: []corev1.Container{
 						{
 							Name: heat.ServiceName + "-" + heat.CfnAPIComponent,

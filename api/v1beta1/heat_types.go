@@ -151,6 +151,21 @@ func (instance Heat) IsReady() bool {
 	return instance.Status.Conditions.IsTrue(condition.ReadyCondition)
 }
 
+// RbacConditionsSet - set the conditions for the rbac object
+func (instance Heat) RbacConditionsSet(c *condition.Condition) {
+	instance.Status.Conditions.Set(c)
+}
+
+// RbacNamespace - return the namespace
+func (instance Heat) RbacNamespace() string {
+	return instance.Namespace
+}
+
+// RbacResourceName - return the name to be used for rbac objects (serviceaccount, role, rolebinding)
+func (instance Heat) RbacResourceName() string {
+	return "heat-" + instance.Name
+}
+
 // SetupDefaults - initializes any CRD field defaults based on environment variables (the defaulting mechanism itself is implemented via webhooks)
 func SetupDefaults() {
 	// Acquire environmental defaults and initialize Heat defaults with them

@@ -20,8 +20,6 @@ const (
 	ServiceName = "heat"
 	// ServiceType -
 	ServiceType = "orchestration"
-	// ServiceAccount -
-	ServiceAccount = "heat-operator-heat"
 	// CfnServiceName -
 	CfnServiceName = "heat-cfn"
 	// CfnServiceType -
