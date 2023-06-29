@@ -45,7 +45,7 @@ spec:
             description: HeatCfnAPISpec defines the desired state of HeatCfnAPI
             properties:
               containerImage:
-                description: ContainerImage - Heat API Container Image URL
+                description: ContainerImage - Container Image URL
                 type: string
               customServiceConfig:
                 default: '# add your customization here'
@@ -86,7 +86,7 @@ spec:
                 additionalProperties:
                   type: string
                 description: NodeSelector to target subset of worker nodes for running
-                  the API service
+                  the service
                 type: object
               passwordSelectors:
                 description: PasswordSelectors - Selectors to identify the DB and

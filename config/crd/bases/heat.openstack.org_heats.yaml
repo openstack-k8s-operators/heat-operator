@@ -86,7 +86,7 @@ spec:
                   Heat deployment
                 properties:
                   containerImage:
-                    description: ContainerImage - Heat API Container Image URL
+                    description: ContainerImage - Container Image URL
                     type: string
                   customServiceConfig:
                     default: '# add your customization here'
@@ -118,7 +118,7 @@ spec:
                     additionalProperties:
                       type: string
                     description: NodeSelector to target subset of worker nodes for
-                      running the API service
+                      running the service
                     type: object
                   replicas:
                     default: 1
@@ -184,7 +184,7 @@ spec:
                   this Heat deployment
                 properties:
                   containerImage:
-                    description: ContainerImage - Heat API Container Image URL
+                    description: ContainerImage - Container Image URL
                     type: string
                   customServiceConfig:
                     default: '# add your customization here'
@@ -216,7 +216,7 @@ spec:
                     additionalProperties:
                       type: string
                     description: NodeSelector to target subset of worker nodes for
-                      running the API service
+                      running the service
                     type: object
                   replicas:
                     default: 1
@@ -282,7 +282,7 @@ spec:
                   this Heat deployment
                 properties:
                   containerImage:
-                    description: ContainerImage - Heat API Container Image URL
+                    description: ContainerImage - Container Image URL
                     type: string
                   customServiceConfig:
                     default: '# add your customization here'
@@ -314,7 +314,7 @@ spec:
                     additionalProperties:
                       type: string
                     description: NodeSelector to target subset of worker nodes for
-                      running the API service
+                      running the service
                     type: object
                   replicas:
                     default: 1
