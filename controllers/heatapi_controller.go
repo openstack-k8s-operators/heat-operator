@@ -335,7 +335,6 @@ func (r *HeatAPIReconciler) reconcileInit(
 	// create users and endpoints
 	//
 	for _, ksSvc := range keystoneServices {
-		r.Log.Info("Reconciled API init successfully")
 		ksSvcSpec := keystonev1.KeystoneServiceSpec{
 			ServiceType:        ksSvc["type"],
 			ServiceName:        ksSvc["name"],
