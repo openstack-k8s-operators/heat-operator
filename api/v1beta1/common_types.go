@@ -41,7 +41,7 @@ type HeatTemplate struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
 	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
-	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
+	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
 }
 
 // HeatServiceTemplate -
@@ -76,7 +76,7 @@ type HeatServiceTemplate struct {
 	// CustomServiceConfig - customize the service config using this parameter to change service defaults,
 	// or overwrite rendered information using raw OpenStack config format. The content gets added to
 	// to /etc/<service>/<service>.conf.d directory as custom.conf file.
-	CustomServiceConfig string `json:"customServiceConfig,omitempty"`
+	CustomServiceConfig string `json:"customServiceConfig"`
 
 	// +kubebuilder:validation:Optional
 	// ConfigOverwrite - interface to overwrite default config files like e.g. policy.json.
@@ -91,15 +91,15 @@ type PasswordSelector struct {
 	// +kubebuilder:default="HeatDatabasePassword"
 	// Database - Selector to get the heat Database user password from the Secret
 	// TODO: not used, need change in mariadb-operator
-	Database string `json:"database,omitempty"`
+	Database string `json:"database"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="HeatPassword"
 	// Service - Selector to get the heat service password from the Secret
-	Service string `json:"service,omitempty"`
+	Service string `json:"service"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="HeatAuthEncryptionKey"
 	// AuthEncryptionKey - Selector to get the heat auth encryption key from the Secret
-	AuthEncryptionKey string `json:"authEncryptionKey,omitempty"`
+	AuthEncryptionKey string `json:"authEncryptionKey"`
 }
 
 // HeatDebug ...
@@ -107,7 +107,7 @@ type HeatDebug struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
 	// DBSync enable debug
-	DBSync bool `json:"dbSync,omitempty"`
+	DBSync bool `json:"dbSync"`
 }
 
 // HeatServiceDebug ...
@@ -115,5 +115,5 @@ type HeatServiceDebug struct {
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
 	// Service enable debug
-	Service bool `json:"service,omitempty"`
+	Service bool `json:"service"`
 }
