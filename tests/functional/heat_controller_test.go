@@ -142,17 +142,8 @@ var _ = Describe("Heat controller", func() {
 	When("keystoneAPI instance is not available", func() {
 		BeforeEach(func() {
 			DeferCleanup(DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      SecretName,
-					Namespace: namespace,
-				},
-				Data: map[string][]byte{
-					"HeatPassword": []byte("12345678"),
-				},
-			}
-			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-			DeferCleanup(k8sClient.Delete, ctx, secret)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
 		})
 		It("should not create a config map", func() {
@@ -165,15 +156,6 @@ var _ = Describe("Heat controller", func() {
 	When("keystoneAPI instance is available", func() {
 		BeforeEach(func() {
 			DeferCleanup(DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
-			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      SecretName,
-					Namespace: namespace,
-				},
-				Data: map[string][]byte{
-					"HeatPassword": []byte("12345678"),
-				},
-			}
 			rmqSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "rabbitmq-secret",
@@ -185,8 +167,8 @@ var _ = Describe("Heat controller", func() {
 			}
 			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
 			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
-			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-			DeferCleanup(k8sClient.Delete, ctx, secret)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
 		})
 

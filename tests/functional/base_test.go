@@ -144,6 +144,7 @@ func CreateHeatSecret(namespace string, name string) *corev1.Secret {
 		map[string][]byte{
 			"HeatPassword":         []byte("12345678"),
 			"HeatDatabasePassword": []byte("12345678"),
+			"AuthEncryptionKey":    []byte("1234567812345678123456781212345678345678"),
 		},
 	)
 }
