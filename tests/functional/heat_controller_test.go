@@ -243,7 +243,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			rmqSecret = &corev1.Secret{
+			rmqSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "rabbitmq-secret",
 					Namespace: namespace,
@@ -391,6 +391,16 @@ var _ = Describe("Heat controller", func() {
 				condition.DBSyncReadyCondition,
 				corev1.ConditionTrue,
 			)
+			th.SimulateTransportURLReady(heatTransportURLName)
+			th.SimulateMariaDBDatabaseCompleted(heatName)
+			th.SimulateJobSuccess(types.NamespacedName{Name: heatName.Name + "-db-sync", Namespace: heatName.Namespace})
+		})
+		It("Assert Services are created", func() {
+			th.AssertServiceExists(types.NamespacedName{Namespace: namespace, Name: "heat-api-public"})
+		})
+
+		It("Assert Routes are created", func() {
+			th.AssertRouteExists(types.NamespacedName{Namespace: namespace, Name: "heat-api-public"})
 		})
 	})
 })

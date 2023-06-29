@@ -45,6 +45,11 @@ func GetDefaultHeatSpec() map[string]interface{} {
 		"heatEngine":       GetDefaultHeatEngineSpec(),
 		"heatAPI":          GetDefaultHeatAPISpec(),
 		"heatCfnAPI":       GetDefaultHeatCFNAPISpec(),
+		"passwordSelectors": heatv1.PasswordSelector{
+			Database:          "HeatDatabasePassword",
+			Service:           "HeatPassword",
+			AuthEncryptionKey: "HeatAuthEncryptionKey",
+		},
 	}
 }
 
