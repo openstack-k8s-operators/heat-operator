@@ -324,11 +324,6 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 		return ctrlResult, nil
 	}
 
-	//
-	// Update instance status with service endpoint url from route host information for v2
-	//
-	// V1 - end
-
 	instance.Status.Conditions.MarkTrue(condition.ExposeServiceReadyCondition, condition.ExposeServiceReadyMessage)
 
 	// expose service - end
