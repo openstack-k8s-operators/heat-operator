@@ -188,8 +188,8 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.HeatEngine{}).
+		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Secret{}).
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
 			handler.EnqueueRequestsFromMapFunc(configMapFn)).
 		Complete(r)

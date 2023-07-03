@@ -234,10 +234,10 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&heatv1beta1.HeatAPI{}).
 		Owns(&keystonev1.KeystoneService{}).
 		Owns(&keystonev1.KeystoneEndpoint{}).
+		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
-		Owns(&corev1.Secret{}).
-		Owns(&routev1.Route{}).
 		Owns(&corev1.Service{}).
+		Owns(&routev1.Route{}).
 		// watch the config CMs we don't own
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
 			handler.EnqueueRequestsFromMapFunc(configMapFn)).
