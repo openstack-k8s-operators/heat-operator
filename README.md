@@ -23,38 +23,27 @@ spec:
   rabbitMqClusterName: rabbitmq
   debug:
     dbSync: false
-    service: false
   heatAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
     customServiceConfig: "# add your customization here"
-    databaseUser: "heat"
     debug:
-      dbSync: false
       service: false
-    passwordSelectors:
-      service: HeatPassword
-      database: HeatDatabasePassword
     replicas: 1
     resources: {}
-    secret: "osp-secret"
-    serviceUser: ""
+  heatCfnAPI:
+    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
+    customServiceConfig: "# add your customization here"
+    debug:
+      service: false
+    replicas: 1
+    resources: {}
   heatEngine:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
     customServiceConfig: "# add your customization here"
-    databaseUser: "heat"
     debug:
-      dbSync: false
       service: false
-    passwordSelectors:
-      service: HeatPassword
-      database: HeatDatabasePassword
     replicas: 1
     resources: {}
-    secret: "osp-secret"
-    serviceUser: ""
-  passwordSelectors:
-    service: HeatPassword
-    database: HeatDatabasePassword
   preserveJobs: false
   secret: osp-secret
   serviceUser: "heat"
@@ -72,7 +61,6 @@ spec:
   databaseUser: heat
   debug:
     dbSync: false
-    service: false
 ```
 
 In this example, we are setting `num_engine_workers` to 4. After this resource has been updated, the controller will
@@ -104,50 +92,31 @@ To enable the Heat service, we simply need to set the Heat service to enabled in
 The following snippet is taken from the `OpenStackControlPlane` Custom Resource:
 
 ```yaml
-heat:
-  enabled: true # <<-- Enable the Heat service by setting `enabled: true`
-  template:
-    customServiceConfig: "# add your customization here"
-    databaseInstance: openstack
-    databaseUser: "heat"
-    rabbitMqClusterName: rabbitmq
-    debug:
-      dbSync: false
-      service: false
-    heatAPI:
-      containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
-      customServiceConfig: "# add your customization here"
-      databaseUser: "heat"
-      debug:
-        dbSync: false
-        service: false
-      passwordSelectors:
-        service: HeatPassword
-        database: HeatDatabasePassword
-      replicas: 1
-      resources: {}
-      secret: "osp-secret"
-      serviceUser: ""
-    heatEngine:
-      containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
-      customServiceConfig: "# add your customization here"
-      databaseUser: "heat"
-      debug:
-        dbSync: false
-        service: false
-      passwordSelectors:
-        service: HeatPassword
-        database: HeatDatabasePassword
-      replicas: 1
-      resources: {}
-      secret: "osp-secret"
-      serviceUser: ""
-    passwordSelectors:
-      service: HeatPassword
-      database: HeatDatabasePassword
-    preserveJobs: false
-    secret: osp-secret
-    serviceUser: "heat"
+❯ oc get openstackcontrolplane openstack -o yaml | yq .spec.heat
+enabled: true #<-- This needs to be set to true for Heat to be deployed
+template:
+  customServiceConfig: '# add your customization here'
+  databaseInstance: openstack
+  databaseUser: heat
+  debug:
+    dbSync: false
+  heatAPI:
+    replicas: 1
+    resources: {}
+  heatCfnAPI:
+    replicas: 0
+    resources: {}
+  heatEngine:
+    replicas: 1
+    resources: {}
+  passwordSelectors:
+    authEncryptionKey: HeatAuthEncryptionKey
+    database: HeatDatabasePassword
+    service: HeatPassword
+  preserveJobs: false
+  rabbitMqClusterName: rabbitmq
+  secret: osp-secret
+  serviceUser: heat
 ```
 
 As we can see, the Heat definition remains consistent within the `OpenStackControlPlane` resource, so the same
@@ -166,18 +135,7 @@ heat:
     rabbitMqClusterName: rabbitmq
 ```
 
-The `HeatPassword` and `HeatDatabasePassword` defined in the examples here are user defined and contained within the provided secret:
-
-```yaml
-[...]
-    passwordSelectors:
-      service: HeatPassword
-      database: HeatDatabasePassword
-    [...]
-    secret: osp-secret
-```
-
-The `osp-secret` contains the base64 encoded password string:
+The `osp-secret` contains the base64 encoded password strings:
 
 ```sh
 ❯ oc get secret osp-secret -o jsonpath={.data.HeatPassword}
@@ -186,6 +144,7 @@ MTIzNDU2Nzg=
 ❯ oc get secret osp-secret -o jsonpath={.data.HeatPassword} | base64 -d
 12345678
 ```
+These are user defined, and should be present prior to the deployment of the Heat service.
 
 ### Undeploy controller
 
