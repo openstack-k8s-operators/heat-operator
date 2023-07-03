@@ -27,12 +27,13 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
+	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
 var _ = Describe("Heat controller", func() {
 
-	var secret *corev1.Secret
+	var rmqSecret *corev1.Secret
 	var heatTransportURLName types.NamespacedName
 	var heatName types.NamespacedName
 
@@ -74,11 +75,59 @@ var _ = Describe("Heat controller", func() {
 			Expect(Heat.Status.HeatEngineReadyCount).To(Equal(int32(0)))
 		})
 
-		It("should have Unknown Conditions initialized as transporturl not created", func() {
+		It("should have input not ready and unknown Conditions initialized", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
 			th.ExpectCondition(
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
 				condition.InputReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatRabbitMqTransportURLReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.DBReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.DBSyncReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatAPIReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatCfnAPIReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatEngineReadyCondition,
 				corev1.ConditionUnknown,
 			)
 		})
@@ -98,38 +147,38 @@ var _ = Describe("Heat controller", func() {
 		})
 	})
 
-	When("the proper secret is provided and TransportURL Created", func() {
+	When("The proper secret is provided", func() {
 		BeforeEach(func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
-			keystoneAPIName := th.CreateKeystoneAPI(namespace)
-			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPIName)
-			keystoneAPI := th.GetKeystoneAPI(keystoneAPIName)
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Status().Update(ctx, keystoneAPI.DeepCopy())).Should(Succeed())
-			}, timeout, interval).Should(Succeed())
-
-			secret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rabbitmq-secret",
-					Namespace: namespace,
-				},
-			}
-			Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-			DeferCleanup(k8sClient.Delete, ctx, secret)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
-					namespace,
-					GetHeat(heatName).Spec.DatabaseInstance,
-					corev1.ServiceSpec{
-						Ports: []corev1.ServicePort{{Port: 3306}},
-					},
-				),
+		})
+
+		It("should have input ready", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
 			)
-			th.SimulateTransportURLReady(heatTransportURLName)
-			th.SimulateMariaDBDatabaseCompleted(heatName)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.InputReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatRabbitMqTransportURLReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionUnknown,
+			)
 		})
 
 		It("should not create a config map", func() {
@@ -139,13 +188,49 @@ var _ = Describe("Heat controller", func() {
 		})
 	})
 
-	When("keystoneAPI instance is not available", func() {
+	When("TransportURL Created", func() {
 		BeforeEach(func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			rmqSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "rabbitmq-secret",
+					Namespace: namespace,
+				},
+			}
+			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
+			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
 			th.SimulateTransportURLReady(heatTransportURLName)
 		})
+
+		It("should have transporturl ready", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatRabbitMqTransportURLReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.DBSyncReadyCondition,
+				corev1.ConditionUnknown,
+			)
+		})
+
 		It("should not create a config map", func() {
 			Eventually(func() []corev1.ConfigMap {
 				return th.ListConfigMaps(fmt.Sprintf("%s-%s", heatName.Name, "config-data")).Items
@@ -156,26 +241,43 @@ var _ = Describe("Heat controller", func() {
 	When("keystoneAPI instance is available", func() {
 		BeforeEach(func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
-			rmqSecret := &corev1.Secret{
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			rmqSecret = &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "rabbitmq-secret",
 					Namespace: namespace,
 				},
-				Data: map[string][]byte{
-					"transport_url": []byte("rabbit://fake"),
-				},
 			}
 			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
 			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
-			DeferCleanup(
-				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPI := th.CreateKeystoneAPI(namespace)
+			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
+		})
+
+		It("should have service config ready", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
 		})
 
 		It("should create a ConfigMap for heat.conf with the heat_domain_admin config option set", func() {
-			keystoneAPI := th.CreateKeystoneAPI(namespace)
-			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
-
 			configataCM := types.NamespacedName{
 				Namespace: heatName.Namespace,
 				Name:      fmt.Sprintf("%s-%s", heatName.Name, "config-data"),
@@ -188,18 +290,106 @@ var _ = Describe("Heat controller", func() {
 			//keystone := GetKeystoneAPI(keystoneAPI)
 			Expect(th.GetConfigMap(configataCM).Data["heat.conf"]).Should(
 				ContainSubstring("stack_domain_admin = heat_stack_domain_admin"))
+		})
+	})
 
+	When("DB is created", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			rmqSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "rabbitmq-secret",
+					Namespace: namespace,
+				},
+			}
+			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
+			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
+			th.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPI := th.CreateKeystoneAPI(namespace)
+			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
+			DeferCleanup(
+				th.DeleteDBService,
+				th.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			th.SimulateMariaDBDatabaseCompleted(heatName)
+		})
+
+		It("should have db ready condition", func() {
 			th.ExpectCondition(
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
-				condition.ServiceConfigReadyCondition,
-				corev1.ConditionTrue,
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
 				condition.DBReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.DBSyncReadyCondition,
 				corev1.ConditionFalse,
+			)
+		})
+	})
+
+	When("DB sync is completed", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			rmqSecret = &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "rabbitmq-secret",
+					Namespace: namespace,
+				},
+			}
+			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
+			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
+			th.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPI := th.CreateKeystoneAPI(namespace)
+			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
+			DeferCleanup(
+				th.DeleteDBService,
+				th.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			th.SimulateMariaDBDatabaseCompleted(heatName)
+			dbSyncJobName := types.NamespacedName{
+				Name:      "heat-db-sync",
+				Namespace: namespace,
+			}
+			th.SimulateJobSuccess(dbSyncJobName)
+		})
+
+		It("should have db sync ready condition", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.DBSyncReadyCondition,
+				corev1.ConditionTrue,
 			)
 		})
 	})
