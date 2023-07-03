@@ -340,17 +340,17 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.InputReadyCondition,
+				heatv1beta1.HeatRabbitMqTransportURLReadyCondition,
 				condition.RequestedReason,
 				condition.SeverityInfo,
-				condition.InputReadyWaitingMessage))
+				heatv1beta1.HeatRabbitMqTransportURLReadyRunningMessage))
 			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("TransportURL secret %s not found", instance.Status.TransportURLSecret)
 		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.InputReadyCondition,
+			heatv1beta1.HeatRabbitMqTransportURLReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			condition.InputReadyErrorMessage,
+			heatv1beta1.HeatRabbitMqTransportURLReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
 	}
