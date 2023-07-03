@@ -329,6 +329,8 @@ func (r *HeatAPIReconciler) reconcileInit(
 		return ctrlResult, nil
 	}
 
+	instance.Status.Conditions.MarkTrue(condition.ExposeServiceReadyCondition, condition.InputReadyMessage)
+
 	// expose service - end
 
 	//
