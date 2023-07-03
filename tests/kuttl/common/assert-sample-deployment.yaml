@@ -22,45 +22,24 @@ spec:
   heatAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
     customServiceConfig: "# add your customization here"
-    databaseUser: "heat"
     debug:
       service: false
-    passwordSelectors:
-      authEncryptionKey: HeatAuthEncryptionKey
-      service: HeatPassword
-      database: HeatDatabasePassword
     replicas: 1
     resources: {}
-    secret: "osp-secret"
-    serviceUser: ""
   heatCfnAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
     customServiceConfig: "# add your customization here"
-    databaseUser: "heat"
     debug:
       service: false
-    passwordSelectors:
-      authEncryptionKey: HeatAuthEncryptionKey
-      service: HeatPassword
-      database: HeatDatabasePassword
     replicas: 1
     resources: {}
-    secret: "osp-secret"
-    serviceUser: ""
   heatEngine:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
     customServiceConfig: "# add your customization here"
-    databaseUser: "heat"
     debug:
       service: false
-    passwordSelectors:
-      authEncryptionKey: HeatAuthEncryptionKey
-      service: HeatPassword
-      database: HeatDatabasePassword
     replicas: 1
     resources: {}
-    secret: "osp-secret"
-    serviceUser: ""
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
     service: HeatPassword
@@ -101,6 +80,7 @@ spec:
   replicas: 1
   resources: {}
   secret: osp-secret
+  serviceAccount: heat-heat
   serviceUser: heat
   transportURLSecret: rabbitmq-transport-url-heat-heat-transport
 status:
@@ -132,6 +112,7 @@ spec:
   replicas: 1
   resources: {}
   secret: osp-secret
+  serviceAccount: heat-heat
   serviceUser: heat
   transportURLSecret: rabbitmq-transport-url-heat-heat-transport
 status:
@@ -163,6 +144,7 @@ spec:
   replicas: 1
   resources: {}
   secret: osp-secret
+  serviceAccount: heat-heat
   serviceUser: heat
   transportURLSecret: rabbitmq-transport-url-heat-heat-transport
 status:
