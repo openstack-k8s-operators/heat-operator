@@ -183,7 +183,7 @@ commands:
   - script: |
       set -x
       RETURN_CODE=0
-      PUBLIC_URL=$(oc get route -n $NAMESPACE heat-public -o jsonpath='{.status.ingress[0].host}')
+      PUBLIC_URL=$(oc get route -n $NAMESPACE heat-api-public -o jsonpath='{.status.ingress[0].host}')
       STATUSCODE=$(curl --silent --output /dev/stderr --head --write-out "%{http_code}" $PUBLIC_URL/healthcheck)
       if test $STATUSCODE -ne 204; then
           RETURN_CODE=1
