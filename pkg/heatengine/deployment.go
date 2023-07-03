@@ -151,6 +151,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
 		VolumeMounts:              getInitVolumeMounts(),
 		TransportURL:              instance.Spec.TransportURLSecret,
+		NotificationURL:           instance.Spec.NotificationURLSecret,
 	}
 	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
 

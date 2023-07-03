@@ -31,6 +31,9 @@ const (
 
 	// HeatStackDomainReadyCondition ...
 	HeatStackDomainReadyCondition condition.Type = "HeatStackDomainReady"
+
+	// HeatRabbitMqNotificationURLReadyCondition Status=True condition which indicates if the RabbitMQ TransportURL is ready
+	HeatRabbitMqNotificationURLReadyCondition condition.Type = "HeatRabbitMqNotificationURLReady"
 )
 
 // Common Messages used by API objects.
@@ -76,4 +79,19 @@ const (
 
 	// HeatStackDomainReadyErrorMessage
 	HeatStackDomainReadyErrorMessage = "HeatStackDomain error occured %s"
+
+	//
+	// HeatRabbitMqNotificationURLReady condition messages
+	//
+	// HeatRabbitMqNotificationURLReadyInitMessage
+	HeatRabbitMqNotificationURLReadyInitMessage = "HeatRabbitMqNotificationURL not started"
+
+	// HeatRabbitMqNotificationURLReadyRunningMessage
+	HeatRabbitMqNotificationURLReadyRunningMessage = "HeatRabbitMqNotificationURL creation in progress"
+
+	// HeatRabbitMqNotificationURLReadyMessage
+	HeatRabbitMqNotificationURLReadyMessage = "HeatRabbitMqNotificationURL successfully created"
+
+	// HeatRabbitMqNotificationURLReadyErrorMessage
+	HeatRabbitMqNotificationURLReadyErrorMessage = "HeatRabbitMqNotificationURL error occured %s"
 )

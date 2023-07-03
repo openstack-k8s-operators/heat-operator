@@ -97,6 +97,11 @@ type HeatSpec struct {
 	// RabbitMQ instance name
 	// Needed to request a transportURL that is created and used in Heat
 	RabbitMqClusterName string `json:"rabbitMqClusterName"`
+
+	// +kubebuilder:validation:Optional
+	// Notification RabbitMQ instance name
+	// Needed to request a transportURL that is created and used in Heat for notifcations
+	NotificationRabbitMqClusterName string `json:"notificationRabbitMqClusterName,omitempty"`
 }
 
 // HeatStatus defines the observed state of Heat
@@ -112,6 +117,9 @@ type HeatStatus struct {
 
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`
+
+	// NotificationURLSecret - Secret containing RabbitMQ transportURL for notifications
+	NotificationURLSecret string `json:"notificationURLSecret,omitempty"`
 
 	// ReadyCount of Heat API instance
 	HeatAPIReadyCount int32 `json:"heatApiReadyCount,omitempty"`

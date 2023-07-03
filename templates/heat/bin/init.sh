@@ -22,6 +22,7 @@ export DBUSER=${DatabaseUser:-"heat"}
 export DBPASSWORD=${DatabasePassword:?"Please specify a DatabasePassword variable."}
 export PASSWORD=${HeatPassword:?"Please specify a HeatPassword variable."}
 export TRANSPORT_URL=${TransportURL:-""}
+export NOTIFICATION_URL=${NotificationUrl:-""}
 export AUTH_ENCRYPTION_KEY=${AuthEncryptionKey:-""}
 
 export CUSTOMCONF=${CustomConf:-""}
@@ -66,6 +67,9 @@ fi
 # set secrets
 if [ -n "$TRANSPORT_URL" ]; then
     crudini --set ${SVC_CFG_MERGED} DEFAULT transport_url $TRANSPORT_URL
+fi
+if [ -n "$NOTIFICATION_URL" ]; then
+    crudini --set ${SVC_CFG_MERGED} oslo_messaging_notifications transport_url $NOTIFICATION_URL
 fi
 
 # set auth_encryption_key

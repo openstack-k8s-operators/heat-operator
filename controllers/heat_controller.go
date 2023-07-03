@@ -161,6 +161,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
 			condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
 			condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
+			condition.UnknownCondition(heatv1beta1.HeatRabbitMqNotificationURLReadyCondition, condition.InitReason, heatv1beta1.HeatRabbitMqNotificationURLReadyInitMessage),
 			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
 			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatStackDomainReadyCondition, condition.InitReason, heatv1beta1.HeatStackDomainReadyInitMessage),
@@ -222,7 +223,8 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		for _, ownerRef := range o.GetOwnerReferences() {
 			if ownerRef.Kind == "TransportURL" {
 				for _, cr := range heats.Items {
-					if ownerRef.Name == fmt.Sprintf("%s-heat-transport", cr.Name) {
+					if ownerRef.Name == fmt.Sprintf("%s-heat-transport", cr.Name) ||
+						ownerRef.Name == fmt.Sprintf("%s-heat-notification", cr.Name) {
 						// return namespace and Name of CR
 						name := client.ObjectKey{
 							Namespace: o.GetNamespace(),
@@ -401,7 +403,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
 	//
-	transportURL, op, err := r.transportURLCreateOrUpdate(instance)
+	transportURL, op, err := r.transportURLCreateOrUpdate(instance, instance.Spec.RabbitMqClusterName, "transport")
 
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -434,7 +436,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// check for required TransportURL secret holding transport URL string
 	//
-
 	transportURLSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Status.TransportURLSecret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
@@ -454,10 +455,72 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 	configMapVars[transportURLSecret.Name] = env.SetValue(hash)
-
 	// run check TransportURL secret - end
 
 	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, condition.RabbitMqTransportURLReadyMessage)
+
+	//
+	// create RabbitMQ transportURL CR for notification and get the actual URL from the associated secret that is created
+	//
+	if instance.Spec.NotificationRabbitMqClusterName != "" {
+		notificationURL, op, err := r.transportURLCreateOrUpdate(instance, instance.Spec.NotificationRabbitMqClusterName, "notification")
+
+		if err != nil {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				heatv1beta1.HeatRabbitMqNotificationURLReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				heatv1beta1.HeatRabbitMqNotificationURLReadyErrorMessage,
+				err.Error()))
+			return ctrl.Result{}, err
+		}
+
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", notificationURL.Name, string(op)))
+		}
+
+		instance.Status.NotificationURLSecret = notificationURL.Status.SecretName
+
+		if instance.Status.NotificationURLSecret == "" {
+			r.Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", notificationURL.Name))
+
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				heatv1beta1.HeatRabbitMqNotificationURLReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				heatv1beta1.HeatRabbitMqNotificationURLReadyRunningMessage))
+
+			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
+		}
+
+		//
+		// check for required TransportURL secret holding transport URL string
+		//
+		notificationURLSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Status.NotificationURLSecret, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				instance.Status.Conditions.Set(condition.FalseCondition(
+					condition.InputReadyCondition,
+					condition.RequestedReason,
+					condition.SeverityInfo,
+					condition.InputReadyWaitingMessage))
+				return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("TransportURL secret %s not found", instance.Status.NotificationURLSecret)
+			}
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				condition.InputReadyErrorMessage,
+				err.Error()))
+			return ctrl.Result{}, err
+		}
+		configMapVars[notificationURLSecret.Name] = env.SetValue(hash)
+		// run check TransportURL secret - end
+	} else {
+		// TODO(tkajinam): We have to delete the TransportURL secret previously created
+		instance.Status.NotificationURLSecret = ""
+	}
+	instance.Status.Conditions.MarkTrue(heatv1beta1.HeatRabbitMqNotificationURLReadyCondition, heatv1beta1.HeatRabbitMqNotificationURLReadyMessage)
 
 	//
 	// Create ConfigMaps and Secrets required as input for the Service and calculate an overall hash of hashes
@@ -697,7 +760,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 		jobDef,
 		heatv1beta1.DbSyncHash,
 		instance.Spec.PreserveJobs,
-		time.Second * 10,
+		time.Second*10,
 		dbSyncHash,
 	)
 	ctrlResult, err = dbSyncjob.DoJob(
@@ -752,11 +815,12 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 ) (*heatv1beta1.HeatAPI, controllerutil.OperationResult, error) {
 
 	heatAPISpec := heatv1beta1.HeatAPISpec{
-		HeatTemplate:       instance.Spec.HeatTemplate,
-		HeatAPITemplate:    instance.Spec.HeatAPI,
-		DatabaseHostname:   instance.Status.DatabaseHostname,
-		TransportURLSecret: instance.Status.TransportURLSecret,
-		ServiceAccount:     instance.RbacResourceName(),
+		HeatTemplate:          instance.Spec.HeatTemplate,
+		HeatAPITemplate:       instance.Spec.HeatAPI,
+		DatabaseHostname:      instance.Status.DatabaseHostname,
+		TransportURLSecret:    instance.Status.TransportURLSecret,
+		NotificationURLSecret: instance.Status.NotificationURLSecret,
+		ServiceAccount:        instance.RbacResourceName(),
 	}
 
 	deployment := &heatv1beta1.HeatAPI{
@@ -783,11 +847,12 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 ) (*heatv1beta1.HeatCfnAPI, controllerutil.OperationResult, error) {
 
 	heatCfnAPISpec := heatv1beta1.HeatCfnAPISpec{
-		HeatTemplate:       instance.Spec.HeatTemplate,
-		HeatCfnAPITemplate: instance.Spec.HeatCfnAPI,
-		DatabaseHostname:   instance.Status.DatabaseHostname,
-		TransportURLSecret: instance.Status.TransportURLSecret,
-		ServiceAccount:     instance.RbacResourceName(),
+		HeatTemplate:          instance.Spec.HeatTemplate,
+		HeatCfnAPITemplate:    instance.Spec.HeatCfnAPI,
+		DatabaseHostname:      instance.Status.DatabaseHostname,
+		TransportURLSecret:    instance.Status.TransportURLSecret,
+		NotificationURLSecret: instance.Status.NotificationURLSecret,
+		ServiceAccount:        instance.RbacResourceName(),
 	}
 
 	deployment := &heatv1beta1.HeatCfnAPI{
@@ -814,11 +879,12 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 ) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
 
 	heatEngineSpec := heatv1beta1.HeatEngineSpec{
-		HeatTemplate:       instance.Spec.HeatTemplate,
-		HeatEngineTemplate: instance.Spec.HeatEngine,
-		DatabaseHostname:   instance.Status.DatabaseHostname,
-		TransportURLSecret: instance.Status.TransportURLSecret,
-		ServiceAccount:     instance.RbacResourceName(),
+		HeatTemplate:          instance.Spec.HeatTemplate,
+		HeatEngineTemplate:    instance.Spec.HeatEngine,
+		DatabaseHostname:      instance.Status.DatabaseHostname,
+		TransportURLSecret:    instance.Status.TransportURLSecret,
+		NotificationURLSecret: instance.Status.NotificationURLSecret,
+		ServiceAccount:        instance.RbacResourceName(),
 	}
 
 	deployment := &heatv1beta1.HeatEngine{
@@ -942,16 +1008,20 @@ func (r *HeatReconciler) createHashOfInputHashes(
 	return hash, nil
 }
 
-func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
+func (r *HeatReconciler) transportURLCreateOrUpdate(
+	instance *heatv1beta1.Heat,
+	clusterName string,
+	clusterType string,
+) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
 	transportURL := &rabbitmqv1.TransportURL{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-heat-transport", instance.Name),
+			Name:      fmt.Sprintf("%s-heat-%s", instance.Name, clusterType),
 			Namespace: instance.Namespace,
 		},
 	}
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, transportURL, func() error {
-		transportURL.Spec.RabbitmqClusterName = instance.Spec.RabbitMqClusterName
+		transportURL.Spec.RabbitmqClusterName = clusterName
 
 		return controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
 	})

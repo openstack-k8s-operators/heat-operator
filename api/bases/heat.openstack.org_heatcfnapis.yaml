@@ -87,6 +87,10 @@ spec:
                 description: NodeSelector to target subset of worker nodes for running
                   the service
                 type: object
+              notificationURLSecret:
+                description: NotificationURLSecret - Secret containing RabbitMQ transportURL
+                  for notifications
+                type: string
               passwordSelectors:
                 default:
                   authEncryptionKey: HeatAuthEncryptionKey

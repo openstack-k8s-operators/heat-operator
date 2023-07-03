@@ -297,7 +297,7 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 		heatcfnapi.ServiceName,
 		serviceLabels,
 		data,
-		time.Second * 5,
+		time.Second*5,
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -335,7 +335,7 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 			PasswordSelector:   instance.Spec.PasswordSelectors.Service,
 		}
 
-		ksSvcObj := keystonev1.NewKeystoneService(ksSvcSpec, instance.Namespace, serviceLabels, time.Second * 10)
+		ksSvcObj := keystonev1.NewKeystoneService(ksSvcSpec, instance.Namespace, serviceLabels, time.Second*10)
 		ctrlResult, err = ksSvcObj.CreateOrPatch(ctx, helper)
 		if err != nil || (ctrlResult != ctrl.Result{}) {
 			return ctrlResult, err
@@ -360,7 +360,7 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 			instance.Namespace,
 			ksEndptSpec,
 			serviceLabels,
-			time.Second * 10)
+			time.Second*10)
 		ctrlResult, err = ksEndpt.CreateOrPatch(ctx, helper)
 		if err != nil || (ctrlResult != ctrl.Result{}) {
 			return ctrlResult, err
@@ -530,7 +530,7 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	// Define a new Deployment object
 	depl := deployment.NewDeployment(
 		heatcfnapi.Deployment(instance, inputHash, serviceLabels),
-		time.Second * 10,
+		time.Second*10,
 	)
 
 	ctrlResult, err = depl.CreateOrPatch(ctx, helper)

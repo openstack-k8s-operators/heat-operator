@@ -57,6 +57,8 @@ const (
 	SecretName = "test-osp-secret"
 
 	HeatMessageBusSecretName = "rabbitmq-secret"
+
+	HeatNotificationBusSecretName = "notif-rabbitmq-secret"
 )
 
 func TestAPIs(t *testing.T) {

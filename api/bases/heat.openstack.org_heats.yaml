@@ -381,6 +381,10 @@ spec:
                 description: NodeSelector to target subset of worker nodes for running
                   the Heat services
                 type: object
+              notificationRabbitMqClusterName:
+                description: Notification RabbitMQ instance name Needed to request
+                  a transportURL that is created and used in Heat for notifcations
+                type: string
               passwordSelectors:
                 default:
                   authEncryptionKey: HeatAuthEncryptionKey
@@ -499,6 +503,10 @@ spec:
                 description: ReadyCount of Heat Engine instance
                 format: int32
                 type: integer
+              notificationURLSecret:
+                description: NotificationURLSecret - Secret containing RabbitMQ transportURL
+                  for notifications
+                type: string
               transportURLSecret:
                 description: TransportURLSecret - Secret containing RabbitMQ transportURL
                 type: string

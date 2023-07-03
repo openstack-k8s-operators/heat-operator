@@ -43,6 +43,10 @@ type HeatCfnAPISpec struct {
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret"`
 
+	// +kubebuilder:validation:Optional
+	// NotificationURLSecret - Secret containing RabbitMQ transportURL for notifications
+	NotificationURLSecret string `json:"notificationURLSecret,omitempty"`
+
 	// +kubebuilder:validation:Required
 	// ServiceAccount - service account name used internally to provide Heat services the default SA name
 	ServiceAccount string `json:"serviceAccount"`

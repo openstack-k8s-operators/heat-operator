@@ -28,6 +28,7 @@ type APIDetails struct {
 	DatabaseUser              string
 	DatabaseName              string
 	TransportURL              string
+	NotificationURL           string
 	OSPSecret                 string
 	DBPasswordSelector        string
 	UserPasswordSelector      string
@@ -109,6 +110,21 @@ func InitContainer(init APIDetails) []corev1.Container {
 			},
 		}
 		envs = append(envs, envTransport)
+	}
+
+	if init.NotificationURL != "" {
+		envNotification := corev1.EnvVar{
+			Name: "NotificationURL",
+			ValueFrom: &corev1.EnvVarSource{
+				SecretKeyRef: &corev1.SecretKeySelector{
+					LocalObjectReference: corev1.LocalObjectReference{
+						Name: init.NotificationURL,
+					},
+					Key: "notification_url",
+				},
+			},
+		}
+		envs = append(envs, envNotification)
 	}
 
 	return []corev1.Container{

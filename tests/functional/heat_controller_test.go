@@ -36,6 +36,7 @@ var _ = Describe("Heat controller", func() {
 
 	var heatName types.NamespacedName
 	var heatTransportURLName types.NamespacedName
+	var heatNotificationURLName types.NamespacedName
 	var heatConfigMapName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var keystoneAPI *keystonev1.KeystoneAPI
@@ -49,6 +50,10 @@ var _ = Describe("Heat controller", func() {
 		heatTransportURLName = types.NamespacedName{
 			Namespace: namespace,
 			Name:      heatName.Name + "-heat-transport",
+		}
+		heatNotificationURLName = types.NamespacedName{
+			Namespace: namespace,
+			Name:      heatName.Name + "-heat-notification",
 		}
 		heatConfigMapName = types.NamespacedName{
 			Namespace: namespace,
@@ -104,6 +109,7 @@ var _ = Describe("Heat controller", func() {
 
 			for _, cond := range []condition.Type{
 				condition.RabbitMqTransportURLReadyCondition,
+				heatv1.HeatRabbitMqNotificationURLReadyCondition,
 				condition.MemcachedReadyCondition,
 				condition.ServiceConfigReadyCondition,
 				condition.DBReadyCondition,
@@ -208,7 +214,7 @@ var _ = Describe("Heat controller", func() {
 			th.ExpectCondition(
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
-				condition.ServiceConfigReadyCondition,
+				heatv1.HeatRabbitMqNotificationURLReadyCondition,
 				corev1.ConditionUnknown,
 			)
 		})
@@ -240,6 +246,121 @@ var _ = Describe("Heat controller", func() {
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
 				condition.RabbitMqTransportURLReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatRabbitMqNotificationURLReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.DBSyncReadyCondition,
+				corev1.ConditionUnknown,
+			)
+		})
+
+		It("should not create a config map", func() {
+			th.AssertConfigMapDoesNotExist(heatConfigMapName)
+		})
+	})
+
+	When("Notification is enabled", func() {
+		BeforeEach(func() {
+			heatSpec := GetDefaultHeatSpec()
+			heatSpec["notificationRabbitMqClusterName"] = "notif-rabbitmq"
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, heatSpec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			th.SimulateTransportURLReady(heatTransportURLName)
+		})
+
+		It("should have notification transporturl not ready", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.RabbitMqTransportURLReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatRabbitMqNotificationURLReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionUnknown,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.DBSyncReadyCondition,
+				corev1.ConditionUnknown,
+			)
+		})
+	})
+
+	When("Notification TransportURL is created", func() {
+		BeforeEach(func() {
+			heatSpec := GetDefaultHeatSpec()
+			heatSpec["notificationRabbitMqClusterName"] = "notif-rabbitmq"
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, heatSpec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			th.SimulateTransportURLReady(heatTransportURLName)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatNotificationBusSecretName))
+			th.SimulateTransportURLReady(heatNotificationURLName)
+		})
+
+		It("should have notification transporturl ready", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.RabbitMqTransportURLReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatRabbitMqNotificationURLReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(
