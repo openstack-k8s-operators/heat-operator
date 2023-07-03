@@ -19,13 +19,11 @@ spec:
   rabbitMqClusterName: rabbitmq
   debug:
     dbSync: false
-    service: false
   heatAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      dbSync: false
       service: false
     passwordSelectors:
       authEncryptionKey: HeatAuthEncryptionKey
@@ -40,7 +38,6 @@ spec:
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      dbSync: false
       service: false
     passwordSelectors:
       authEncryptionKey: HeatAuthEncryptionKey
@@ -55,7 +52,6 @@ spec:
     customServiceConfig: "# add your customization here"
     databaseUser: "heat"
     debug:
-      dbSync: false
       service: false
     passwordSelectors:
       authEncryptionKey: HeatAuthEncryptionKey
@@ -97,7 +93,6 @@ spec:
   databaseHostname: openstack
   databaseUser: heat
   debug:
-    dbSync: false
     service: false
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
@@ -129,7 +124,6 @@ spec:
   databaseHostname: openstack
   databaseUser: heat
   debug:
-    dbSync: false
     service: false
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
@@ -161,7 +155,6 @@ spec:
   databaseHostname: openstack
   databaseUser: heat
   debug:
-    dbSync: false
     service: false
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
