@@ -53,7 +53,7 @@ var _ = Describe("Heat controller", func() {
 
 	When("A Heat instance is created", func() {
 		BeforeEach(func() {
-			DeferCleanup(DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 		})
 
 		It("should have the Spec fields initialized", func() {
@@ -100,7 +100,7 @@ var _ = Describe("Heat controller", func() {
 
 	When("the proper secret is provided and TransportURL Created", func() {
 		BeforeEach(func() {
-			DeferCleanup(DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			keystoneAPIName := th.CreateKeystoneAPI(namespace)
 			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPIName)
 			keystoneAPI := th.GetKeystoneAPI(keystoneAPIName)
@@ -119,8 +119,8 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(
-				DeleteDBService,
-				CreateDBService(
+				th.DeleteDBService,
+				th.CreateDBService(
 					namespace,
 					GetHeat(heatName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -141,7 +141,7 @@ var _ = Describe("Heat controller", func() {
 
 	When("keystoneAPI instance is not available", func() {
 		BeforeEach(func() {
-			DeferCleanup(DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
@@ -155,7 +155,7 @@ var _ = Describe("Heat controller", func() {
 
 	When("keystoneAPI instance is available", func() {
 		BeforeEach(func() {
-			DeferCleanup(DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			rmqSecret := &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "rabbitmq-secret",
@@ -173,8 +173,8 @@ var _ = Describe("Heat controller", func() {
 		})
 
 		It("should create a ConfigMap for heat.conf with the heat_domain_admin config option set", func() {
-			keystoneAPI := CreateKeystoneAPI(namespace)
-			DeferCleanup(DeleteKeystoneAPI, keystoneAPI)
+			keystoneAPI := th.CreateKeystoneAPI(namespace)
+			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
 
 			configataCM := types.NamespacedName{
 				Namespace: heatName.Namespace,
