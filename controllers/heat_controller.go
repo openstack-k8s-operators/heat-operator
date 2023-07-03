@@ -298,10 +298,37 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 
 	// ConfigMap
 	configMapVars := make(map[string]env.Setter)
+
+	//
+	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
+	//
+	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.InputReadyWaitingMessage))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, fmt.Errorf("OpenStack secret %s not found", instance.Spec.Secret)
+		}
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	configMapVars[ospSecret.Name] = env.SetValue(hash)
+
+	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
+
+	// run check OpenStack secret - end
+
 	//
 	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
 	//
-
 	transportURL, op, err := r.transportURLCreateOrUpdate(instance)
 
 	if err != nil {
@@ -359,32 +386,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// run check TransportURL secret - end
 
 	instance.Status.Conditions.MarkTrue(heatv1beta1.HeatRabbitMqTransportURLReadyCondition, heatv1beta1.HeatRabbitMqTransportURLReadyMessage)
-
-	//
-	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
-	//
-	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
-	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.InputReadyCondition,
-				condition.RequestedReason,
-				condition.SeverityInfo,
-				condition.InputReadyWaitingMessage))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, fmt.Errorf("OpenStack secret %s not found", instance.Spec.Secret)
-		}
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			condition.InputReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			condition.InputReadyErrorMessage,
-			err.Error()))
-		return ctrl.Result{}, err
-	}
-	configMapVars[ospSecret.Name] = env.SetValue(hash)
-
-	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
-	// run check OpenStack secret - end
 
 	//
 	// Create ConfigMaps and Secrets required as input for the Service and calculate an overall hash of hashes
