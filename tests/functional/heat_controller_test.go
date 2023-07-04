@@ -88,48 +88,24 @@ var _ = Describe("Heat controller", func() {
 				condition.InputReadyCondition,
 				corev1.ConditionFalse,
 			)
-			th.ExpectCondition(
-				heatName,
-				ConditionGetterFunc(HeatConditionGetter),
+
+			for _, cond := range []condition.Type{
 				heatv1.HeatRabbitMqTransportURLReadyCondition,
-				corev1.ConditionUnknown,
-			)
-			th.ExpectCondition(
-				heatName,
-				ConditionGetterFunc(HeatConditionGetter),
 				condition.ServiceConfigReadyCondition,
-				corev1.ConditionUnknown,
-			)
-			th.ExpectCondition(
-				heatName,
-				ConditionGetterFunc(HeatConditionGetter),
 				condition.DBReadyCondition,
-				corev1.ConditionUnknown,
-			)
-			th.ExpectCondition(
-				heatName,
-				ConditionGetterFunc(HeatConditionGetter),
 				condition.DBSyncReadyCondition,
-				corev1.ConditionUnknown,
-			)
-			th.ExpectCondition(
-				heatName,
-				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatStackDomainReadyCondition,
 				heatv1.HeatAPIReadyCondition,
-				corev1.ConditionUnknown,
-			)
-			th.ExpectCondition(
-				heatName,
-				ConditionGetterFunc(HeatConditionGetter),
 				heatv1.HeatCfnAPIReadyCondition,
-				corev1.ConditionUnknown,
-			)
-			th.ExpectCondition(
-				heatName,
-				ConditionGetterFunc(HeatConditionGetter),
 				heatv1.HeatEngineReadyCondition,
-				corev1.ConditionUnknown,
-			)
+			} {
+				th.ExpectCondition(
+					heatName,
+					ConditionGetterFunc(HeatConditionGetter),
+					cond,
+					corev1.ConditionUnknown,
+				)
+			}
 		})
 
 		It("should have a finalizer", func() {
@@ -341,6 +317,12 @@ var _ = Describe("Heat controller", func() {
 				condition.DBSyncReadyCondition,
 				corev1.ConditionFalse,
 			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatStackDomainReadyCondition,
+				corev1.ConditionUnknown,
+			)
 		})
 	})
 
@@ -390,6 +372,12 @@ var _ = Describe("Heat controller", func() {
 				ConditionGetterFunc(HeatConditionGetter),
 				condition.DBSyncReadyCondition,
 				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				heatv1.HeatStackDomainReadyCondition,
+				corev1.ConditionFalse,
 			)
 		})
 	})

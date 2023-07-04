@@ -28,44 +28,43 @@ const (
 
 	// HeatEngineReadyCondition ...
 	HeatEngineReadyCondition condition.Type = "HeatEngineReady"
+
+	// HeatRabbitMqTransportURLReadyCondition Status=True condition which indicates if the RabbitMQ TransportURLUrl is ready
+	HeatRabbitMqTransportURLReadyCondition condition.Type = "HeatRabbitMqTransportURLReady"
+
+	// HeatStackDomainReadyCondition ...
+	HeatStackDomainReadyCondition condition.Type = "HeatStackDomainReady"
 )
 
+// Common Messages used by API objects.
 const (
-	// HeatAPIReadyInitMessage ...
 	//
 	// HeatAPIReady condition messages
 	//
+	// HeatAPIReadyInitMessage ...
 	HeatAPIReadyInitMessage = "HeatAPI not started"
 
 	// HeatAPIReadyErrorMessage ...
 	HeatAPIReadyErrorMessage = "HeatAPI error occured %s"
 
-	// HeatCfnAPIReadyInitMessage ...
 	//
 	// HeatCfnAPIReady condition messages
 	//
+	// HeatCfnAPIReadyInitMessage ...
 	HeatCfnAPIReadyInitMessage = "HeatCfnAPI not started"
 
 	// HeatCfnAPIReadyErrorMessage ...
 	HeatCfnAPIReadyErrorMessage = "HeatCfnAPI error occured %s"
 
-	// HeatEngineReadyInitMessage ...
 	//
 	// HeatEngineReady condition messages
 	//
+	// HeatEngineReadyInitMessage ...
 	HeatEngineReadyInitMessage = "HeatEngine not started"
 
 	// HeatEngineReadyErrorMessage ...
 	HeatEngineReadyErrorMessage = "HeatEngine error occured %s"
-)
 
-const (
-	// HeatRabbitMqTransportURLReadyCondition Status=True condition which indicates if the RabbitMQ TransportURLUrl is ready
-	HeatRabbitMqTransportURLReadyCondition condition.Type = "HeatRabbitMqTransportURLReady"
-)
-
-// Common Messages used by API objects.
-const (
 	//
 	// HeatRabbitMqTransportURLReady condition messages
 	//
@@ -80,4 +79,19 @@ const (
 
 	// HeatRabbitMqTransportURLReadyErrorMessage
 	HeatRabbitMqTransportURLReadyErrorMessage = "HeatRabbitMqTransportURL error occured %s"
+
+	//
+	// HeatStackDomainReady condition messages
+	//
+	// HeatStackDomainReadyInitMessage
+	HeatStackDomainReadyInitMessage = "HeatStackDomain not started"
+
+	// HeatStackDomainReadyRunningMessage
+	HeatStackDomainReadyRunningMessage = "HeatStackDomain creation in progress"
+
+	// HeatStackDomainReadyMessage
+	HeatStackDomainReadyMessage = "HeatStackDomain successfully created"
+
+	// HeatStackDomainReadyErrorMessage
+	HeatStackDomainReadyErrorMessage = "HeatStackDomain error occured %s"
 )
