@@ -158,6 +158,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
 			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
 			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
+			condition.UnknownCondition(heatv1beta1.HeatStackDomainReadyCondition, condition.InitReason, heatv1beta1.HeatStackDomainReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatAPIReadyCondition, condition.InitReason, heatv1beta1.HeatAPIReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatCfnAPIReadyCondition, condition.InitReason, heatv1beta1.HeatCfnAPIReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatEngineReadyCondition, condition.InitReason, heatv1beta1.HeatEngineReadyInitMessage),
@@ -462,10 +463,22 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// Create domain for Heat stacks
 	ctrlResult, err = r.ensureStackDomain(ctx, helper, instance)
 	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			heatv1beta1.HeatStackDomainReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			heatv1beta1.HeatStackDomainReadyErrorMessage,
+			err.Error()))
 		return ctrl.Result{}, err
 	} else if (ctrlResult != ctrl.Result{}) {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			heatv1beta1.HeatStackDomainReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			heatv1beta1.HeatStackDomainReadyRunningMessage))
 		return ctrlResult, nil
 	}
+	instance.Status.Conditions.MarkTrue(heatv1beta1.HeatStackDomainReadyCondition, heatv1beta1.HeatStackDomainReadyMessage)
 
 	// deploy heat-engine
 	heatEngine, op, err := r.engineDeploymentCreateOrUpdate(ctx, instance)
