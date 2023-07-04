@@ -24,7 +24,6 @@ import (
 	. "github.com/onsi/gomega"
 	. "github.com/openstack-k8s-operators/lib-common/modules/test/helpers"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
@@ -33,9 +32,8 @@ import (
 
 var _ = Describe("Heat controller", func() {
 
-	var rmqSecret *corev1.Secret
-	var heatTransportURLName types.NamespacedName
 	var heatName types.NamespacedName
+	var heatTransportURLName types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -193,14 +191,8 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			rmqSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rabbitmq-secret",
-					Namespace: namespace,
-				},
-			}
-			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
-			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
 		})
 
@@ -243,14 +235,8 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			rmqSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rabbitmq-secret",
-					Namespace: namespace,
-				},
-			}
-			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
-			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
 			keystoneAPI := th.CreateKeystoneAPI(namespace)
 			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
@@ -298,14 +284,8 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			rmqSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rabbitmq-secret",
-					Namespace: namespace,
-				},
-			}
-			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
-			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
 			keystoneAPI := th.CreateKeystoneAPI(namespace)
 			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
@@ -349,14 +329,8 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			rmqSecret = &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rabbitmq-secret",
-					Namespace: namespace,
-				},
-			}
-			Expect(k8sClient.Create(ctx, rmqSecret)).Should(Succeed())
-			DeferCleanup(k8sClient.Delete, ctx, rmqSecret)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
 			keystoneAPI := th.CreateKeystoneAPI(namespace)
 			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
