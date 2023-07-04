@@ -18,25 +18,14 @@ package functional
 
 import (
 	. "github.com/onsi/gomega"
+
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
-
-func CreateUnstructured(rawObj map[string]interface{}) *unstructured.Unstructured {
-	logger.Info("Creating", "raw", rawObj)
-	unstructuredObj := &unstructured.Unstructured{Object: rawObj}
-	_, err := controllerutil.CreateOrPatch(
-		ctx, k8sClient, unstructuredObj, func() error { return nil })
-	Expect(err).ShouldNot(HaveOccurred())
-	return unstructuredObj
-}
 
 func GetDefaultHeatSpec() map[string]interface{} {
 	return map[string]interface{}{
@@ -80,9 +69,7 @@ func CreateHeat(name types.NamespacedName, spec map[string]interface{}) client.O
 		},
 		"spec": spec,
 	}
-	return CreateUnstructured(raw)
-
-	// return types.NamespacedName{Name: HeatName, Namespace: namespace}
+	return th.CreateUnstructured(raw)
 }
 
 func GetHeat(name types.NamespacedName) *heatv1.Heat {
@@ -93,20 +80,8 @@ func GetHeat(name types.NamespacedName) *heatv1.Heat {
 	return instance
 }
 
-func CreateSecret(name types.NamespacedName, data map[string][]byte) *corev1.Secret {
-	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name.Name,
-			Namespace: name.Namespace,
-		},
-		Data: data,
-	}
-	Expect(k8sClient.Create(ctx, secret)).Should(Succeed())
-	return secret
-}
-
 func CreateHeatSecret(namespace string, name string) *corev1.Secret {
-	return CreateSecret(
+	return th.CreateSecret(
 		types.NamespacedName{Namespace: namespace, Name: name},
 		map[string][]byte{
 			"HeatPassword":         []byte("12345678"),
@@ -117,7 +92,7 @@ func CreateHeatSecret(namespace string, name string) *corev1.Secret {
 }
 
 func CreateHeatMessageBusSecret(namespace string, name string) *corev1.Secret {
-	return CreateSecret(
+	return th.CreateSecret(
 		types.NamespacedName{Namespace: namespace, Name: name},
 		map[string][]byte{
 			"transport_url": []byte("rabbit://fake"),
