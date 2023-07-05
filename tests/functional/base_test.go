@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package functional
+package functional_test
 
 import (
 	. "github.com/onsi/gomega"
@@ -39,22 +39,19 @@ func GetDefaultHeatSpec() map[string]interface{} {
 
 func GetDefaultHeatAPISpec() map[string]interface{} {
 	return map[string]interface{}{
-		"replicas":       1,
-		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified",
+		"replicas": 1,
 	}
 }
 
 func GetDefaultHeatEngineSpec() map[string]interface{} {
 	return map[string]interface{}{
-		"replicas":       1,
-		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified",
+		"replicas": 1,
 	}
 }
 
 func GetDefaultHeatCFNAPISpec() map[string]interface{} {
 	return map[string]interface{}{
-		"replicas":       1,
-		"containerImage": "quay.io/podified-antelope-centos9/openstack-heat-cfn:current-podified",
+		"replicas": 1,
 	}
 }
 
