@@ -52,9 +52,11 @@ var (
 const (
 	timeout = time.Second * 2
 
+	interval = time.Millisecond * 200
+
 	SecretName = "test-osp-secret"
 
-	interval = time.Millisecond * 200
+	HeatMessageBusSecretName = "rabbitmq-secret"
 )
 
 func TestAPIs(t *testing.T) {
