@@ -423,9 +423,32 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	// run check OpenStack secret - end
 
 	//
+	// check for required TransportURL secret holding transport URL string
+	//
+	_, hash, err = secret.GetSecret(ctx, helper, instance.Spec.TransportURLSecret, instance.Namespace)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.InputReadyWaitingMessage))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, fmt.Errorf("Transport secret %s not found", instance.Spec.TransportURLSecret)
+		}
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	configMapVars[instance.Spec.TransportURLSecret] = env.SetValue(hash)
+	// run check TransportURL secret - end
+
+	//
 	// check for required Heat config maps that should have been created by parent Heat CR
 	//
-
 	parentHeatName := heat.GetOwningHeatName(instance)
 
 	configMaps := []string{
@@ -459,7 +482,7 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	//
 
 	//
-	// create custom Configmap for this heat volume service
+	// create custom Configmap for this heat-api-cfn service
 	//
 	err = r.generateServiceConfigMaps(ctx, helper, instance, &configMapVars)
 	if err != nil {
