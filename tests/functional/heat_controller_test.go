@@ -24,8 +24,11 @@ import (
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/utils/pointer"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
@@ -34,6 +37,8 @@ var _ = Describe("Heat controller", func() {
 	var heatName types.NamespacedName
 	var heatTransportURLName types.NamespacedName
 	var heatConfigMapName types.NamespacedName
+	var memcachedSpec memcachedv1.MemcachedSpec
+	var keystoneAPI *keystonev1.KeystoneAPI
 
 	BeforeEach(func() {
 
@@ -48,6 +53,9 @@ var _ = Describe("Heat controller", func() {
 		heatConfigMapName = types.NamespacedName{
 			Namespace: namespace,
 			Name:      heatName.Name + "-config-data",
+		}
+		memcachedSpec = memcachedv1.MemcachedSpec{
+			Replicas: pointer.Int32(3),
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -96,6 +104,7 @@ var _ = Describe("Heat controller", func() {
 
 			for _, cond := range []condition.Type{
 				condition.RabbitMqTransportURLReadyCondition,
+				condition.MemcachedReadyCondition,
 				condition.ServiceConfigReadyCondition,
 				condition.DBReadyCondition,
 				condition.DBSyncReadyCondition,
@@ -149,6 +158,50 @@ var _ = Describe("Heat controller", func() {
 			th.ExpectCondition(
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
+				condition.MemcachedReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.RabbitMqTransportURLReadyCondition,
+				corev1.ConditionUnknown,
+			)
+		})
+
+		It("should not create a config map", func() {
+			th.AssertConfigMapDoesNotExist(heatConfigMapName)
+		})
+	})
+
+	When("Memcached is available", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+		})
+
+		It("should have memcached ready", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.MemcachedReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
 				condition.RabbitMqTransportURLReadyCondition,
 				corev1.ConditionFalse,
 			)
@@ -159,10 +212,6 @@ var _ = Describe("Heat controller", func() {
 				corev1.ConditionUnknown,
 			)
 		})
-
-		It("should not create a config map", func() {
-			th.AssertConfigMapDoesNotExist(heatConfigMapName)
-		})
 	})
 
 	When("TransportURL Created", func() {
@@ -170,6 +219,11 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
@@ -212,11 +266,17 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
-			keystoneAPI := th.CreateKeystoneAPI(namespace)
-			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
+			keystoneAPIName := th.CreateKeystoneAPI(namespace)
+			keystoneAPI = th.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPIName)
 		})
 
 		It("should have service config ready", func() {
@@ -240,11 +300,21 @@ var _ = Describe("Heat controller", func() {
 			)
 		})
 
-		It("should create a ConfigMap for heat.conf with the heat_domain_admin config option set", func() {
+		It("should create a ConfigMap for heat.conf", func() {
 			cm := th.GetConfigMap(heatConfigMapName)
 
 			Expect(cm.Data["heat.conf"]).Should(
-				ContainSubstring("stack_domain_admin = heat_stack_domain_admin"))
+				ContainSubstring("stack_domain_admin=heat_stack_domain_admin"))
+			Expect(cm.Data["heat.conf"]).Should(
+				ContainSubstring("auth_uri=%s/v3/ec2tokens", keystoneAPI.Status.APIEndpoints["public"]))
+			Expect(cm.Data["heat.conf"]).Should(
+				ContainSubstring("auth_url=%s", keystoneAPI.Status.APIEndpoints["public"]))
+			Expect(cm.Data["heat.conf"]).Should(
+				ContainSubstring("www_authenticate_uri=http://keystone-public-openstack.testing"))
+			Expect(cm.Data["heat.conf"]).Should(
+				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
+			Expect(cm.Data["heat.conf"]).Should(
+				ContainSubstring("memcached_servers=inet:[memcached-0.memcached]:11211,inet:[memcached-1.memcached]:11211,inet:[memcached-2.memcached]:11211"))
 		})
 	})
 
@@ -253,6 +323,11 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
@@ -304,6 +379,11 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
+			th.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
