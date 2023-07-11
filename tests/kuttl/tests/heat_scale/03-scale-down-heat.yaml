@@ -1,0 +1,7 @@
+apiVersion: kuttl.dev/v1beta1
+kind: TestStep
+commands:
+  - script: |
+      oc patch heat -n $NAMESPACE heat --type='json' -p='[{"op": "replace", "path": "/spec/heatAPI/replicas", "value":1}]' && \
+      oc patch heat -n $NAMESPACE heat --type='json' -p='[{"op": "replace", "path": "/spec/heatCfnAPI/replicas", "value":1}]' && \
+      oc patch heat -n $NAMESPACE heat --type='json' -p='[{"op": "replace", "path": "/spec/heatEngine/replicas", "value":1}]'
