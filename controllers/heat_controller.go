@@ -134,7 +134,6 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 			instance.Status.Conditions.Set(
 				instance.Status.Conditions.Mirror(condition.ReadyCondition))
 		}
-
 		err := helper.PatchInstance(ctx, instance)
 		if err != nil {
 			_err = err
