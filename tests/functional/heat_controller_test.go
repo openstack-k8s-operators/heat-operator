@@ -61,6 +61,9 @@ var _ = Describe("Heat controller", func() {
 			Expect(Heat.Spec.DatabaseUser).Should(Equal("heat"))
 			Expect(Heat.Spec.RabbitMqClusterName).Should(Equal("rabbitmq"))
 			Expect(Heat.Spec.ServiceUser).Should(Equal("heat"))
+			Expect(*(Heat.Spec.HeatAPI.Replicas)).Should(Equal(int32(1)))
+			Expect(*(Heat.Spec.HeatCfnAPI.Replicas)).Should(Equal(int32(1)))
+			Expect(*(Heat.Spec.HeatEngine.Replicas)).Should(Equal(int32(1)))
 		})
 
 		It("should have the Status fields initialized", func() {

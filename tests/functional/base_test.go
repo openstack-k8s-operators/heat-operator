@@ -38,21 +38,15 @@ func GetDefaultHeatSpec() map[string]interface{} {
 }
 
 func GetDefaultHeatAPISpec() map[string]interface{} {
-	return map[string]interface{}{
-		"replicas": 1,
-	}
+	return map[string]interface{}{}
 }
 
 func GetDefaultHeatEngineSpec() map[string]interface{} {
-	return map[string]interface{}{
-		"replicas": 1,
-	}
+	return map[string]interface{}{}
 }
 
 func GetDefaultHeatCFNAPISpec() map[string]interface{} {
-	return map[string]interface{}{
-		"replicas": 1,
-	}
+	return map[string]interface{}{}
 }
 
 func CreateHeat(name types.NamespacedName, spec map[string]interface{}) client.Object {
