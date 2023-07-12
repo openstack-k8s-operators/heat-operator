@@ -60,7 +60,7 @@ type HeatServiceTemplate struct {
 	// +kubebuilder:validation:Maximum=32
 	// +kubebuilder:validation:Minimum=0
 	// Replicas -
-	Replicas int32 `json:"replicas"`
+	Replicas *int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
 	// NodeSelector to target subset of worker nodes for running the service

@@ -10,25 +10,19 @@ spec:
   debug:
     dbSync: false
   heatAPI:
-    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
     customServiceConfig: "# add your customization here"
     debug:
       service: false
-    replicas: 1
     resources: {}
   heatCfnAPI:
-    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
     customServiceConfig: "# add your customization here"
     debug:
       service: false
-    replicas: 1
     resources: {}
   heatEngine:
-    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
     customServiceConfig: "# add your customization here"
     debug:
       service: false
-    replicas: 1
     resources: {}
   preserveJobs: false
   secret: osp-secret
