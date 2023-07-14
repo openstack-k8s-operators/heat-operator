@@ -469,8 +469,10 @@ func (r *HeatEngineReconciler) generateServiceConfigMaps(
 
 	// customData hold any customization for the service.
 	// custom.conf is going to /etc/heat/heat.conf.d
-	// TODO: make sure custom.conf can not be overwritten
-	customData := map[string]string{common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig}
+	customData := map[string]string{}
+	if instance.Spec.CustomServiceConfig != "" {
+		customData[common.CustomServiceConfigFileName] = instance.Spec.CustomServiceConfig}
+	}
 
 	for key, data := range instance.Spec.DefaultConfigOverwrite {
 		customData[key] = data
