@@ -30,6 +30,12 @@ const (
 	StackDomainName = "heat_stack"
 	// DatabaseName -
 	DatabaseName = "heat"
+	// DefaultsConfigFileName -
+	DefaultsConfigFileName = "00-config.conf"
+	// CustomConfigFileName -
+	CustomConfigFileName = "01-config.conf"
+	// CustomServiceConfigFileName -
+	CustomServiceConfigFileName = "02-config.conf"
 	// HeatPublicPort -
 	HeatPublicPort int32 = 8004
 	// HeatInternalPort -

@@ -796,7 +796,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	// custom.conf is going to /etc/heat/heat.conf.d
 	// all other files get placed into /etc/heat to allow overwrite of e.g. policy.json
 	// TODO: make sure custom.conf can not be overwritten
-	customData := map[string]string{common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig}
+	customData := map[string]string{heat.CustomConfigFileName: instance.Spec.CustomServiceConfig}
 	for key, data := range instance.Spec.DefaultConfigOverwrite {
 		customData[key] = data
 	}

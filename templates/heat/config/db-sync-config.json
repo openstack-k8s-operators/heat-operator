@@ -8,8 +8,8 @@
       "perm": "0600"
     },
     {
-      "source": "/var/lib/config-data/merged/custom.conf",
-      "dest": "/etc/heat/heat.conf.d/custom.conf",
+      "source": "/var/lib/config-data/merged/02-config.conf",
+      "dest": "/etc/heat/heat.conf.d/02-config.conf",
       "owner": "heat",
       "perm": "0600"
     }

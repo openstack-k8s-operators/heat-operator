@@ -9,8 +9,15 @@
       "perm": "0644"
     },
     {
-      "source": "/var/lib/config-data/merged/custom.conf",
-      "dest": "/etc/heat/heat.conf.d/custom.conf",
+      "source": "/var/lib/config-data/merged/02-config.conf.conf",
+      "dest": "/etc/heat/heat.conf.d/02-config.conf.conf",
+      "merge": false,
+      "preserve_properties": true,
+      "perm": "0644"
+    },
+    {
+      "source": "/var/lib/config-data/merged/03-config.conf.conf",
+      "dest": "/etc/heat/heat.conf.d/03-config.conf.conf",
       "merge": false,
       "preserve_properties": true,
       "perm": "0644"
