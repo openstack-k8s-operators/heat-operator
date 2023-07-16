@@ -17,7 +17,6 @@ limitations under the License.
 package functional_test
 
 import (
-	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -34,6 +33,7 @@ var _ = Describe("Heat controller", func() {
 
 	var heatName types.NamespacedName
 	var heatTransportURLName types.NamespacedName
+	var heatConfigMapName types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -44,6 +44,10 @@ var _ = Describe("Heat controller", func() {
 		heatTransportURLName = types.NamespacedName{
 			Namespace: namespace,
 			Name:      heatName.Name + "-heat-transport",
+		}
+		heatConfigMapName = types.NamespacedName{
+			Namespace: namespace,
+			Name:      heatName.Name + "-config-data",
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -118,9 +122,7 @@ var _ = Describe("Heat controller", func() {
 		})
 
 		It("should not create a config map", func() {
-			Eventually(func() []corev1.ConfigMap {
-				return th.ListConfigMaps(fmt.Sprintf("%s-%s", heatName.Name, "config-data")).Items
-			}, timeout, interval).Should(BeEmpty())
+			th.AssertConfigMapDoesNotExist(heatConfigMapName)
 		})
 	})
 
@@ -159,9 +161,7 @@ var _ = Describe("Heat controller", func() {
 		})
 
 		It("should not create a config map", func() {
-			Eventually(func() []corev1.ConfigMap {
-				return th.ListConfigMaps(fmt.Sprintf("%s-%s", heatName.Name, "config-data")).Items
-			}, timeout, interval).Should(BeEmpty())
+			th.AssertConfigMapDoesNotExist(heatConfigMapName)
 		})
 	})
 
@@ -203,9 +203,7 @@ var _ = Describe("Heat controller", func() {
 		})
 
 		It("should not create a config map", func() {
-			Eventually(func() []corev1.ConfigMap {
-				return th.ListConfigMaps(fmt.Sprintf("%s-%s", heatName.Name, "config-data")).Items
-			}, timeout, interval).Should(BeEmpty())
+			th.AssertConfigMapDoesNotExist(heatConfigMapName)
 		})
 	})
 
@@ -243,17 +241,9 @@ var _ = Describe("Heat controller", func() {
 		})
 
 		It("should create a ConfigMap for heat.conf with the heat_domain_admin config option set", func() {
-			configataCM := types.NamespacedName{
-				Namespace: heatName.Namespace,
-				Name:      fmt.Sprintf("%s-%s", heatName.Name, "config-data"),
-			}
+			cm := th.GetConfigMap(heatConfigMapName)
 
-			Eventually(func() corev1.ConfigMap {
-				return *th.GetConfigMap(configataCM)
-			}, timeout, interval).ShouldNot(BeNil())
-
-			//keystone := GetKeystoneAPI(keystoneAPI)
-			Expect(th.GetConfigMap(configataCM).Data["heat.conf"]).Should(
+			Expect(cm.Data["heat.conf"]).Should(
 				ContainSubstring("stack_domain_admin = heat_stack_domain_admin"))
 		})
 	})
