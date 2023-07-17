@@ -11,13 +11,13 @@ require (
 	github.com/onsi/gomega v1.27.8
 	github.com/openshift/api v3.9.0+incompatible
 	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230603103902-1e54146d8c60
-	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230628130307-16734cb02944
-	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230706163045-fab7648d6c10
+	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230717054643-27820dc98d9b
+	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230717135919-f75717ebcf92
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230714104628-12cc1e43cccd
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230711124224-54bd95cadcf3
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230711124224-54bd95cadcf3
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.0.0-20230711124224-54bd95cadcf3
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230705055551-16455227d331
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230714104628-12cc1e43cccd
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230714104628-12cc1e43cccd
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.0.0-20230714104628-12cc1e43cccd
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.0.0-20230717141726-1bd909777952
 	k8s.io/api v0.26.3
 	k8s.io/apimachinery v0.26.3
 	k8s.io/client-go v0.26.3
