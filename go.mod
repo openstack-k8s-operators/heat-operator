@@ -13,7 +13,7 @@ require (
 	github.com/openstack-k8s-operators/heat-operator/api v0.0.0-20230603103902-1e54146d8c60
 	github.com/openstack-k8s-operators/infra-operator/apis v0.0.0-20230628130307-16734cb02944
 	github.com/openstack-k8s-operators/keystone-operator/api v0.0.0-20230706163045-fab7648d6c10
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230711124224-54bd95cadcf3
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230714104628-12cc1e43cccd
 	github.com/openstack-k8s-operators/lib-common/modules/database v0.0.0-20230711124224-54bd95cadcf3
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.0.0-20230711124224-54bd95cadcf3
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.0.0-20230711124224-54bd95cadcf3
