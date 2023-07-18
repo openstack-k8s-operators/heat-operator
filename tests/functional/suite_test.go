@@ -2,9 +2,7 @@ package functional_test
 
 import (
 	"context"
-	"crypto/tls"
-	"fmt"
-	"net"
+	"net/http"
 	"path/filepath"
 	"testing"
 	"time"
@@ -186,15 +184,9 @@ var _ = BeforeSuite(func() {
 	}()
 
 	// wait for the webhook server to get ready
-	dialer := &net.Dialer{Timeout: time.Duration(10) * time.Second}
-	addrPort := fmt.Sprintf("%s:%d", webhookInstallOptions.LocalServingHost, webhookInstallOptions.LocalServingPort)
 	Eventually(func() error {
-		conn, err := tls.DialWithDialer(dialer, "tcp", addrPort, &tls.Config{InsecureSkipVerify: true})
-		if err != nil {
-			return err
-		}
-		conn.Close()
-		return nil
+		checker := k8sManager.GetWebhookServer().StartedChecker()
+		return checker(&http.Request{})
 	}).Should(Succeed())
 })
 
