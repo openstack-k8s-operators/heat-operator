@@ -95,7 +95,7 @@ var _ = Describe("Heat controller", func() {
 			)
 
 			for _, cond := range []condition.Type{
-				heatv1.HeatRabbitMqTransportURLReadyCondition,
+				condition.RabbitMqTransportURLReadyCondition,
 				condition.ServiceConfigReadyCondition,
 				condition.DBReadyCondition,
 				condition.DBSyncReadyCondition,
@@ -149,7 +149,7 @@ var _ = Describe("Heat controller", func() {
 			th.ExpectCondition(
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
-				heatv1.HeatRabbitMqTransportURLReadyCondition,
+				condition.RabbitMqTransportURLReadyCondition,
 				corev1.ConditionFalse,
 			)
 			th.ExpectCondition(
@@ -185,7 +185,7 @@ var _ = Describe("Heat controller", func() {
 			th.ExpectCondition(
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
-				heatv1.HeatRabbitMqTransportURLReadyCondition,
+				condition.RabbitMqTransportURLReadyCondition,
 				corev1.ConditionTrue,
 			)
 			th.ExpectCondition(

@@ -29,9 +29,6 @@ const (
 	// HeatEngineReadyCondition ...
 	HeatEngineReadyCondition condition.Type = "HeatEngineReady"
 
-	// HeatRabbitMqTransportURLReadyCondition Status=True condition which indicates if the RabbitMQ TransportURLUrl is ready
-	HeatRabbitMqTransportURLReadyCondition condition.Type = "HeatRabbitMqTransportURLReady"
-
 	// HeatStackDomainReadyCondition ...
 	HeatStackDomainReadyCondition condition.Type = "HeatStackDomainReady"
 )
@@ -64,21 +61,6 @@ const (
 
 	// HeatEngineReadyErrorMessage ...
 	HeatEngineReadyErrorMessage = "HeatEngine error occured %s"
-
-	//
-	// HeatRabbitMqTransportURLReady condition messages
-	//
-	// HeatRabbitMqTransportURLReadyInitMessage
-	HeatRabbitMqTransportURLReadyInitMessage = "HeatRabbitMqTransportURL not started"
-
-	// HeatRabbitMqTransportURLReadyRunningMessage
-	HeatRabbitMqTransportURLReadyRunningMessage = "HeatRabbitMqTransportURL creation in progress"
-
-	// HeatRabbitMqTransportURLReadyMessage
-	HeatRabbitMqTransportURLReadyMessage = "HeatRabbitMqTransportURL successfully created"
-
-	// HeatRabbitMqTransportURLReadyErrorMessage
-	HeatRabbitMqTransportURLReadyErrorMessage = "HeatRabbitMqTransportURL error occured %s"
 
 	//
 	// HeatStackDomainReady condition messages

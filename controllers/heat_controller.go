@@ -155,13 +155,13 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 		cl := condition.CreateList(
 			condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
 			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
+			condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
 			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
 			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatStackDomainReadyCondition, condition.InitReason, heatv1beta1.HeatStackDomainReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatAPIReadyCondition, condition.InitReason, heatv1beta1.HeatAPIReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatCfnAPIReadyCondition, condition.InitReason, heatv1beta1.HeatCfnAPIReadyInitMessage),
 			condition.UnknownCondition(heatv1beta1.HeatEngineReadyCondition, condition.InitReason, heatv1beta1.HeatEngineReadyInitMessage),
-			condition.UnknownCondition(heatv1beta1.HeatRabbitMqTransportURLReadyCondition, condition.InitReason, heatv1beta1.HeatRabbitMqTransportURLReadyInitMessage),
 			// service account, role, rolebinding conditions
 			condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
 			condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
@@ -336,10 +336,10 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
-			heatv1beta1.HeatRabbitMqTransportURLReadyCondition,
+			condition.RabbitMqTransportURLReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			heatv1beta1.HeatRabbitMqTransportURLReadyErrorMessage,
+			condition.RabbitMqTransportURLReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
 	}
@@ -354,10 +354,10 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		r.Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
 
 		instance.Status.Conditions.Set(condition.FalseCondition(
-			heatv1beta1.HeatRabbitMqTransportURLReadyCondition,
+			condition.RabbitMqTransportURLReadyCondition,
 			condition.RequestedReason,
 			condition.SeverityInfo,
-			heatv1beta1.HeatRabbitMqTransportURLReadyRunningMessage))
+			condition.RabbitMqTransportURLReadyRunningMessage))
 
 		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
 	}
@@ -370,17 +370,17 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			instance.Status.Conditions.Set(condition.FalseCondition(
-				heatv1beta1.HeatRabbitMqTransportURLReadyCondition,
+				condition.RabbitMqTransportURLReadyCondition,
 				condition.RequestedReason,
 				condition.SeverityInfo,
-				heatv1beta1.HeatRabbitMqTransportURLReadyRunningMessage))
+				condition.RabbitMqTransportURLReadyRunningMessage))
 			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("TransportURL secret %s not found", instance.Status.TransportURLSecret)
 		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
-			heatv1beta1.HeatRabbitMqTransportURLReadyCondition,
+			condition.RabbitMqTransportURLReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			heatv1beta1.HeatRabbitMqTransportURLReadyErrorMessage,
+			condition.RabbitMqTransportURLReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
 	}
@@ -388,7 +388,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 
 	// run check TransportURL secret - end
 
-	instance.Status.Conditions.MarkTrue(heatv1beta1.HeatRabbitMqTransportURLReadyCondition, heatv1beta1.HeatRabbitMqTransportURLReadyMessage)
+	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, condition.RabbitMqTransportURLReadyMessage)
 
 	//
 	// Create ConfigMaps and Secrets required as input for the Service and calculate an overall hash of hashes
