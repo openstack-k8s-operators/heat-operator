@@ -3,17 +3,13 @@ module github.com/openstack-k8s-operators/heat-operator/api
 go 1.19
 
 require (
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.0.0-20230714104628-12cc1e43cccd
-	k8s.io/api v0.26.3
-	k8s.io/apimachinery v0.26.3
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.1.0
+	k8s.io/api v0.26.7
+	k8s.io/apimachinery v0.26.7
 	sigs.k8s.io/controller-runtime v0.14.6
 )
 
-require (
-	github.com/onsi/ginkgo/v2 v2.11.0 // indirect
-	github.com/onsi/gomega v1.27.8 // indirect
-	k8s.io/client-go v0.26.3 // indirect
-)
+require k8s.io/client-go v0.26.7 // indirect
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -62,11 +58,11 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiextensions-apiserver v0.26.3 // indirect
-	k8s.io/component-base v0.26.3 // indirect
+	k8s.io/apiextensions-apiserver v0.26.7 // indirect
+	k8s.io/component-base v0.26.7 // indirect
 	k8s.io/klog/v2 v2.100.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20230501164219-8b0f38b5fd1f // indirect
-	k8s.io/utils v0.0.0-20230505201702-9f6742963106 // indirect
+	k8s.io/utils v0.0.0-20230711102312-30195339c3c7 // indirect
 	sigs.k8s.io/json v0.0.0-20221116044647-bc3834ca7abd // indirect
 	sigs.k8s.io/structured-merge-diff/v4 v4.2.3 // indirect
 	sigs.k8s.io/yaml v1.3.0 // indirect
