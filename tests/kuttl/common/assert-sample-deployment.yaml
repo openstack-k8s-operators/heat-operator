@@ -13,7 +13,9 @@ kind: Heat
 metadata:
   name: heat
 spec:
-  customServiceConfig: "# add your customization here"
+  customServiceConfig: |
+    [DEFAULT]
+    debug = True
   databaseInstance: openstack
   databaseUser: "heat"
   rabbitMqClusterName: rabbitmq
@@ -21,21 +23,18 @@ spec:
     dbSync: false
   heatAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
-    customServiceConfig: "# add your customization here"
     debug:
       service: false
     replicas: 1
     resources: {}
   heatCfnAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
-    customServiceConfig: "# add your customization here"
     debug:
       service: false
     replicas: 1
     resources: {}
   heatEngine:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
-    customServiceConfig: "# add your customization here"
     debug:
       service: false
     replicas: 1
@@ -68,7 +67,6 @@ metadata:
       name: heat
 spec:
   containerImage: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
-  customServiceConfig: "# add your customization here"
   databaseHostname: openstack
   databaseUser: heat
   debug:
@@ -100,7 +98,6 @@ metadata:
       name: heat
 spec:
   containerImage: quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified
-  customServiceConfig: "# add your customization here"
   databaseHostname: openstack
   databaseUser: heat
   debug:
@@ -132,7 +129,6 @@ metadata:
       name: heat
 spec:
   containerImage: quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified
-  customServiceConfig: "# add your customization here"
   databaseHostname: openstack
   databaseUser: heat
   debug:
