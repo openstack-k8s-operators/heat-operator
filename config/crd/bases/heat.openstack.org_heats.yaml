@@ -45,7 +45,6 @@ spec:
             description: HeatSpec defines the desired state of Heat
             properties:
               customServiceConfig:
-                default: '# add your customization here'
                 description: CustomServiceConfig - customize the service config using
                   this parameter to change service defaults, or overwrite rendered
                   information using raw OpenStack config format. The content gets
@@ -89,7 +88,6 @@ spec:
                     description: ContainerImage - Container Image URL
                     type: string
                   customServiceConfig:
-                    default: '# add your customization here'
                     description: CustomServiceConfig - customize the service config
                       using this parameter to change service defaults, or overwrite
                       rendered information using raw OpenStack config format. The
@@ -187,7 +185,6 @@ spec:
                     description: ContainerImage - Container Image URL
                     type: string
                   customServiceConfig:
-                    default: '# add your customization here'
                     description: CustomServiceConfig - customize the service config
                       using this parameter to change service defaults, or overwrite
                       rendered information using raw OpenStack config format. The
@@ -285,7 +282,6 @@ spec:
                     description: ContainerImage - Container Image URL
                     type: string
                   customServiceConfig:
-                    default: '# add your customization here'
                     description: CustomServiceConfig - customize the service config
                       using this parameter to change service defaults, or overwrite
                       rendered information using raw OpenStack config format. The

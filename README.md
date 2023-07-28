@@ -17,7 +17,7 @@ The following is taken from the Sample config in this repo:
 
 ```yaml
 spec:
-  customServiceConfig: "# add your customization here"
+  customServiceConfig: ""
   databaseInstance: openstack
   databaseUser: "heat"
   rabbitMqClusterName: rabbitmq
@@ -25,21 +25,21 @@ spec:
     dbSync: false
   heatAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
-    customServiceConfig: "# add your customization here"
+    customServiceConfig: ""
     debug:
       service: false
     replicas: 1
     resources: {}
   heatCfnAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
-    customServiceConfig: "# add your customization here"
+    customServiceConfig: ""
     debug:
       service: false
     replicas: 1
     resources: {}
   heatEngine:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
-    customServiceConfig: "# add your customization here"
+    customServiceConfig: ""
     debug:
       service: false
     replicas: 1
@@ -95,7 +95,7 @@ The following snippet is taken from the `OpenStackControlPlane` Custom Resource:
 ❯ oc get openstackcontrolplane openstack -o yaml | yq .spec.heat
 enabled: true #<-- This needs to be set to true for Heat to be deployed
 template:
-  customServiceConfig: '# add your customization here'
+  customServiceConfig: ''
   databaseInstance: openstack
   databaseUser: heat
   debug:

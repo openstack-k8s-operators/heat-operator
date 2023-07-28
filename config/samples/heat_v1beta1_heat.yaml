@@ -3,24 +3,23 @@ kind: Heat
 metadata:
   name: heat
 spec:
-  customServiceConfig: "# add your customization here"
+  customServiceConfig: |
+    [DEFAULT]
+    debug = True
   databaseInstance: openstack
   databaseUser: "heat"
   rabbitMqClusterName: rabbitmq
   debug:
     dbSync: false
   heatAPI:
-    customServiceConfig: "# add your customization here"
     debug:
       service: false
     resources: {}
   heatCfnAPI:
-    customServiceConfig: "# add your customization here"
     debug:
       service: false
     resources: {}
   heatEngine:
-    customServiceConfig: "# add your customization here"
     debug:
       service: false
     resources: {}
