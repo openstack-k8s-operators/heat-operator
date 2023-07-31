@@ -7,22 +7,8 @@ spec:
     [DEFAULT]
     debug = True
   databaseInstance: openstack
-  databaseUser: "heat"
+  heatAPI: {}
+  heatCfnAPI: {}
+  heatEngine: {}
   rabbitMqClusterName: rabbitmq
-  debug:
-    dbSync: false
-  heatAPI:
-    debug:
-      service: false
-    resources: {}
-  heatCfnAPI:
-    debug:
-      service: false
-    resources: {}
-  heatEngine:
-    debug:
-      service: false
-    resources: {}
-  preserveJobs: false
   secret: osp-secret
-  serviceUser: "heat"

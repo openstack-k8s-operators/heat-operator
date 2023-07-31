@@ -1,0 +1,87 @@
+#
+# Check for:
+#
+# - Heat CR
+# - HeatAPI CR
+# - HeatCfnAPI CR
+# - HeatEngine CR
+# - Deployment with 3 Pods for HeatAPI CR
+# - Deployment with 3 Pods for HeatCfnAPI CR
+# - Deployment with 3 Pods for HeatEngine CR
+#
+
+apiVersion: heat.openstack.org/v1beta1
+kind: Heat
+metadata:
+  name: heat
+spec:
+  heatAPI:
+    replicas: 3
+  heatCfnAPI:
+    replicas: 3
+  heatEngine:
+    replicas: 3
+status:
+  heatApiReadyCount: 3
+  heatCfnApiReadyCount: 3
+  heatEngineReadyCount: 3
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatAPI
+metadata:
+  name: heat-api
+spec:
+  replicas: 3
+status:
+  readyCount: 3
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatCfnAPI
+metadata:
+  name: heat-cfnapi
+spec:
+  replicas: 3
+status:
+  readyCount: 3
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatEngine
+metadata:
+  name: heat-engine
+spec:
+  replicas: 3
+status:
+  readyCount: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-api
+  ownerReferences:
+  - apiVersion: heat.openstack.org/v1beta1
+    kind: HeatAPI
+    name: heat-api
+spec:
+  replicas: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-cfnapi
+  ownerReferences:
+  - apiVersion: heat.openstack.org/v1beta1
+    kind: HeatCfnAPI
+    name: heat-cfnapi
+spec:
+  replicas: 3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-engine
+  ownerReferences:
+  - apiVersion: heat.openstack.org/v1beta1
+    kind: HeatEngine
+    name: heat-engine
+spec:
+  replicas: 3

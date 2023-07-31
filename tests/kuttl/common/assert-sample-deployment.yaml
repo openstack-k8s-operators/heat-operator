@@ -1,12 +1,14 @@
 #
 # Check for:
 #
-# Heat
-# HeatAPI
-# HeatCfnAPI
-# HeatEngine
-# apiEndpoints
-# service port connectivity
+# - Heat CR
+# - HeatAPI CR
+# - HeatCfnAPI CR
+# - HeatEngine CR
+# - Deployment with 1 Pod for HeatAPI CR
+# - Deployment with 1 Pod for HeatCfnAPI CR
+# - Deployment with 1 Pod for HeatEngine CR
+# - service port connectivity
 #
 apiVersion: heat.openstack.org/v1beta1
 kind: Heat
@@ -146,6 +148,39 @@ spec:
 status:
   readyCount: 1
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-api
+  ownerReferences:
+  - apiVersion: heat.openstack.org/v1beta1
+    kind: HeatAPI
+    name: heat-api
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-cfnapi
+  ownerReferences:
+  - apiVersion: heat.openstack.org/v1beta1
+    kind: HeatCfnAPI
+    name: heat-cfnapi
+spec:
+  replicas: 1
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-engine
+  ownerReferences:
+  - apiVersion: heat.openstack.org/v1beta1
+    kind: HeatEngine
+    name: heat-engine
+spec:
+  replicas: 1
+---
 # Test the status code is correct for each endpoint
 # This test is for heat endpoints
 apiVersion: kuttl.dev/v1beta1
@@ -158,6 +193,6 @@ commands:
       STATUSCODE=$(curl --silent --output /dev/stderr --head --write-out "%{http_code}" $PUBLIC_URL/healthcheck)
       if test $STATUSCODE -ne 204; then
           RETURN_CODE=1
-          echo "${PUBLIC_URL} status code expected is 200 but was ${STATUSCODE}"
+          echo "${PUBLIC_URL} status code expected is 204 but was ${STATUSCODE}"
       fi
       exit $RETURN_CODE
