@@ -923,7 +923,7 @@ func (r *HeatReconciler) ensureStackDomain(
 	}
 
 	// Create Heat user
-	userID, ctrlResult, err := r.ensureStackDomainAdminUser(ctx, helper, instance, os)
+	userID, ctrlResult, err := r.ensureStackDomainAdminUser(ctx, helper, instance, domainID, os)
 	if err != nil {
 		return ctrl.Result{}, err
 	} else if (ctrlResult != ctrl.Result{}) {
@@ -939,6 +939,7 @@ func (r *HeatReconciler) ensureStackDomainAdminUser(
 	ctx context.Context,
 	helper *helper.Helper,
 	instance *heatv1beta1.Heat,
+	domainID string,
 	os *openstack.OpenStack,
 ) (string, ctrl.Result, error) {
 
@@ -961,6 +962,7 @@ func (r *HeatReconciler) ensureStackDomainAdminUser(
 			Name:      heat.StackDomainAdminUsername,
 			Password:  password,
 			ProjectID: "service",
+			DomainID:  domainID,
 		})
 	if err != nil {
 		return "", ctrl.Result{}, err
@@ -968,7 +970,11 @@ func (r *HeatReconciler) ensureStackDomainAdminUser(
 	return userID, ctrl.Result{}, nil
 }
 
-func (r *HeatReconciler) addUserToDomain(userID string, domainID string, os *openstack.OpenStack) error {
+func (r *HeatReconciler) addUserToDomain(
+	userID string,
+	domainID string,
+	os *openstack.OpenStack,
+) error {
 	//
 	// add user to admin role
 	//
