@@ -205,7 +205,7 @@ func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *he
 		}
 		if err == nil {
 			controllerutil.RemoveFinalizer(keystoneEndpoint, helper.GetFinalizer())
-			if err = helper.GetClient().Update(ctx, keystoneEndpoint); err != nil && !k8s_errors.IsNotFound(err) {
+			if err = r.Update(ctx, keystoneEndpoint); err != nil && !k8s_errors.IsNotFound(err) {
 				return ctrl.Result{}, err
 			}
 			util.LogForObject(helper, "Removed finalizer from KeystoneEndpoint", instance)
@@ -217,7 +217,7 @@ func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *he
 		}
 		if err == nil {
 			controllerutil.RemoveFinalizer(keystoneService, helper.GetFinalizer())
-			if err = helper.GetClient().Update(ctx, keystoneService); err != nil && !k8s_errors.IsNotFound(err) {
+			if err = r.Update(ctx, keystoneService); err != nil && !k8s_errors.IsNotFound(err) {
 				return ctrl.Result{}, err
 			}
 			util.LogForObject(helper, "Removed finalizer from our KeystoneService", instance)
