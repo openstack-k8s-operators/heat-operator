@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/go-logr/logr"
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	heatapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatapi"
@@ -52,11 +52,25 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 )
 
+// GetClient -
+func (r *HeatAPIReconciler) GetClient() client.Client {
+	return r.Client
+}
+
+// GetKClient -
+func (r *HeatAPIReconciler) GetKClient() kubernetes.Interface {
+	return r.Kclient
+}
+
+// GetScheme -
+func (r *HeatAPIReconciler) GetScheme() *runtime.Scheme {
+	return r.Scheme
+}
+
 // HeatAPIReconciler reconciles a Heat object
 type HeatAPIReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
-	Log     logr.Logger
 	Kclient kubernetes.Interface
 }
 
@@ -69,6 +83,11 @@ var (
 		},
 	}
 )
+
+// getlog returns a logger object with a prefix of "conroller.name" and aditional controller context fields
+func (r *HeatAPIReconciler) GetLogger(ctx context.Context) logr.Logger {
+	return log.FromContext(ctx).WithName("Controllers").WithName("Heat")
+}
 
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/status,verbs=get;update;patch
@@ -87,8 +106,7 @@ var (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
-	_ = log.FromContext(ctx)
-
+	Log := r.GetLogger(ctx)
 	// TODO(bshephar): your logic here
 	// We should have a Database and a `heat.conf` file by this time. Handled by the heat_controller.
 	// We just need to initialise the API in a deployment here, and allow scaling of the ReplicaSet.
@@ -108,7 +126,7 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		r.Log,
+		Log,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -174,8 +192,8 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
+func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
+	Log := r.GetLogger(ctx)
 	configMapFn := func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
@@ -183,21 +201,21 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), apis, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to get API CRs %v")
+		if err := r.Client.List(ctx, apis, listOpts...); err != nil {
+			Log.Error(err, "Unable to get API CRs")
 			return nil
 		}
 
 		label := o.GetLabels()
 
-		if l, ok := label[labels.GetOwnerNameLabelSelector(labels.GetGroupLabel(heat.ServiceName))]; ok {
+		if lbl, ok := label[labels.GetOwnerNameLabelSelector(labels.GetGroupLabel(heat.ServiceName))]; ok {
 			for _, cr := range apis.Items {
-				if l == heat.GetOwningHeatName(&cr) {
+				if lbl == heat.GetOwningHeatName(&cr) {
 					name := client.ObjectKey{
 						Namespace: o.GetNamespace(),
 						Name:      cr.Name,
 					}
-					r.Log.Info(fmt.Sprintf("ConfigMap object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
+					Log.Info("", "ConfigMap object", o.GetName(), "and CR", cr.Name, "marked with label:", lbl)
 					result = append(result, reconcile.Request{NamespacedName: name})
 				}
 			}
@@ -222,7 +240,8 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API Delete")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling API Delete")
 
 	for _, ksSvc := range keystoneServices {
 		keystoneEndpoint, err := keystonev1.GetKeystoneEndpointWithName(ctx, helper, ksSvc["name"], instance.Namespace)
@@ -237,6 +256,7 @@ func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv
 				}
 				util.LogForObject(helper, "Removed finalizer from KeystoneEndpoint", instance)
 			}
+			Log.Info("Removed finalizer from KeystoneEndpoint", "KeystoneEndpoint", instance)
 		}
 
 		keystoneService, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, ksSvc["name"], instance.Namespace)
@@ -249,14 +269,15 @@ func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv
 				if err != nil && !k8s_errors.IsNotFound(err) {
 					return ctrl.Result{}, err
 				}
-				util.LogForObject(helper, "Removed finalizer from our KeystoneService", instance)
+				Log.Info("Removed finalizer from our KeystoneService")
 			}
+			Log.Info("Removed finalizer from our KeystoneService", "KeystoneService", instance)
 		}
 	}
 
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled API delete successfully")
+	Log.Info("Reconciled API delete successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -267,7 +288,8 @@ func (r *HeatAPIReconciler) reconcileInit(
 	helper *helper.Helper,
 	serviceLabels map[string]string,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API init")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling API init")
 
 	//
 	// expose the service (create service and return the created endpoint URLs)
@@ -433,12 +455,13 @@ func (r *HeatAPIReconciler) reconcileInit(
 		}
 	}
 
-	r.Log.Info("Reconciled API init successfully")
+	Log.Info("Reconciled API init successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service")
 
 	// ConfigMap
 	configMapVars := make(map[string]env.Setter)
@@ -617,27 +640,29 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	}
 	// create Deployment - end
 
-	r.Log.Info("Reconciled API successfully")
+	Log.Info("Reconciled API successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatAPIReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API update")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling API update")
 
 	// TODO: should have minor update tasks if required
 	// - delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled API update successfully")
+	Log.Info("Reconciled API update successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatAPIReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API upgrade")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling API upgrade")
 
 	// TODO: should have major version upgrade tasks
 	// -delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled API upgrade successfully")
+	Log.Info("Reconciled API upgrade successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -689,6 +714,8 @@ func (r *HeatAPIReconciler) createHashOfInputHashes(
 	instance *heatv1beta1.HeatAPI,
 	envVars map[string]env.Setter,
 ) (string, error) {
+	Log := r.GetLogger(ctx)
+
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
 	hash, err := util.ObjectHash(mergedMapVars)
 	if err != nil {
@@ -699,7 +726,7 @@ func (r *HeatAPIReconciler) createHashOfInputHashes(
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return hash, err
 		}
-		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
+		Log.Info("Input maps", common.InputHashName, "hash", hash)
 	}
 	return hash, nil
 }

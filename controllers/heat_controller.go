@@ -61,11 +61,15 @@ import (
 type HeatReconciler struct {
 	client.Client
 	Kclient kubernetes.Interface
-	Log     logr.Logger
 	Scheme  *runtime.Scheme
 }
 
 var keystoneAPI *keystonev1.KeystoneAPI
+
+// getlog returns a logger object with a prefix of "conroller.name" and aditional controller context fields
+func (r *HeatReconciler) GetLogger(ctx context.Context) logr.Logger {
+	return log.FromContext(ctx).WithName("Controllers").WithName("Heat")
+}
 
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats/status,verbs=get;update;patch
@@ -100,7 +104,7 @@ var keystoneAPI *keystonev1.KeystoneAPI
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
-	_ = log.FromContext(ctx)
+	Log := r.GetLogger(ctx)
 
 	instance := &heatv1beta1.Heat{}
 	err := r.Client.Get(ctx, req.NamespacedName, instance)
@@ -116,7 +120,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		r.Log,
+		Log,
 	)
 
 	if err != nil {
@@ -192,7 +196,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
 
 	// transportURLSecretFn - Watch for changes made to the secret associated with the RabbitMQ
 	// TransportURL created and used by Heat CRs.  Watch functions return a list of namespace-scoped
@@ -205,6 +209,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// reconciliation for a Heat CR that does not need it.
 	//
 	// TODO: We also need a watch func to monitor for changes to the secret referenced by Heat.Spec.Secret
+	Log := r.GetLogger(ctx)
 	transportURLSecretFn := func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
@@ -213,8 +218,8 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), heats, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to retrieve Heat CRs %v")
+		if err := r.Client.List(ctx, heats, listOpts...); err != nil {
+			Log.Error(err, "Unable to retrieve Heat CRs", "Error")
 			return nil
 		}
 
@@ -227,7 +232,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 							Namespace: o.GetNamespace(),
 							Name:      cr.Name,
 						}
-						r.Log.Info(fmt.Sprintf("TransportURL Secret %s belongs to TransportURL belonging to Heat CR %s", o.GetName(), cr.Name))
+						Log.Info("TransportURL", "secret", o.GetName(), "belongs to TransportURL belonging to Heat CR", cr.Name)
 						result = append(result, reconcile.Request{NamespacedName: name})
 					}
 				}
@@ -289,7 +294,8 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Heat delete")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Heat delete")
 
 	// remove db finalizer first
 	db, err := mariadbv1.GetDatabaseByName(ctx, helper, instance.Name)
@@ -305,13 +311,14 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled Heat delete successfully")
+	Log.Info("Reconciled Heat delete successfully")
 
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service")
 
 	// Service account, role, binding
 	rbacRules := []rbacv1.PolicyRule{
@@ -413,13 +420,13 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", transportURL.Name, string(op)))
+		Log.Info("Successfully reconciled operation:", "TransportURL", transportURL.Name, "Operation", string(op))
 	}
 
 	instance.Status.TransportURLSecret = transportURL.Status.SecretName
 
 	if instance.Status.TransportURLSecret == "" {
-		r.Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
+		Log.Info("Waiting for TransportURL secret to be created", "TransportURL", transportURL.Name)
 
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
@@ -556,7 +563,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		Log.Info("Deployment successfully reconciled", "Deployment", instance.Name, "operation", string(op))
 	}
 	// Mirror HeatEngine status' ReadyCount to this parent CR
 	instance.Status.HeatEngineReadyCount = heatEngine.Status.ReadyCount
@@ -579,7 +586,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		Log.Info("Deployment successfully reconciled", "Deployment", instance.Name, "operation", string(op))
 	}
 
 	// Mirror HeatAPI status' ReadyCount to this parent CR
@@ -603,7 +610,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		Log.Info("Deployment successfully reconciled", "Deployment", instance.Name, "operation", string(op))
 	}
 
 	// Mirror HeatCfnAPI status' ReadyCount to this parent CR
@@ -615,7 +622,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		instance.Status.Conditions.Set(c)
 	}
 
-	r.Log.Info("Reconciled Heat successfully")
+	Log.Info("Reconciled Heat successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -624,7 +631,8 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 	helper *helper.Helper,
 	serviceLabels map[string]string,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Heat init")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Heat init")
 	//
 	// create service DB instance
 	//
@@ -725,23 +733,24 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return ctrl.Result{}, err
 		}
-		r.Log.Info(fmt.Sprintf("Job %s hash added - %s", jobDef.Name, instance.Status.Hash[heatv1beta1.DbSyncHash]))
+		Log.Info("Job hash added", "Job", jobDef.Name, "Hash", instance.Status.Hash[heatv1beta1.DbSyncHash])
 	}
 	instance.Status.Conditions.MarkTrue(condition.DBSyncReadyCondition, condition.DBSyncReadyMessage)
 
 	// run heat db sync - end
 
-	r.Log.Info("Reconciled Heat init successfully")
+	Log.Info("Reconciled Heat init successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Heat update")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Heat update")
 
 	// TODO: should have minor update tasks if required
 	// - delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled Heat update successfully")
+	Log.Info("Reconciled Heat update successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -910,12 +919,13 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 }
 
 func (r *HeatReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Heat upgrade")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Heat upgrade")
 
 	// TODO(bshephar): should have major version upgrade tasks
 	// -delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled Heat upgrade successfully")
+	Log.Info("Reconciled Heat upgrade successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -926,6 +936,7 @@ func (r *HeatReconciler) createHashOfInputHashes(
 	instance *heatv1beta1.Heat,
 	envVars map[string]env.Setter,
 ) (string, error) {
+	Log := r.GetLogger(ctx)
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
 	hash, err := util.ObjectHash(mergedMapVars)
 	if err != nil {
@@ -936,7 +947,7 @@ func (r *HeatReconciler) createHashOfInputHashes(
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return hash, err
 		}
-		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
+		Log.Info("Input maps hash", "Input", common.InputHashName, "Hash", hash)
 	}
 	return hash, nil
 }
@@ -973,6 +984,7 @@ func (r *HeatReconciler) ensureStackDomain(
 	}
 	password := strings.TrimSuffix(string(val), "\n")
 
+	Log := r.GetLogger(ctx)
 	//
 	// get admin authentication OpenStack
 	//
@@ -990,14 +1002,14 @@ func (r *HeatReconciler) ensureStackDomain(
 		Name:        heat.StackDomainName,
 		Description: "Domain for Heat stacks",
 	}
-	domainID, err := os.CreateDomain(r.Log, domain)
+	domainID, err := os.CreateDomain(Log, domain)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Create Heat user
 	userID, err := os.CreateUser(
-		r.Log,
+		Log,
 		openstack.User{
 			Name:      heat.StackDomainAdminUsername,
 			Password:  password,
@@ -1010,7 +1022,7 @@ func (r *HeatReconciler) ensureStackDomain(
 
 	// Add the user to the domain
 	err = os.AssignUserDomainRole(
-		r.Log,
+		Log,
 		"admin",
 		userID,
 		domainID)

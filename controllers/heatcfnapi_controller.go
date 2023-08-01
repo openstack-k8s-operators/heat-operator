@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -34,7 +35,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
-	"github.com/go-logr/logr"
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	heatcfnapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatcfnapi"
@@ -52,11 +52,25 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 )
 
+// GetClient -
+func (r *HeatCfnAPIReconciler) GetClient() client.Client {
+	return r.Client
+}
+
+// GetKClient -
+func (r *HeatCfnAPIReconciler) GetKClient() kubernetes.Interface {
+	return r.Kclient
+}
+
+// GetScheme -
+func (r *HeatCfnAPIReconciler) GetScheme() *runtime.Scheme {
+	return r.Scheme
+}
+
 // HeatCfnAPIReconciler reconciles a Heat object
 type HeatCfnAPIReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
-	Log     logr.Logger
 	Kclient kubernetes.Interface
 }
 
@@ -69,6 +83,11 @@ var (
 		},
 	}
 )
+
+// getlog returns a logger object with a prefix of "conroller.name" and aditional controller context fields
+func (r *HeatCfnAPIReconciler) GetLogger(ctx context.Context) logr.Logger {
+	return log.FromContext(ctx).WithName("Controllers").WithName("HeatCfnAPI")
+}
 
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatcfnapis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatcfnapis/status,verbs=get;update;patch
@@ -91,7 +110,7 @@ var (
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
-	_ = log.FromContext(ctx)
+	Log := r.GetLogger(ctx)
 
 	// TODO(bshephar): your logic here
 	// We should have a Database and a `heat.conf` file by this time. Handled by the heat_controller.
@@ -112,7 +131,7 @@ func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		r.Log,
+		Log,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -178,8 +197,8 @@ func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
+func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
+	Log := r.GetLogger(ctx)
 	configMapFn := func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
@@ -187,21 +206,21 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), apis, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to get CfnAPI CRs %v")
+		if err := r.Client.List(ctx, apis, listOpts...); err != nil {
+			Log.Error(err, "Unable to get CfnAPI CRs")
 			return nil
 		}
 
 		label := o.GetLabels()
 
-		if l, ok := label[labels.GetOwnerNameLabelSelector(labels.GetGroupLabel(heat.ServiceName))]; ok {
+		if lbl, ok := label[labels.GetOwnerNameLabelSelector(labels.GetGroupLabel(heat.ServiceName))]; ok {
 			for _, cr := range apis.Items {
-				if l == heat.GetOwningHeatName(&cr) {
+				if lbl == heat.GetOwningHeatName(&cr) {
 					name := client.ObjectKey{
 						Namespace: o.GetNamespace(),
 						Name:      cr.Name,
 					}
-					r.Log.Info(fmt.Sprintf("ConfigMap object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
+					Log.Info("", "ConfigMap object", o.GetName(), "and CR", cr.Name, "marked with label:", lbl)
 					result = append(result, reconcile.Request{NamespacedName: name})
 				}
 			}
@@ -226,7 +245,8 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *HeatCfnAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling CfnAPI Delete")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling CfnAPI Delete")
 
 	for _, ksSvc := range keystoneCfnServices {
 		keystoneEndpoint, err := keystonev1.GetKeystoneEndpointWithName(ctx, helper, ksSvc["name"], instance.Namespace)
@@ -241,6 +261,7 @@ func (r *HeatCfnAPIReconciler) reconcileDelete(ctx context.Context, instance *he
 				}
 				util.LogForObject(helper, "Removed finalizer from KeystoneEndpoint", instance)
 			}
+			Log.Info("Removed finalizer from KeystoneEndpoint")
 		}
 
 		keystoneService, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, ksSvc["name"], instance.Namespace)
@@ -255,12 +276,13 @@ func (r *HeatCfnAPIReconciler) reconcileDelete(ctx context.Context, instance *he
 				}
 				util.LogForObject(helper, "Removed finalizer from our KeystoneService", instance)
 			}
+			Log.Info("Removed finalizer from our KeystoneService")
 		}
 	}
 
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled CfnAPI delete successfully")
+	Log.Info("Reconciled CfnAPI delete successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -271,7 +293,8 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 	helper *helper.Helper,
 	serviceLabels map[string]string,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling CfnAPI init")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling CfnAPI init")
 
 	//
 	// expose the service (create service and return the created endpoint URLs)
@@ -437,12 +460,13 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 		}
 	}
 
-	r.Log.Info("Reconciled CfnAPI init successfully")
+	Log.Info("Reconciled CfnAPI init successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service")
 
 	// ConfigMap
 	configMapVars := make(map[string]env.Setter)
@@ -621,27 +645,29 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	}
 	// create Deployment - end
 
-	r.Log.Info("Reconciled CfnAPI successfully")
+	Log.Info("Reconciled CfnAPI successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatCfnAPIReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling CfnAPI update")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling CfnAPI update")
 
 	// TODO: should have minor update tasks if required
 	// - delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled CfnAPI update successfully")
+	Log.Info("Reconciled CfnAPI update successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatCfnAPIReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling CfnAPI upgrade")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling CfnAPI upgrade")
 
 	// TODO: should have major version upgrade tasks
 	// -delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled CfnAPI upgrade successfully")
+	Log.Info("Reconciled CfnAPI upgrade successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -693,6 +719,8 @@ func (r *HeatCfnAPIReconciler) createHashOfInputHashes(
 	instance *heatv1beta1.HeatCfnAPI,
 	envVars map[string]env.Setter,
 ) (string, error) {
+	Log := r.GetLogger(ctx)
+
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
 	hash, err := util.ObjectHash(mergedMapVars)
 	if err != nil {
@@ -703,7 +731,7 @@ func (r *HeatCfnAPIReconciler) createHashOfInputHashes(
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return hash, err
 		}
-		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
+		Log.Info("", "Input maps hash", common.InputHashName, "Hash", hash)
 	}
 	return hash, nil
 }
