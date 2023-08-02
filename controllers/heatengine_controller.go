@@ -38,7 +38,6 @@ import (
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	heatengine "github.com/openstack-k8s-operators/heat-operator/pkg/heatengine"
-	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	configmap "github.com/openstack-k8s-operators/lib-common/modules/common/configmap"
@@ -198,35 +197,8 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Engine Delete")
 
-	for _, ksSvc := range keystoneServices {
-		keystoneEndpoint, err := keystonev1.GetKeystoneEndpointWithName(ctx, helper, ksSvc["name"], instance.Namespace)
-		if err != nil && !k8s_errors.IsNotFound(err) {
-			return ctrl.Result{}, err
-		}
-		if err == nil {
-			controllerutil.RemoveFinalizer(keystoneEndpoint, helper.GetFinalizer())
-			if err = helper.GetClient().Update(ctx, keystoneEndpoint); err != nil && !k8s_errors.IsNotFound(err) {
-				return ctrl.Result{}, err
-			}
-			util.LogForObject(helper, "Removed finalizer from KeystoneEndpoint", instance)
-		}
-
-		keystoneService, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, ksSvc["name"], instance.Namespace)
-		if err != nil && !k8s_errors.IsNotFound(err) {
-			return ctrl.Result{}, err
-		}
-		if err == nil {
-			controllerutil.RemoveFinalizer(keystoneService, helper.GetFinalizer())
-			if err = helper.GetClient().Update(ctx, keystoneService); err != nil && !k8s_errors.IsNotFound(err) {
-				return ctrl.Result{}, err
-			}
-			util.LogForObject(helper, "Removed finalizer from our KeystoneService", instance)
-		}
-	}
-
-	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled API delete successfully")
+	r.Log.Info("Reconciled Engine delete successfully")
 
 	return ctrl.Result{}, nil
 }

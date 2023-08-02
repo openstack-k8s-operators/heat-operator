@@ -52,26 +52,6 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 )
 
-// GetClient -
-func (r *HeatAPIReconciler) GetClient() client.Client {
-	return r.Client
-}
-
-// GetKClient -
-func (r *HeatAPIReconciler) GetKClient() kubernetes.Interface {
-	return r.Kclient
-}
-
-// GetLogger -
-func (r *HeatAPIReconciler) GetLogger() logr.Logger {
-	return r.Log
-}
-
-// GetScheme -
-func (r *HeatAPIReconciler) GetScheme() *runtime.Scheme {
-	return r.Scheme
-}
-
 // HeatAPIReconciler reconciles a Heat object
 type HeatAPIReconciler struct {
 	client.Client
@@ -252,11 +232,13 @@ func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv
 			return ctrl.Result{}, err
 		}
 		if err == nil {
-			controllerutil.RemoveFinalizer(keystoneEndpoint, helper.GetFinalizer())
-			if err = helper.GetClient().Update(ctx, keystoneEndpoint); err != nil && !k8s_errors.IsNotFound(err) {
-				return ctrl.Result{}, err
+			if controllerutil.RemoveFinalizer(keystoneEndpoint, helper.GetFinalizer()) {
+				err = r.Update(ctx, keystoneEndpoint)
+				if err != nil && !k8s_errors.IsNotFound(err) {
+					return ctrl.Result{}, err
+				}
+				util.LogForObject(helper, "Removed finalizer from KeystoneEndpoint", instance)
 			}
-			util.LogForObject(helper, "Removed finalizer from KeystoneEndpoint", instance)
 		}
 
 		keystoneService, err := keystonev1.GetKeystoneServiceWithName(ctx, helper, ksSvc["name"], instance.Namespace)
@@ -264,11 +246,13 @@ func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv
 			return ctrl.Result{}, err
 		}
 		if err == nil {
-			controllerutil.RemoveFinalizer(keystoneService, helper.GetFinalizer())
-			if err = helper.GetClient().Update(ctx, keystoneService); err != nil && !k8s_errors.IsNotFound(err) {
-				return ctrl.Result{}, err
+			if controllerutil.RemoveFinalizer(keystoneService, helper.GetFinalizer()) {
+				err = r.Update(ctx, keystoneService)
+				if err != nil && !k8s_errors.IsNotFound(err) {
+					return ctrl.Result{}, err
+				}
+				util.LogForObject(helper, "Removed finalizer from our KeystoneService", instance)
 			}
-			util.LogForObject(helper, "Removed finalizer from our KeystoneService", instance)
 		}
 	}
 
