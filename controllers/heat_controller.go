@@ -13,6 +13,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -463,7 +464,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 
 	// Create domain for Heat stacks
-	ctrlResult, err = r.ensureStackDomain(ctx, helper, instance)
+	ctrlResult, err = r.ensureStackDomain(ctx, helper, instance, ospSecret)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatStackDomainReadyCondition,
@@ -898,7 +899,15 @@ func (r *HeatReconciler) ensureStackDomain(
 	ctx context.Context,
 	helper *helper.Helper,
 	instance *heatv1beta1.Heat,
+	secret *corev1.Secret,
 ) (ctrl.Result, error) {
+
+	val, ok := secret.Data[instance.Spec.PasswordSelectors.Service]
+	if !ok {
+		return ctrl.Result{}, fmt.Errorf("%s not found in secret %s", instance.Spec.PasswordSelectors.Service, instance.Spec.Secret)
+	}
+	password := strings.TrimSuffix(string(val), "\n")
+
 	//
 	// get admin authentication OpenStack
 	//
@@ -913,6 +922,7 @@ func (r *HeatReconciler) ensureStackDomain(
 		return ctrlResult, nil
 	}
 
+	// create domain
 	domain := openstack.Domain{
 		Name:        heat.StackDomainName,
 		Description: "Domain for Heat stacks",
@@ -923,39 +933,6 @@ func (r *HeatReconciler) ensureStackDomain(
 	}
 
 	// Create Heat user
-	userID, ctrlResult, err := r.ensureStackDomainAdminUser(ctx, helper, instance, domainID, os)
-	if err != nil {
-		return ctrl.Result{}, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
-	}
-
-	// Add the user to the domain
-	err = r.addUserToDomain(userID, domainID, os)
-	return ctrl.Result{}, err
-}
-
-func (r *HeatReconciler) ensureStackDomainAdminUser(
-	ctx context.Context,
-	helper *helper.Helper,
-	instance *heatv1beta1.Heat,
-	domainID string,
-	os *openstack.OpenStack,
-) (string, ctrl.Result, error) {
-
-	// get the password of the service user from the secret
-	password, ctrlResult, err := oko_secret.GetDataFromSecret(
-		ctx,
-		helper,
-		instance.Spec.Secret,
-		time.Duration(10),
-		instance.Spec.PasswordSelectors.Service)
-	if err != nil {
-		return "", ctrl.Result{}, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return "", ctrlResult, nil
-	}
-
 	userID, err := os.CreateUser(
 		r.Log,
 		openstack.User{
@@ -965,23 +942,14 @@ func (r *HeatReconciler) ensureStackDomainAdminUser(
 			DomainID:  domainID,
 		})
 	if err != nil {
-		return "", ctrl.Result{}, err
+		return ctrl.Result{}, err
 	}
-	return userID, ctrl.Result{}, nil
-}
 
-func (r *HeatReconciler) addUserToDomain(
-	userID string,
-	domainID string,
-	os *openstack.OpenStack,
-) error {
-	//
-	// add user to admin role
-	//
-	err := os.AssignUserDomainRole(
+	// Add the user to the domain
+	err = os.AssignUserDomainRole(
 		r.Log,
 		"admin",
 		userID,
 		domainID)
-	return err
+	return ctrl.Result{}, err
 }
