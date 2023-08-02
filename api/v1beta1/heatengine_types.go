@@ -35,13 +35,13 @@ type HeatEngineSpec struct {
 	// Input parameters for the Heat Engine service
 	HeatEngineTemplate `json:",inline"`
 
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	// DatabaseHostname - Heat Database Hostname
-	DatabaseHostname string `json:"databaseHostname,omitempty"`
+	DatabaseHostname string `json:"databaseHostname"`
 
-	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Required
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
-	TransportURLSecret string `json:"transportURLSecret,omitempty"`
+	TransportURLSecret string `json:"transportURLSecret"`
 
 	// +kubebuilder:validation:Required
 	// ServiceAccount - service account name used internally to provide Heat services the default SA name
