@@ -303,7 +303,8 @@ func (r *HeatAPIReconciler) reconcileInit(
 			condition.ExposeServiceReadyErrorMessage,
 			err.Error()))
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
+	}
+	if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ExposeServiceReadyCondition,
 			condition.RequestedReason,
@@ -332,7 +333,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 
 		ksSvcObj := keystonev1.NewKeystoneService(ksSvcSpec, instance.Namespace, serviceLabels, time.Duration(10)*time.Second)
 		ctrlResult, err = ksSvcObj.CreateOrPatch(ctx, helper)
-		if err != nil {
+		if err != nil || (ctrlResult != ctrl.Result{}) {
 			return ctrlResult, err
 		}
 
@@ -341,10 +342,6 @@ func (r *HeatAPIReconciler) reconcileInit(
 		c := ksSvcObj.GetConditions().Mirror(condition.KeystoneServiceReadyCondition)
 		if c != nil {
 			instance.Status.Conditions.Set(c)
-		}
-
-		if (ctrlResult != ctrl.Result{}) {
-			return ctrlResult, nil
 		}
 
 		//
@@ -361,7 +358,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 			serviceLabels,
 			time.Duration(10)*time.Second)
 		ctrlResult, err = ksEndpt.CreateOrPatch(ctx, helper)
-		if err != nil {
+		if err != nil || (ctrlResult != ctrl.Result{}) {
 			return ctrlResult, err
 		}
 		// mirror the Status, Reason, Severity and Message of the latest keystoneendpoint condition
@@ -369,10 +366,6 @@ func (r *HeatAPIReconciler) reconcileInit(
 		c = ksEndpt.GetConditions().Mirror(condition.KeystoneEndpointReadyCondition)
 		if c != nil {
 			instance.Status.Conditions.Set(c)
-		}
-
-		if (ctrlResult != ctrl.Result{}) {
-			return ctrlResult, nil
 		}
 	}
 
@@ -510,26 +503,20 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 
 	// Handle service init
 	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	// Handle service update
 	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	// Handle service upgrade
 	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	//
@@ -551,7 +538,8 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			condition.DeploymentReadyErrorMessage,
 			err.Error()))
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
+	}
+	if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,
 			condition.RequestedReason,

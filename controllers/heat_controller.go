@@ -294,10 +294,8 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		},
 	}
 	rbacResult, err := common_rbac.ReconcileRbac(ctx, helper, instance, rbacRules)
-	if err != nil {
+	if err != nil || (rbacResult != ctrl.Result{}) {
 		return rbacResult, err
-	} else if (rbacResult != ctrl.Result{}) {
-		return rbacResult, nil
 	}
 
 	// ConfigMap
@@ -437,26 +435,20 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 
 	// Handle service init
 	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	// Handle service update
 	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	// Handle service upgrade
 	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	//
@@ -473,7 +465,8 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			heatv1beta1.HeatStackDomainReadyErrorMessage,
 			err.Error()))
 		return ctrl.Result{}, err
-	} else if (ctrlResult != ctrl.Result{}) {
+	}
+	if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatStackDomainReadyCondition,
 			condition.RequestedReason,
@@ -916,10 +909,8 @@ func (r *HeatReconciler) ensureStackDomain(
 		helper,
 		keystoneAPI,
 	)
-	if err != nil {
-		return ctrl.Result{}, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
+	if err != nil || (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
 	}
 
 	// create domain
