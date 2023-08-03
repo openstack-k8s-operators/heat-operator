@@ -378,10 +378,6 @@ spec:
                   the Heat services
                 type: object
               passwordSelectors:
-                default:
-                  authEncryptionKey: HeatAuthEncryptionKey
-                  database: HeatDatabasePassword
-                  service: HeatPassword
                 description: PasswordSelectors - Selectors to identify the DB and
                   ServiceUser password from the Secret
                 properties:

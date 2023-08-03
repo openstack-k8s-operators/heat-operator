@@ -39,9 +39,8 @@ type HeatTemplate struct {
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
 	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
-	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
+	PasswordSelectors PasswordSelector `json:"passwordSelectors,omitempty"`
 }
 
 // HeatServiceTemplate -
@@ -90,15 +89,15 @@ type PasswordSelector struct {
 	// +kubebuilder:default="HeatDatabasePassword"
 	// Database - Selector to get the heat Database user password from the Secret
 	// TODO: not used, need change in mariadb-operator
-	Database string `json:"database"`
+	Database string `json:"database,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="HeatPassword"
 	// Service - Selector to get the heat service password from the Secret
-	Service string `json:"service"`
+	Service string `json:"service,omitempty"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="HeatAuthEncryptionKey"
 	// AuthEncryptionKey - Selector to get the heat auth encryption key from the Secret
-	AuthEncryptionKey string `json:"authEncryptionKey"`
+	AuthEncryptionKey string `json:"authEncryptionKey,omitempty"`
 }
 
 // HeatDebug ...
