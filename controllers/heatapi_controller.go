@@ -293,7 +293,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 		heatapi.ServiceName,
 		serviceLabels,
 		data,
-		time.Duration(5)*time.Second,
+		time.Second * 5,
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -330,7 +330,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 			PasswordSelector:   instance.Spec.PasswordSelectors.Service,
 		}
 
-		ksSvcObj := keystonev1.NewKeystoneService(ksSvcSpec, instance.Namespace, serviceLabels, time.Duration(10)*time.Second)
+		ksSvcObj := keystonev1.NewKeystoneService(ksSvcSpec, instance.Namespace, serviceLabels, time.Second * 10)
 		ctrlResult, err = ksSvcObj.CreateOrPatch(ctx, helper)
 		if err != nil {
 			return ctrlResult, err
@@ -359,7 +359,7 @@ func (r *HeatAPIReconciler) reconcileInit(
 			instance.Namespace,
 			ksEndptSpec,
 			serviceLabels,
-			time.Duration(10)*time.Second)
+			time.Second * 10)
 		ctrlResult, err = ksEndpt.CreateOrPatch(ctx, helper)
 		if err != nil {
 			return ctrlResult, err
@@ -539,7 +539,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	// Define a new Deployment object
 	depl := deployment.NewDeployment(
 		heatapi.Deployment(instance, inputHash, serviceLabels),
-		time.Duration(5)*time.Second,
+		time.Second * 5,
 	)
 
 	ctrlResult, err = depl.CreateOrPatch(ctx, helper)

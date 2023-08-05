@@ -360,7 +360,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.SeverityInfo,
 			condition.RabbitMqTransportURLReadyRunningMessage))
 
-		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
+		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 	}
 
 	//
@@ -375,7 +375,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 				condition.RequestedReason,
 				condition.SeverityInfo,
 				condition.RabbitMqTransportURLReadyRunningMessage))
-			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("TransportURL secret %s not found", instance.Status.TransportURLSecret)
+			return ctrl.Result{RequeueAfter: time.Second * 10}, fmt.Errorf("TransportURL secret %s not found", instance.Status.TransportURLSecret)
 		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
@@ -634,7 +634,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 		jobDef,
 		heatv1beta1.DbSyncHash,
 		instance.Spec.PreserveJobs,
-		time.Duration(5)*time.Second,
+		time.Second * 10,
 		dbSyncHash,
 	)
 	ctrlResult, err = dbSyncjob.DoJob(
