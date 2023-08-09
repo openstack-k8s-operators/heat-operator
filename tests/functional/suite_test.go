@@ -22,8 +22,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	routev1 "github.com/openshift/api/route/v1"
-	appsv1 "k8s.io/api/apps/v1"
-	corev1 "k8s.io/api/core/v1"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
@@ -114,10 +112,6 @@ var _ = BeforeSuite(func() {
 	err = mariadbv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = rabbitmqv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-	err = corev1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
-	err = appsv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = routev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
