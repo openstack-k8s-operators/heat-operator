@@ -351,26 +351,20 @@ func (r *HeatEngineReconciler) reconcileNormal(
 
 	// Handle service init
 	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	// Handle service update
 	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	// Handle service upgrade
 	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
-	if err != nil {
+	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
-		return ctrlResult, nil
 	}
 
 	depl := deployment.NewDeployment(
@@ -387,7 +381,8 @@ func (r *HeatEngineReconciler) reconcileNormal(
 			condition.DeploymentReadyErrorMessage,
 			err.Error()))
 		return ctrlResult, err
-	} else if (ctrlResult != ctrl.Result{}) {
+	}
+	if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,
 			condition.RequestedReason,
