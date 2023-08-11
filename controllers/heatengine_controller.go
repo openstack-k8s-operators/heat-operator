@@ -64,7 +64,6 @@ type HeatEngineReconciler struct {
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;
-// +kubebuilder:rbac:groups=route.openshift.io,resources=routes,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
@@ -369,7 +368,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 
 	depl := deployment.NewDeployment(
 		heatengine.Deployment(instance, inputHash, serviceLabels),
-		time.Second * 5,
+		time.Second*5,
 	)
 
 	ctrlResult, err = depl.CreateOrPatch(ctx, helper)
