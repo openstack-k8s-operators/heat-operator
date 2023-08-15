@@ -94,8 +94,8 @@ func GetVolumeMounts() []corev1.VolumeMount {
 	}
 }
 
-// GetDBSyncVolumeMounts ...
-func GetDBSyncVolumeMounts() []corev1.VolumeMount {
+// getDBSyncVolumeMounts ...
+func getDBSyncVolumeMounts() []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "config-data-merged",

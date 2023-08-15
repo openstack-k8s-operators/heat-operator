@@ -71,7 +71,7 @@ func DBSyncJob(
 								RunAsUser: &runAsUser,
 							},
 							Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
-							VolumeMounts: GetDBSyncVolumeMounts(),
+							VolumeMounts: getDBSyncVolumeMounts(),
 						},
 					},
 				},

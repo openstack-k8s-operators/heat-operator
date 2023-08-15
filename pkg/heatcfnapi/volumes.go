@@ -5,8 +5,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
-// GetVolumes -
-func GetVolumes(parentName string, name string) []corev1.Volume {
+// getVolumes -
+func getVolumes(parentName string, name string) []corev1.Volume {
 	var config0640AccessMode int32 = 0640
 
 	volumes := []corev1.Volume{
@@ -26,8 +26,8 @@ func GetVolumes(parentName string, name string) []corev1.Volume {
 	return append(heat.GetVolumes(parentName), volumes...)
 }
 
-// GetInitVolumeMounts - heat Cfn API init task VolumeMounts
-func GetInitVolumeMounts() []corev1.VolumeMount {
+// getInitVolumeMounts - heat Cfn API init task VolumeMounts
+func getInitVolumeMounts() []corev1.VolumeMount {
 
 	volumeMounts := []corev1.VolumeMount{
 		{
@@ -40,8 +40,8 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 	return append(heat.GetInitVolumeMounts(), volumeMounts...)
 }
 
-// GetVolumeMounts - heat Cfn API VolumeMounts
-func GetVolumeMounts() []corev1.VolumeMount {
+// getVolumeMounts - heat Cfn API VolumeMounts
+func getVolumeMounts() []corev1.VolumeMount {
 
 	volumeMounts := []corev1.VolumeMount{
 		{
