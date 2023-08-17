@@ -16,6 +16,11 @@ spec:
       kind: HeatAPI
       name: heatapis.heat.openstack.org
       version: v1beta1
+    - description: HeatCfnAPI is the Schema for the heatcfnapis API
+      displayName: Heat Cfn API
+      kind: HeatCfnAPI
+      name: heatcfnapis.heat.openstack.org
+      version: v1beta1
     - description: HeatEngine is the Schema for the heatengines API
       displayName: Heat Engine
       kind: HeatEngine
