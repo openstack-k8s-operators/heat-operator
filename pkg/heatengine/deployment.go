@@ -80,7 +80,6 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	}
 
 	envVars := map[string]env.Setter{}
-	envVars["KOLLA_CONFIG_FILE"] = env.SetValue(KollaConfig)
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["CONFIG_HASH"] = env.SetValue(configHash)
 
@@ -115,7 +114,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 								RunAsUser: &runAsUser,
 							},
 							Env:            env.MergeEnvs([]corev1.EnvVar{}, envVars),
-							VolumeMounts:   GetVolumeMounts(),
+							VolumeMounts:   getVolumeMounts(),
 							Resources:      instance.Spec.Resources,
 							ReadinessProbe: readinessProbe,
 							LivenessProbe:  livenessProbe,
@@ -126,7 +125,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 			},
 		},
 	}
-	deployment.Spec.Template.Spec.Volumes = GetVolumes(heat.ServiceName, instance.Name)
+	deployment.Spec.Template.Spec.Volumes = getVolumes(heat.ServiceName, instance.Name)
 	// If possible two pods of the same service should not
 	// run on the same worker node. If this is not possible
 	// the get still created on the same worker node.
@@ -150,7 +149,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		DBPasswordSelector:        instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
 		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
-		VolumeMounts:              GetInitVolumeMounts(),
+		VolumeMounts:              getInitVolumeMounts(),
 		TransportURL:              instance.Spec.TransportURLSecret,
 	}
 	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
