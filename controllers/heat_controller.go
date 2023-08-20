@@ -69,9 +69,9 @@ var keystoneAPI *keystonev1.KeystoneAPI
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heats/finalizers,verbs=update
-// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapiss,verbs=get;list;watch;create;update;patch;delete
-// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapiss/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapiss/finalizers,verbs=update
+// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/finalizers,verbs=update
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatengines,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatengines/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatengines/finalizers,verbs=update
