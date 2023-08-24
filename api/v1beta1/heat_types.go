@@ -169,9 +169,9 @@ func (instance Heat) RbacResourceName() string {
 func SetupDefaults() {
 	// Acquire environmental defaults and initialize Heat defaults with them
 	heatDefaults := HeatDefaults{
-		APIContainerImageURL:    util.GetEnvVar("HEAT_API_IMAGE_URL_DEFAULT", HeatAPIContainerImage),
-		CfnAPIContainerImageURL: util.GetEnvVar("HEAT_CFNAPI_IMAGE_URL_DEFAULT", HeatCfnAPIContainerImage),
-		EngineContainerImageURL: util.GetEnvVar("HEAT_ENGINE_IMAGE_URL_DEFAULT", HeatEngineContainerImage),
+		APIContainerImageURL:    util.GetEnvVar("RELATED_IMAGE_HEAT_API_IMAGE_URL_DEFAULT", HeatAPIContainerImage),
+		CfnAPIContainerImageURL: util.GetEnvVar("RELATED_IMAGE_HEAT_CFNAPI_IMAGE_URL_DEFAULT", HeatCfnAPIContainerImage),
+		EngineContainerImageURL: util.GetEnvVar("RELATED_IMAGE_HEAT_ENGINE_IMAGE_URL_DEFAULT", HeatEngineContainerImage),
 	}
 
 	SetupHeatDefaults(heatDefaults)

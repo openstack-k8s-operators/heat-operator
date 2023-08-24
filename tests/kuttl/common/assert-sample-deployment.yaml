@@ -196,3 +196,35 @@ commands:
           echo "${PUBLIC_URL} status code expected is 204 but was ${STATUSCODE}"
       fi
       exit $RETURN_CODE
+---
+#
+apiVersion: kuttl.dev/v1beta1
+kind: TestAssert
+commands:
+  - script: |
+      tupleTemplate='{{ range (index .spec.template.spec.containers 1).env }}{{ .name }}{{ "#" }}{{ .value}}{{"\n"}}{{ end }}'
+      imageTuples=$(oc get -n openstack-operators deployment heat-operator-controller-manager -o go-template="$tupleTemplate")
+      for ITEM in $(echo $imageTuples); do
+        # it is an image
+        if echo $ITEM | grep 'RELATED_IMAGE' &> /dev/null; then
+          NAME=$(echo $ITEM | sed -e 's|^RELATED_IMAGE_HEAT_\([^_]*\)_.*|\1|')
+          IMG_FROM_ENV=$(echo $ITEM | sed -e 's|^.*#\(.*\)|\1|')
+          template='{{.spec.containerImage}}'
+          case $NAME in
+            API)
+              SERVICE_IMAGE=$(oc get -n $NAMESPACE heatapi heat-api -o go-template="$template")
+              ;;
+            CFNAPI)
+              SERVICE_IMAGE=$(oc get -n $NAMESPACE heatcfnapi heat-cfnapi -o go-template="$template")
+              ;;
+            ENGINE)
+              SERVICE_IMAGE=$(oc get -n $NAMESPACE heatengine heat-engine -o go-template="$template")
+              ;;
+          esac
+          if [ "$SERVICE_IMAGE" != "$IMG_FROM_ENV" ]; then
+            echo "$NAME image ($SERVICE_IMAGE) does not equal $IMG_FROM_ENV"
+            exit 1
+          fi
+        fi
+      done
+      exit 0
