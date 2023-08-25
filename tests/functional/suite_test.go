@@ -24,6 +24,7 @@ import (
 	routev1 "github.com/openshift/api/route/v1"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	test "github.com/openstack-k8s-operators/lib-common/modules/test"
@@ -77,7 +78,7 @@ var _ = BeforeSuite(func() {
 	mariaDBCRDs, err := test.GetCRDDirFromModule(
 		"github.com/openstack-k8s-operators/mariadb-operator/api", "../../go.mod", "bases")
 	Expect(err).ShouldNot(HaveOccurred())
-	rabbitmqCRDs, err := test.GetCRDDirFromModule(
+	infraCRDs, err := test.GetCRDDirFromModule(
 		"github.com/openstack-k8s-operators/infra-operator/apis", "../../go.mod", "bases")
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -87,7 +88,7 @@ var _ = BeforeSuite(func() {
 			filepath.Join("..", "..", "config", "crd", "bases"),
 			keystoneCRDs,
 			mariaDBCRDs,
-			rabbitmqCRDs,
+			infraCRDs,
 			routev1CRDs,
 		},
 		ErrorIfCRDPathMissing: true,
@@ -110,6 +111,8 @@ var _ = BeforeSuite(func() {
 	err = keystonev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = mariadbv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = memcachedv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 	err = rabbitmqv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())

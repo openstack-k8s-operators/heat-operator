@@ -20,7 +20,6 @@ spec:
   customServiceConfig: ""
   databaseInstance: openstack
   databaseUser: "heat"
-  rabbitMqClusterName: rabbitmq
   debug:
     dbSync: false
   heatAPI:
@@ -44,7 +43,9 @@ spec:
       service: false
     replicas: 1
     resources: {}
+  memcachedInstance: memcached
   preserveJobs: false
+  rabbitMqClusterName: rabbitmq
   secret: osp-secret
   serviceUser: "heat"
 ```
@@ -109,6 +110,7 @@ template:
   heatEngine:
     replicas: 1
     resources: {}
+  memcachedInstance: memcached
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword
@@ -132,6 +134,7 @@ heat:
       num_engine_workers=4
     databaseInstance: openstack
     databaseUser: "heat"
+    memcachedInstance: memcached
     rabbitMqClusterName: rabbitmq
 ```
 

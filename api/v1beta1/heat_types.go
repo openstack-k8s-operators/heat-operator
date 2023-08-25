@@ -49,6 +49,11 @@ type HeatSpec struct {
 	// Might not be required in future.
 	DatabaseInstance string `json:"databaseInstance"`
 
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=memcached
+	// Memcached instance name.
+	MemcachedInstance string `json:"memcachedInstance"`
+
 	// +kubebuilder:validation:Optional
 	// Debug - enable debug for different deploy stages. If an init container is used, it runs and the
 	// actual action pod gets started with sleep infinity

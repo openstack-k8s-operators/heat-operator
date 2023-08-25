@@ -371,6 +371,10 @@ spec:
                 required:
                 - containerImage
                 type: object
+              memcachedInstance:
+                default: memcached
+                description: Memcached instance name.
+                type: string
               nodeSelector:
                 additionalProperties:
                   type: string
@@ -425,6 +429,7 @@ spec:
             - heatAPI
             - heatCfnAPI
             - heatEngine
+            - memcachedInstance
             - rabbitMqClusterName
             - secret
             type: object

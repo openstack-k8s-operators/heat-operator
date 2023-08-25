@@ -27,6 +27,7 @@ import (
 
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +46,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/openstack"
 
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
@@ -81,6 +83,7 @@ var keystoneAPI *keystonev1.KeystoneAPI
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=mariadb.openstack.org,resources=mariadbdatabases,verbs=get;list;watch;create;update;patch;delete;
+// +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds,verbs=get;list;watch;
 // +kubebuilder:rbac:groups=rabbitmq.openstack.org,resources=transporturls,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;
 
@@ -156,6 +159,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 		cl := condition.CreateList(
 			condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
 			condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
+			condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
 			condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
 			condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
 			condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
@@ -236,6 +240,35 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return nil
 	}
 
+	memcachedFn := func(o client.Object) []reconcile.Request {
+		result := []reconcile.Request{}
+
+		// get all Heat CRs
+		heats := &heatv1beta1.HeatList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(o.GetNamespace()),
+		}
+		if err := r.Client.List(context.Background(), heats, listOpts...); err != nil {
+			r.Log.Error(err, "Unable to retrieve Heat CRs %w")
+			return nil
+		}
+
+		for _, cr := range heats.Items {
+			if o.GetName() == cr.Spec.MemcachedInstance {
+				name := client.ObjectKey{
+					Namespace: o.GetNamespace(),
+					Name:      cr.Name,
+				}
+				r.Log.Info(fmt.Sprintf("Memcached %s is used by Heat CR %s", o.GetName(), cr.Name))
+				result = append(result, reconcile.Request{NamespacedName: name})
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.Heat{}).
 		Owns(&heatv1beta1.HeatAPI{}).
@@ -251,6 +284,8 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// Watch for TransportURL Secrets which belong to any TransportURLs created by Heat CRs
 		Watches(&source.Kind{Type: &corev1.Secret{}},
 			handler.EnqueueRequestsFromMapFunc(transportURLSecretFn)).
+		Watches(&source.Kind{Type: &memcachedv1.Memcached{}},
+			handler.EnqueueRequestsFromMapFunc(memcachedFn)).
 		Complete(r)
 }
 
@@ -329,6 +364,41 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// run check OpenStack secret - end
 
 	//
+	// Check for required memcached used for caching
+	//
+	memcached, err := r.getHeatMemcached(ctx, helper, instance)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.MemcachedReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.MemcachedReadyWaitingMessage))
+			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("memcached %s not found", instance.Spec.MemcachedInstance)
+		}
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.MemcachedReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.MemcachedReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+
+	if !memcached.IsReady() {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.MemcachedReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.MemcachedReadyWaitingMessage))
+		return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, fmt.Errorf("memcached %s is not ready", memcached.Name)
+	}
+	// Mark the Memcached Service as Ready if we get to this point with no errors
+	instance.Status.Conditions.MarkTrue(
+		condition.MemcachedReadyCondition, condition.MemcachedReadyMessage)
+	// run check memcached - end
+
+	//
 	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
 	//
 	transportURL, op, err := r.transportURLCreateOrUpdate(instance)
@@ -399,7 +469,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// - %-config configmap holding minimal heat config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars)
+	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -776,6 +846,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	instance *heatv1beta1.Heat,
 	h *helper.Helper,
 	envVars *map[string]env.Setter,
+	mc *memcachedv1.Memcached,
 ) error {
 	//
 	// create Configmap/Secret required for heat input
@@ -811,6 +882,8 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		"ServiceUser":              instance.Spec.ServiceUser,
 		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
 		"StackDomainName":          heat.StackDomainName,
+		"MemcachedServers":         strings.Join(mc.Status.ServerList, ","),
+		"MemcachedServersWithInet": strings.Join(mc.Status.ServerListWithInet, ","),
 	}
 
 	cms := []util.Template{
@@ -943,4 +1016,24 @@ func (r *HeatReconciler) ensureStackDomain(
 		userID,
 		domainID)
 	return ctrl.Result{}, err
+}
+
+// getHeatMemcached - gets the Memcached instance used for heat cache backend
+func (r *HeatReconciler) getHeatMemcached(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *heatv1beta1.Heat,
+) (*memcachedv1.Memcached, error) {
+	memcached := &memcachedv1.Memcached{}
+	err := h.GetClient().Get(
+		ctx,
+		types.NamespacedName{
+			Name:      instance.Spec.MemcachedInstance,
+			Namespace: instance.Namespace,
+		},
+		memcached)
+	if err != nil {
+		return nil, err
+	}
+	return memcached, err
 }
