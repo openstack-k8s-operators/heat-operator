@@ -697,7 +697,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 		jobDef,
 		heatv1beta1.DbSyncHash,
 		instance.Spec.PreserveJobs,
-		time.Second * 10,
+		time.Second*10,
 		dbSyncHash,
 	)
 	ctrlResult, err = dbSyncjob.DoJob(

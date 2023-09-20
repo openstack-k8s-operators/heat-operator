@@ -25,6 +25,10 @@ import (
 type HeatCfnAPITemplate struct {
 	// Common input parameters for all Heat services
 	HeatServiceTemplate `json:",inline"`
+
+	// +kubebuilder:validation:Optional
+	// Override, provides the ability to override the generated manifest of several child resources.
+	Override APIOverrideSpec `json:"override,omitempty"`
 }
 
 // HeatCfnAPISpec defines the desired state of HeatCfnAPI
