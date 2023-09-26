@@ -274,9 +274,9 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
-			keystoneAPIName := th.CreateKeystoneAPI(namespace)
-			keystoneAPI = th.GetKeystoneAPI(keystoneAPIName)
-			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPIName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
 		})
 
 		It("should have service config ready", func() {
@@ -331,8 +331,8 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
-			keystoneAPI := th.CreateKeystoneAPI(namespace)
-			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
+			keystoneAPI := keystone.CreateKeystoneAPI(namespace)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPI)
 			DeferCleanup(
 				th.DeleteDBService,
 				th.CreateDBService(
@@ -387,8 +387,8 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			th.SimulateTransportURLReady(heatTransportURLName)
-			keystoneAPI := th.CreateKeystoneAPI(namespace)
-			DeferCleanup(th.DeleteKeystoneAPI, keystoneAPI)
+			keystoneAPI := keystone.CreateKeystoneAPI(namespace)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPI)
 			DeferCleanup(
 				th.DeleteDBService,
 				th.CreateDBService(

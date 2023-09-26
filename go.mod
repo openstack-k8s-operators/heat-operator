@@ -7,24 +7,22 @@ replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 require (
 	github.com/go-logr/logr v1.2.4
 	github.com/google/uuid v1.3.1
-	github.com/onsi/ginkgo/v2 v2.12.0
+	github.com/onsi/ginkgo/v2 v2.12.1
 	github.com/onsi/gomega v1.27.10
 	github.com/openstack-k8s-operators/heat-operator/api v0.1.1-0.20230828054057-36837cde8504
-	github.com/openstack-k8s-operators/infra-operator/apis v0.1.1-0.20230914145253-116f307c7875
-	github.com/openstack-k8s-operators/keystone-operator/api v0.1.1-0.20230920085319-92ae0260bbf3
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.1.1-0.20230919113507-d74c2f31d216
-	github.com/openstack-k8s-operators/lib-common/modules/database v0.1.1-0.20230919113507-d74c2f31d216
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.1.1-0.20230919113507-d74c2f31d216
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.1.2-0.20230919113507-d74c2f31d216
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.1.1-0.20230913081601-9e4fc8aadad5
+	github.com/openstack-k8s-operators/infra-operator/apis v0.1.1-0.20230920125017-2c76cd203b44
+	github.com/openstack-k8s-operators/keystone-operator/api v0.1.1-0.20230925115904-772bbf00ffcf
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.1.1-0.20230925103424-7dcb605ea0bb
+	github.com/openstack-k8s-operators/lib-common/modules/database v0.1.1-0.20230925103424-7dcb605ea0bb
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.1.1-0.20230925103424-7dcb605ea0bb
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.1.2-0.20230925103424-7dcb605ea0bb
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.1.1-0.20230918111825-8999b3b2dc3c
 	k8s.io/api v0.26.9
 	k8s.io/apimachinery v0.26.9
 	k8s.io/client-go v0.26.9
 	k8s.io/utils v0.0.0-20230726121419-3b25d923346b
 	sigs.k8s.io/controller-runtime v0.14.6
 )
-
-require golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -65,6 +63,7 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
+	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
 	golang.org/x/mod v0.12.0 // indirect
 	golang.org/x/net v0.15.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
