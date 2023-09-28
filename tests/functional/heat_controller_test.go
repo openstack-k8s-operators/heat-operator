@@ -334,8 +334,8 @@ var _ = Describe("Heat controller", func() {
 			keystoneAPI := keystone.CreateKeystoneAPI(namespace)
 			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPI)
 			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
 					namespace,
 					GetHeat(heatName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -343,7 +343,7 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
-			th.SimulateMariaDBDatabaseCompleted(heatName)
+			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
 		})
 
 		It("should have db ready condition", func() {
@@ -390,8 +390,8 @@ var _ = Describe("Heat controller", func() {
 			keystoneAPI := keystone.CreateKeystoneAPI(namespace)
 			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPI)
 			DeferCleanup(
-				th.DeleteDBService,
-				th.CreateDBService(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
 					namespace,
 					GetHeat(heatName).Spec.DatabaseInstance,
 					corev1.ServiceSpec{
@@ -399,7 +399,7 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
-			th.SimulateMariaDBDatabaseCompleted(heatName)
+			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
 			dbSyncJobName := types.NamespacedName{
 				Name:      "heat-db-sync",
 				Namespace: namespace,
