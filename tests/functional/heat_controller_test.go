@@ -179,8 +179,8 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
@@ -219,14 +219,14 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
-			th.SimulateTransportURLReady(heatTransportURLName)
+			infra.SimulateTransportURLReady(heatTransportURLName)
 		})
 
 		It("should have transporturl ready", func() {
@@ -266,14 +266,14 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
-			th.SimulateTransportURLReady(heatTransportURLName)
+			infra.SimulateTransportURLReady(heatTransportURLName)
 			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
 			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
 			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
@@ -323,14 +323,14 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
-			th.SimulateTransportURLReady(heatTransportURLName)
+			infra.SimulateTransportURLReady(heatTransportURLName)
 			keystoneAPI := keystone.CreateKeystoneAPI(namespace)
 			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPI)
 			DeferCleanup(
@@ -379,14 +379,14 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			DeferCleanup(th.DeleteMemcached, th.CreateMemcached(namespace, "memcached", memcachedSpec))
-			th.SimulateMemcachedReady(types.NamespacedName{
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
 				Namespace: namespace,
 			})
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
-			th.SimulateTransportURLReady(heatTransportURLName)
+			infra.SimulateTransportURLReady(heatTransportURLName)
 			keystoneAPI := keystone.CreateKeystoneAPI(namespace)
 			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPI)
 			DeferCleanup(
