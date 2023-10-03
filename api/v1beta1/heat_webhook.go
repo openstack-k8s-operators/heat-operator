@@ -105,6 +105,13 @@ func (r *Heat) ValidateUpdate(old runtime.Object) error {
 			fmt.Errorf("Expected a Heatv1 object, but got %T", oldHeat))
 	}
 
+	// Allow users to bypass this validation in cases where they have independently verified
+	// the validity of their new database to ensure consistency with the current one.
+	annotations := r.GetAnnotations()
+	if annotations[HeatDatabaseMigrationAnnotation] == "true" {
+		return nil
+	}
+
 	var errors field.ErrorList
 	// We currently have no logic in place to perform database migrations. Changing databases
 	// would render all of the existing stacks unmanageable. We should block changes to the
