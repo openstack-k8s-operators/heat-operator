@@ -161,7 +161,8 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	var allErrs field.ErrorList
 	basePath := field.NewPath("spec")
 
-	if err := r.Spec.ValidateUpdate(oldHeat.Spec, basePath); err != nil {
+	annotations := r.GetAnnotations()
+	if err := r.Spec.ValidateUpdate(oldHeat.Spec, basePath, annotations); err != nil {
 		allErrs = append(allErrs, err...)
 	}
 
@@ -176,16 +177,20 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 
 // ValidateUpdate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate an barbican spec.
-func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path) field.ErrorList {
+func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotations map[string]string) field.ErrorList {
 	var allErrs field.ErrorList
 
-	// We currently have no logic in place to perform database migrations. Changing databases
-	// would render all of the existing stacks unmanageable. We should block changes to the
-	// databaseInstance to protect existing workloads.
-	if r.DatabaseInstance != old.DatabaseInstance {
-		allErrs = append(allErrs, field.Forbidden(
-			field.NewPath("spec.databaseInstance"),
-			"Changing the DatabaseInstance is not supported for existing deployments"))
+	// Allow users to bypass this validation in cases where they have independently verified
+	// the validity of their new database to ensure consistency with the current one.
+	if _, ok := annotations[HeatDatabaseMigrationAnnotation]; !ok {
+		// We currently have no logic in place to perform database migrations. Changing databases
+		// would render all of the existing stacks unmanageable. We should block changes to the
+		// databaseInstance to protect existing workloads.
+		if r.DatabaseInstance != old.DatabaseInstance {
+			allErrs = append(allErrs, field.Forbidden(
+				field.NewPath("spec.databaseInstance"),
+				"Changing the DatabaseInstance is not supported for existing deployments"))
+		}
 	}
 
 	// validate the service override key is valid

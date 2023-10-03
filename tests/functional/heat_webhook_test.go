@@ -30,11 +30,9 @@ import (
 )
 
 var _ = Describe("Heat Webhook", func() {
-
 	var heatName types.NamespacedName
 
 	BeforeEach(func() {
-
 		heatName = types.NamespacedName{
 			Name:      "heat",
 			Namespace: namespace,
@@ -169,5 +167,22 @@ var _ = Describe("Heat Webhook", func() {
 				"invalid: spec.heatCfnAPI.override.service[wrooong]: " +
 					"Invalid value: \"wrooong\": invalid endpoint type: wrooong"),
 		)
+	})
+
+	When("A user provides the skip-validations annotation", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+		})
+
+		It("should skip the validation when the DatabaseInstance is updated", func() {
+			Eventually(func(g Gomega) {
+				instance := GetHeat(heatName)
+				instance.SetAnnotations(map[string]string{
+					heatv1.HeatDatabaseMigrationAnnotation: "true",
+				})
+				instance.Spec.DatabaseInstance = "new-database"
+				g.Expect(th.K8sClient.Update(th.Ctx, instance)).Should(Succeed())
+			}).Should(Succeed())
+		})
 	})
 })
