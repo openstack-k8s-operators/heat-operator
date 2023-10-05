@@ -42,7 +42,6 @@ import (
 	common_rbac "github.com/openstack-k8s-operators/lib-common/modules/common/rbac"
 	oko_secret "github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
-	database "github.com/openstack-k8s-operators/lib-common/modules/database"
 	"github.com/openstack-k8s-operators/lib-common/modules/openstack"
 
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
@@ -293,7 +292,7 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 	r.Log.Info("Reconciling Heat delete")
 
 	// remove db finalizer first
-	db, err := database.GetDatabaseByName(ctx, helper, instance.Name)
+	db, err := mariadbv1.GetDatabaseByName(ctx, helper, instance.Name)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
@@ -629,7 +628,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 	//
 	// create service DB instance
 	//
-	db := database.NewDatabaseWithNamespace(
+	db := mariadbv1.NewDatabaseWithNamespace(
 		heat.DatabaseName,
 		instance.Spec.DatabaseUser,
 		instance.Spec.Secret,
