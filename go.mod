@@ -11,10 +11,10 @@ require (
 	github.com/onsi/gomega v1.28.0
 	github.com/openstack-k8s-operators/heat-operator/api v0.1.1-0.20230828054057-36837cde8504
 	github.com/openstack-k8s-operators/infra-operator/apis v0.1.1-0.20231001103054-f74a88ed4971
-	github.com/openstack-k8s-operators/keystone-operator/api v0.1.1-0.20230925133339-116a3a39cdfa
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.1.1-0.20231001084618-12369665b166
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.1.1-0.20230927082538-4f614f333d17
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.1.2-0.20230927082538-4f614f333d17
+	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20231005132119-e75019792469
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231006072650-7fe7fe16bcd1
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20231006072650-7fe7fe16bcd1
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20231006072650-7fe7fe16bcd1
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.0
 	k8s.io/api v0.26.9
 	k8s.io/apimachinery v0.26.9
