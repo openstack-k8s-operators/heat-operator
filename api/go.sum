@@ -116,8 +116,8 @@ github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 h1:C3w9PqII01/Oq
 github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822/go.mod h1:+n7T8mK8HuQTcFwEeznm/DIxMOiR9yIdICNftLE1DvQ=
 github.com/onsi/ginkgo/v2 v2.12.1 h1:uHNEO1RP2SpuZApSkel9nEh1/Mu+hmQe7Q+Pepg5OYA=
 github.com/onsi/gomega v1.28.0 h1:i2rg/p9n/UqIDAMFUJ6qIUUMcsqOuUHgbpbu235Vr1c=
-github.com/openstack-k8s-operators/lib-common/modules/common v0.1.1-0.20231001084618-12369665b166 h1:pZPl9njjTchHSFf2OSuzyRxrRW8LLb1OscPxVNoATrk=
-github.com/openstack-k8s-operators/lib-common/modules/common v0.1.1-0.20231001084618-12369665b166/go.mod h1:Ozg6SxfwOtMkiH553c0XQBWuygZQq4jDQCpR4hZqlxM=
+github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231006072650-7fe7fe16bcd1 h1:ALZWU2GFDSoOKoBsGbsdgAzlJzGFFsBVFyLvrJIZ+ss=
+github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231006072650-7fe7fe16bcd1/go.mod h1:Ozg6SxfwOtMkiH553c0XQBWuygZQq4jDQCpR4hZqlxM=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
