@@ -53,8 +53,12 @@ import (
 type HeatEngineReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
-	Log     logr.Logger
 	Kclient kubernetes.Interface
+}
+
+// getlog returns a logger object with a prefix of "conroller.name" and aditional controller context fields
+func (r *HeatEngineReconciler) GetLogger(ctx context.Context) logr.Logger {
+	return log.FromContext(ctx).WithName("Controllers").WithName("Heat")
 }
 
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatengines,verbs=get;list;watch;create;update;patch;delete
@@ -72,8 +76,7 @@ type HeatEngineReconciler struct {
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
-	_ = log.FromContext(ctx)
-
+	Log := r.GetLogger(ctx)
 	instance := &heatv1beta1.HeatEngine{}
 
 	// Does Heat engine already exist?
@@ -90,7 +93,7 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		r.Log,
+		Log,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -150,7 +153,8 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager, ctx context.Context) error {
+	Log := r.GetLogger(ctx)
 
 	configMapFn := func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
@@ -159,8 +163,8 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), engines, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to get engine CRs %v")
+		if err := r.Client.List(ctx, engines, listOpts...); err != nil {
+			Log.Error(err, "Unable to get engine CRs")
 			return nil
 		}
 
@@ -173,7 +177,7 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 						Namespace: o.GetNamespace(),
 						Name:      cr.Name,
 					}
-					r.Log.Info(fmt.Sprintf("ConfigMap object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
+					Log.Info(fmt.Sprintf("ConfigMap object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
 					result = append(result, reconcile.Request{NamespacedName: name})
 				}
 
@@ -194,10 +198,12 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Engine Delete")
+	Log := r.GetLogger(ctx)
+
+	Log.Info("Reconciling Engine Delete")
 
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled Engine delete successfully")
+	Log.Info("Reconciled API delete successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -208,11 +214,13 @@ func (r *HeatEngineReconciler) reconcileInit(
 	helper *helper.Helper,
 	serviceLabels map[string]string,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Engine init")
+	Log := r.GetLogger(ctx)
+
+	Log.Info("Reconciling Engine init")
 
 	// TODO(tkajinam): Do we need this ?
 
-	r.Log.Info("Reconciled Engine init successfully")
+	Log.Info("Reconciled Engine init successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -220,8 +228,9 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	ctx context.Context,
 	instance *heatv1beta1.HeatEngine,
 	helper *helper.Helper) (ctrl.Result, error) {
+	Log := r.GetLogger(ctx)
 
-	r.Log.Info("Reconciling Heat Engine")
+	Log.Info("Reconciling Heat Engine")
 
 	// TODO(bshephar) Write the reconcile logic for Heat engine. Let's just create
 	// the deployment. We don't need to expose Heat engine, it will just talk to the
@@ -394,27 +403,31 @@ func (r *HeatEngineReconciler) reconcileNormal(
 		instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
 	}
 
-	r.Log.Info("Reconciled Engine successfully")
+	Log.Info("Reconciled Engine successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatEngineReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Engine update")
+	Log := r.GetLogger(ctx)
+
+	Log.Info("Reconciling Engine update")
 
 	// TODO: should have minor update tasks if required
 	// - delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled Engine update successfully")
+	Log.Info("Reconciled Engine update successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatEngineReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Engine upgrade")
+	Log := r.GetLogger(ctx)
+
+	Log.Info("Reconciling Engine upgrade")
 
 	// TODO: should have major version upgrade tasks
 	// -delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled Engine upgrade successfully")
+	Log.Info("Reconciled Engine upgrade successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -466,6 +479,8 @@ func (r *HeatEngineReconciler) createHashOfInputHashes(
 	instance *heatv1beta1.HeatEngine,
 	envVars map[string]env.Setter,
 ) (string, error) {
+	Log := r.GetLogger(ctx)
+
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
 	hash, err := util.ObjectHash(mergedMapVars)
 	if err != nil {
@@ -476,7 +491,7 @@ func (r *HeatEngineReconciler) createHashOfInputHashes(
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
 			return hash, err
 		}
-		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
+		Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
 	return hash, nil
 }

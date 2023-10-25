@@ -21,18 +21,18 @@ import (
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	routev1 "github.com/openshift/api/route/v1"
+	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
+
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
-	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	test "github.com/openstack-k8s-operators/lib-common/modules/test"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 
 	"github.com/openstack-k8s-operators/heat-operator/controllers"
-	infra_test "github.com/openstack-k8s-operators/infra-operator/apis/test/helpers"
-	keystone_test "github.com/openstack-k8s-operators/keystone-operator/api/test/helpers"
-	common_test "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
-	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
+	. "github.com/openstack-k8s-operators/lib-common/modules/test/helpers"
 	//+kubebuilder:scaffold:imports
 )
 
@@ -46,10 +46,7 @@ var (
 	ctx       context.Context
 	cancel    context.CancelFunc
 	logger    logr.Logger
-	th        *common_test.TestHelper
-	keystone  *keystone_test.TestHelper
-	mariadb   *mariadb_test.TestHelper
-	infra     *infra_test.TestHelper
+	th        *TestHelper
 	namespace string
 )
 
@@ -77,10 +74,12 @@ var _ = BeforeSuite(func() {
 	keystoneCRDs, err := test.GetCRDDirFromModule(
 		"github.com/openstack-k8s-operators/keystone-operator/api", "../../go.mod", "bases")
 	Expect(err).ShouldNot(HaveOccurred())
+	routev1CRDs, err := test.GetOpenShiftCRDDir("route/v1", "../../go.mod")
+	Expect(err).ShouldNot(HaveOccurred())
 	mariaDBCRDs, err := test.GetCRDDirFromModule(
 		"github.com/openstack-k8s-operators/mariadb-operator/api", "../../go.mod", "bases")
 	Expect(err).ShouldNot(HaveOccurred())
-	infraCRDs, err := test.GetCRDDirFromModule(
+	rabbitmqCRDs, err := test.GetCRDDirFromModule(
 		"github.com/openstack-k8s-operators/infra-operator/apis", "../../go.mod", "bases")
 	Expect(err).ShouldNot(HaveOccurred())
 
@@ -90,7 +89,8 @@ var _ = BeforeSuite(func() {
 			filepath.Join("..", "..", "config", "crd", "bases"),
 			keystoneCRDs,
 			mariaDBCRDs,
-			infraCRDs,
+			rabbitmqCRDs,
+			routev1CRDs,
 		},
 		ErrorIfCRDPathMissing: true,
 		WebhookInstallOptions: envtest.WebhookInstallOptions{
@@ -113,9 +113,13 @@ var _ = BeforeSuite(func() {
 	Expect(err).NotTo(HaveOccurred())
 	err = mariadbv1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
-	err = memcachedv1.AddToScheme(scheme.Scheme)
-	Expect(err).NotTo(HaveOccurred())
 	err = rabbitmqv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = corev1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = appsv1.AddToScheme(scheme.Scheme)
+	Expect(err).NotTo(HaveOccurred())
+	err = routev1.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	//+kubebuilder:scaffold:scheme
@@ -123,14 +127,8 @@ var _ = BeforeSuite(func() {
 	k8sClient, err = client.New(cfg, client.Options{Scheme: scheme.Scheme})
 	Expect(err).NotTo(HaveOccurred())
 	Expect(k8sClient).NotTo(BeNil())
-	th = common_test.NewTestHelper(ctx, k8sClient, timeout, interval, logger)
+	th = NewTestHelper(ctx, k8sClient, timeout, interval, logger)
 	Expect(th).NotTo(BeNil())
-	keystone = keystone_test.NewTestHelper(ctx, k8sClient, timeout, interval, logger)
-	Expect(keystone).NotTo(BeNil())
-	mariadb = mariadb_test.NewTestHelper(ctx, k8sClient, timeout, interval, logger)
-	Expect(mariadb).NotTo(BeNil())
-	infra = infra_test.NewTestHelper(ctx, k8sClient, timeout, interval, logger)
-	Expect(infra).NotTo(BeNil())
 
 	// Start the controller-manager if goroutine
 	webhookInstallOptions := &testEnv.WebhookInstallOptions
@@ -159,24 +157,21 @@ var _ = BeforeSuite(func() {
 		Client:  k8sManager.GetClient(),
 		Scheme:  k8sManager.GetScheme(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("Heat"),
-	}).SetupWithManager(k8sManager)
+	}).SetupWithManager(k8sManager, context.Background())
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&controllers.HeatAPIReconciler{
 		Client:  k8sManager.GetClient(),
 		Scheme:  k8sManager.GetScheme(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("HeatAPI"),
-	}).SetupWithManager(k8sManager)
+	}).SetupWithManager(k8sManager, context.Background())
 	Expect(err).ToNot(HaveOccurred())
 
 	err = (&controllers.HeatEngineReconciler{
 		Client:  k8sManager.GetClient(),
 		Scheme:  k8sManager.GetScheme(),
 		Kclient: kclient,
-		Log:     ctrl.Log.WithName("controllers").WithName("HeatEngine"),
-	}).SetupWithManager(k8sManager)
+	}).SetupWithManager(k8sManager, context.Background())
 	Expect(err).ToNot(HaveOccurred())
 
 	go func() {
