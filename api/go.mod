@@ -6,7 +6,7 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231019091705-f3aa3d057b0f
 	k8s.io/api v0.26.10
 	k8s.io/apimachinery v0.26.10
-	sigs.k8s.io/controller-runtime v0.14.6
+	sigs.k8s.io/controller-runtime v0.14.7
 )
 
 require k8s.io/client-go v0.26.10 // indirect
