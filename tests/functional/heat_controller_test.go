@@ -24,7 +24,7 @@ import (
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/utils/pointer"
+	"k8s.io/utils/ptr"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
@@ -55,7 +55,7 @@ var _ = Describe("Heat controller", func() {
 			Name:      heatName.Name + "-config-data",
 		}
 		memcachedSpec = memcachedv1.MemcachedSpec{
-			Replicas: pointer.Int32(3),
+			Replicas: ptr.To[int32](3),
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
