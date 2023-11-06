@@ -871,13 +871,13 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		return err
 	}
 
-	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointPublic)
+	authURL, err := keystoneAPI.GetEndpoint(endpoint.EndpointInternal)
 	if err != nil {
 		return err
 	}
 
 	templateParameters := map[string]interface{}{
-		"KeystonePublicURL":        authURL,
+		"KeystoneInternalURL":      authURL,
 		"ServiceUser":              instance.Spec.ServiceUser,
 		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
 		"StackDomainName":          heat.StackDomainName,
