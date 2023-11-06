@@ -306,11 +306,11 @@ var _ = Describe("Heat controller", func() {
 			Expect(cm.Data["heat.conf"]).Should(
 				ContainSubstring("stack_domain_admin=heat_stack_domain_admin"))
 			Expect(cm.Data["heat.conf"]).Should(
-				ContainSubstring("auth_uri=%s/v3/ec2tokens", keystoneAPI.Status.APIEndpoints["public"]))
+				ContainSubstring("auth_uri=%s/v3/ec2tokens", keystoneAPI.Status.APIEndpoints["internal"]))
 			Expect(cm.Data["heat.conf"]).Should(
-				ContainSubstring("auth_url=%s", keystoneAPI.Status.APIEndpoints["public"]))
+				ContainSubstring("auth_url=%s", keystoneAPI.Status.APIEndpoints["internal"]))
 			Expect(cm.Data["heat.conf"]).Should(
-				ContainSubstring("www_authenticate_uri=http://keystone-public-openstack.testing"))
+				ContainSubstring("www_authenticate_uri=http://keystone-internal.openstack.svc"))
 			Expect(cm.Data["heat.conf"]).Should(
 				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
 			Expect(cm.Data["heat.conf"]).Should(
