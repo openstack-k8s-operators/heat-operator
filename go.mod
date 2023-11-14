@@ -10,14 +10,14 @@ replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 require (
 	github.com/go-logr/logr v1.3.0
 	github.com/google/uuid v1.4.0
-	github.com/onsi/ginkgo/v2 v2.13.0
-	github.com/onsi/gomega v1.29.0
+	github.com/onsi/ginkgo/v2 v2.13.1
+	github.com/onsi/gomega v1.30.0
 	github.com/openstack-k8s-operators/heat-operator/api v0.1.1-0.20230828054057-36837cde8504
-	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20231020142809-b6b6796c004f
-	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20231020144009-3e445cd965f8
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231019091705-f3aa3d057b0f
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20231019091705-f3aa3d057b0f
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20231019091705-f3aa3d057b0f
+	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20231107091218-aa3924ab43e5
+	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20231103151903-a1a0e540408d
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20231112102812-be1055bb92a2
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20231112102812-be1055bb92a2
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20231112102812-be1055bb92a2
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.0
 	k8s.io/api v0.26.10
 	k8s.io/apimachinery v0.26.10
@@ -64,15 +64,15 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.26.0 // indirect
-	golang.org/x/exp v0.0.0-20230905200255-921286631fa9 // indirect
-	golang.org/x/mod v0.12.0 // indirect
+	golang.org/x/exp v0.0.0-20231006140011-7918f672742d // indirect
+	golang.org/x/mod v0.13.0 // indirect
 	golang.org/x/net v0.17.0 // indirect
 	golang.org/x/oauth2 v0.7.0 // indirect
-	golang.org/x/sys v0.13.0 // indirect
+	golang.org/x/sys v0.14.0 // indirect
 	golang.org/x/term v0.13.0 // indirect
 	golang.org/x/text v0.13.0 // indirect
 	golang.org/x/time v0.3.0 // indirect
-	golang.org/x/tools v0.13.0 // indirect
+	golang.org/x/tools v0.14.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.2.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
 	google.golang.org/protobuf v1.30.0 // indirect
