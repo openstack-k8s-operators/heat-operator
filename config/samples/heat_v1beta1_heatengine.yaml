@@ -1,0 +1,19 @@
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatEngine
+metadata:
+  name: heat-engine
+spec:
+  databaseHostname: openstack
+  databaseUser: heat
+  debug:
+    service: false
+  passwordSelectors:
+    authEncryptionKey: HeatAuthEncryptionKey
+    database: HeatDatabasePassword
+    service: HeatPassword
+  replicas: 1
+  resources: {}
+  secret: osp-secret
+  serviceAccount: heat-heat
+  serviceUser: heat
+  transportURLSecret: rabbitmq-transport-url-heat-heat-transport
