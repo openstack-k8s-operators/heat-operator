@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
@@ -60,15 +59,13 @@ type HeatCfnAPIReconciler struct {
 	Kclient kubernetes.Interface
 }
 
-var (
-	keystoneCfnServices = []map[string]string{
-		{
-			"type": heat.CfnServiceType,
-			"name": heat.CfnServiceName,
-			"desc": "Heat Cloudformation API service",
-		},
-	}
-)
+var keystoneCfnServices = []map[string]string{
+	{
+		"type": heat.CfnServiceType,
+		"name": heat.CfnServiceName,
+		"desc": "Heat Cloudformation API service",
+	},
+}
 
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatcfnapis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatcfnapis/status,verbs=get;update;patch
@@ -179,8 +176,7 @@ func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
-	configMapFn := func(o client.Object) []reconcile.Request {
+	configMapFn := func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		apis := &heatv1beta1.HeatCfnAPIList{}
@@ -220,7 +216,7 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		// watch the config CMs we don't own
-		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
+		Watches(&corev1.ConfigMap{},
 			handler.EnqueueRequestsFromMapFunc(configMapFn)).
 		Complete(r)
 }
@@ -501,8 +497,8 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	parentHeatName := heat.GetOwningHeatName(instance)
 
 	configMaps := []string{
-		fmt.Sprintf("%s-scripts", parentHeatName),     //ScriptsConfigMap
-		fmt.Sprintf("%s-config-data", parentHeatName), //ConfigMap
+		fmt.Sprintf("%s-scripts", parentHeatName),     // ScriptsConfigMap
+		fmt.Sprintf("%s-config-data", parentHeatName), // ConfigMap
 	}
 
 	_, err = configmap.GetConfigMaps(ctx, helper, instance, configMaps, instance.Namespace, &configMapVars)

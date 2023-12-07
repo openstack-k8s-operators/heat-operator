@@ -34,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
@@ -118,7 +117,6 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 		r.Scheme,
 		r.Log,
 	)
-
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -188,12 +186,10 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 
 	// Handle non-deleted clusters
 	return r.reconcileNormal(ctx, instance, helper)
-
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	// transportURLSecretFn - Watch for changes made to the secret associated with the RabbitMQ
 	// TransportURL created and used by Heat CRs.  Watch functions return a list of namespace-scoped
 	// CRs that then get fed  to the reconciler.  Hence, in this case, we need to know the name of the
@@ -205,7 +201,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// reconciliation for a Heat CR that does not need it.
 	//
 	// TODO: We also need a watch func to monitor for changes to the secret referenced by Heat.Spec.Secret
-	transportURLSecretFn := func(o client.Object) []reconcile.Request {
+	transportURLSecretFn := func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// get all Heat CRs
@@ -239,7 +235,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return nil
 	}
 
-	memcachedFn := func(o client.Object) []reconcile.Request {
+	memcachedFn := func(ctx context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// get all Heat CRs
@@ -281,9 +277,9 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
 		// Watch for TransportURL Secrets which belong to any TransportURLs created by Heat CRs
-		Watches(&source.Kind{Type: &corev1.Secret{}},
+		Watches(&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(transportURLSecretFn)).
-		Watches(&source.Kind{Type: &memcachedv1.Memcached{}},
+		Watches(&memcachedv1.Memcached{},
 			handler.EnqueueRequestsFromMapFunc(memcachedFn)).
 		Complete(r)
 }
@@ -401,7 +397,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
 	//
 	transportURL, op, err := r.transportURLCreateOrUpdate(instance)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
@@ -644,7 +639,6 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 		helper,
 		instance.Spec.DatabaseInstance,
 	)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBReadyCondition,
@@ -749,7 +743,6 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatAPI, controllerutil.OperationResult, error) {
-
 	heatAPISpec := heatv1beta1.HeatAPISpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatAPITemplate:    instance.Spec.HeatAPI,
@@ -780,7 +773,6 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatCfnAPI, controllerutil.OperationResult, error) {
-
 	heatCfnAPISpec := heatv1beta1.HeatCfnAPISpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatCfnAPITemplate: instance.Spec.HeatCfnAPI,
@@ -811,7 +803,6 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
-
 	heatEngineSpec := heatv1beta1.HeatEngineSpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatEngineTemplate: instance.Spec.HeatEngine,
@@ -966,7 +957,6 @@ func (r *HeatReconciler) ensureStackDomain(
 	instance *heatv1beta1.Heat,
 	secret *corev1.Secret,
 ) (ctrl.Result, error) {
-
 	val, ok := secret.Data[instance.Spec.PasswordSelectors.Service]
 	if !ok {
 		return ctrl.Result{}, fmt.Errorf("%s not found in secret %s", instance.Spec.PasswordSelectors.Service, instance.Spec.Secret)
