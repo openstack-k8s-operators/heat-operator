@@ -38,11 +38,11 @@ type APIDetails struct {
 
 // InitContainerCommand is
 const (
-	InitContainerCommand = "/usr/local/bin/container-scripts/init.sh"
+	InitContainerCommand = "/usr/local/bin/container-scripts/a.sh"
 )
 
 // InitContainer ..
-func InitContainer(init APIDetails) []corev1.Container {
+func (a *APIDetails) InitContainer() []corev1.Container {
 	runAsUser := int64(0)
 	trueVar := true
 
@@ -50,14 +50,14 @@ func InitContainer(init APIDetails) []corev1.Container {
 		RunAsUser: &runAsUser,
 	}
 
-	if init.Privileged {
+	if a.Privileged {
 		securityContext.Privileged = &trueVar
 	}
 
 	envVars := map[string]env.Setter{}
-	envVars["DatabaseHost"] = env.SetValue(init.DatabaseHost)
-	envVars["DatabaseUser"] = env.SetValue(init.DatabaseUser)
-	envVars["DatabaseName"] = env.SetValue(init.DatabaseName)
+	envVars["DatabaseHost"] = env.SetValue(a.DatabaseHost)
+	envVars["DatabaseUser"] = env.SetValue(a.DatabaseUser)
+	envVars["DatabaseName"] = env.SetValue(a.DatabaseName)
 
 	envs := []corev1.EnvVar{
 		{
@@ -65,9 +65,9 @@ func InitContainer(init APIDetails) []corev1.Container {
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: init.OSPSecret,
+						Name: a.OSPSecret,
 					},
-					Key: init.DBPasswordSelector,
+					Key: a.DBPasswordSelector,
 				},
 			},
 		},
@@ -76,9 +76,9 @@ func InitContainer(init APIDetails) []corev1.Container {
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: init.OSPSecret,
+						Name: a.OSPSecret,
 					},
-					Key: init.UserPasswordSelector,
+					Key: a.UserPasswordSelector,
 				},
 			},
 		},
@@ -87,22 +87,22 @@ func InitContainer(init APIDetails) []corev1.Container {
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: init.OSPSecret,
+						Name: a.OSPSecret,
 					},
-					Key: init.AuthEncryptionKeySelector,
+					Key: a.AuthEncryptionKeySelector,
 				},
 			},
 		},
 	}
 	envs = env.MergeEnvs(envs, envVars)
 
-	if init.TransportURL != "" {
+	if a.TransportURL != "" {
 		envTransport := corev1.EnvVar{
 			Name: "TransportURL",
 			ValueFrom: &corev1.EnvVarSource{
 				SecretKeyRef: &corev1.SecretKeySelector{
 					LocalObjectReference: corev1.LocalObjectReference{
-						Name: init.TransportURL,
+						Name: a.TransportURL,
 					},
 					Key: "transport_url",
 				},
@@ -114,7 +114,7 @@ func InitContainer(init APIDetails) []corev1.Container {
 	return []corev1.Container{
 		{
 			Name:            "init",
-			Image:           init.ContainerImage,
+			Image:           a.ContainerImage,
 			SecurityContext: securityContext,
 			Command: []string{
 				"/bin/bash",
@@ -123,7 +123,7 @@ func InitContainer(init APIDetails) []corev1.Container {
 				InitContainerCommand,
 			},
 			Env:          envs,
-			VolumeMounts: init.VolumeMounts,
+			VolumeMounts: a.VolumeMounts,
 		},
 	}
 }

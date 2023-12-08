@@ -143,7 +143,7 @@ func Deployment(
 		deployment.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
 	}
 
-	initContainerDetails := heat.APIDetails{
+	initAPIDetails := heat.APIDetails{
 		ContainerImage:            instance.Spec.ContainerImage,
 		DatabaseHost:              instance.Spec.DatabaseHostname,
 		DatabaseUser:              instance.Spec.DatabaseUser,
@@ -155,7 +155,7 @@ func Deployment(
 		VolumeMounts:              getInitVolumeMounts(),
 		TransportURL:              instance.Spec.TransportURLSecret,
 	}
-	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
+	deployment.Spec.Template.Spec.InitContainers = initAPIDetails.InitContainer()
 
 	return deployment
 }

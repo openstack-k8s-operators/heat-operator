@@ -81,7 +81,7 @@ func DBSyncJob(
 
 	job.Spec.Template.Spec.Volumes = GetVolumes(ServiceName)
 
-	initContainerDetails := APIDetails{
+	initAPIDetails := APIDetails{
 		ContainerImage:            instance.Spec.HeatAPI.ContainerImage,
 		DatabaseHost:              instance.Status.DatabaseHostname,
 		DatabaseUser:              instance.Spec.DatabaseUser,
@@ -92,7 +92,7 @@ func DBSyncJob(
 		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
 		VolumeMounts:              GetInitVolumeMounts(),
 	}
-	job.Spec.Template.Spec.InitContainers = InitContainer(initContainerDetails)
+	job.Spec.Template.Spec.InitContainers = initAPIDetails.InitContainer()
 
 	return job
 }
