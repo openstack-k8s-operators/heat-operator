@@ -88,4 +88,36 @@ var _ = Describe("Heat Webhook", func() {
 			))
 		})
 	})
+
+	When("The DatabaseInstance is changed for existing deployments", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+		})
+
+		It("Should be blocked by the webhook", func() {
+			Eventually(func(g Gomega) {
+				instance := GetHeat(heatName)
+				instance.Spec.DatabaseInstance = "new-database"
+				err := th.K8sClient.Update(th.Ctx, instance)
+				g.Expect(err).Should(Equal("Changing the DatabaseInstance is not supported for existing deployments"))
+			})
+		})
+	})
+
+	When("A user provides the skip-validations annotation", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+		})
+
+		It("should skip the validation when the DatabaseInstance is updated", func() {
+			Eventually(func(g Gomega) {
+				instance := GetHeat(heatName)
+				instance.SetAnnotations(map[string]string{
+					heatv1.HeatDatabaseMigrationAnnotation: "true",
+				})
+				instance.Spec.DatabaseInstance = "new-database"
+				g.Expect(th.K8sClient.Update(th.Ctx, instance)).Should(Succeed())
+			}).Should(Succeed())
+		})
+	})
 })
