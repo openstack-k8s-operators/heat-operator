@@ -23,7 +23,12 @@ limitations under the License.
 package v1beta1
 
 import (
+	"fmt"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
@@ -94,8 +99,30 @@ func (r *Heat) ValidateCreate() error {
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
 func (r *Heat) ValidateUpdate(old runtime.Object) error {
 	heatlog.Info("validate update", "name", r.Name)
+	oldHeat, ok := old.(*Heat)
+	if !ok {
+		return apierrors.NewInternalError(
+			fmt.Errorf("Expected a Heatv1 object, but got %T", oldHeat))
+	}
 
-	// TODO(user): fill in your validation logic upon object update.
+	var errors field.ErrorList
+	// We currently have no logic in place to perform database migrations. Changing databases
+	// would render all of the existing stacks unmanageable. We should block changes to the
+	// databaseInstance to protect existing workloads.
+	if r.Spec.DatabaseInstance != oldHeat.Spec.DatabaseInstance {
+		errors = append(errors, field.Forbidden(
+			field.NewPath("spec.databaseInstance"),
+			"Changing the DatabaseInstance is not supported for existing deployments"))
+	}
+
+	if errors != nil {
+		return apierrors.NewInvalid(
+			schema.GroupKind{Group: "heat.openstack.org", Kind: "Heat"},
+			r.Name,
+			errors,
+		)
+	}
+
 	return nil
 }
 
