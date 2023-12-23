@@ -8,7 +8,7 @@ replace golang.org/x/net => golang.org/x/net v0.19.0 //allow-merging
 replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 
 require (
-	github.com/go-logr/logr v1.3.0
+	github.com/go-logr/logr v1.4.1
 	github.com/google/uuid v1.5.0
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
