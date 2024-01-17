@@ -86,6 +86,17 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	// Default oslo.service graceful_shutdown_timeout is 60, so align with that
 	terminationGracePeriod := int64(60)
 
+	volumeMounts := getVolumeMounts()
+	initVolumeMounts := getInitVolumeMounts()
+	volumes := getVolumes(heat.ServiceName, instance.Name)
+
+	// add CA cert if defined
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
+		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+		initVolumeMounts = append(initVolumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-%s", heat.ServiceName, heat.EngineComponent),
@@ -114,18 +125,19 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 								RunAsUser: &runAsUser,
 							},
 							Env:            env.MergeEnvs([]corev1.EnvVar{}, envVars),
-							VolumeMounts:   getVolumeMounts(),
+							VolumeMounts:   volumeMounts,
 							Resources:      instance.Spec.Resources,
 							ReadinessProbe: readinessProbe,
 							LivenessProbe:  livenessProbe,
 						},
 					},
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
+					Volumes:                       volumes,
 				},
 			},
 		},
 	}
-	deployment.Spec.Template.Spec.Volumes = getVolumes(heat.ServiceName, instance.Name)
+
 	// If possible two pods of the same service should not
 	// run on the same worker node. If this is not possible
 	// the get still created on the same worker node.
@@ -149,7 +161,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		DBPasswordSelector:        instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
 		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
-		VolumeMounts:              getInitVolumeMounts(),
+		VolumeMounts:              initVolumeMounts,
 		TransportURL:              instance.Spec.TransportURLSecret,
 	}
 	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)

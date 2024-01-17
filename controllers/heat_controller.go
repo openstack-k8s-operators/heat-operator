@@ -24,19 +24,25 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/job"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
+	heatapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatapi"
+	heatcfnapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatcfnapi"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	labels "github.com/openstack-k8s-operators/lib-common/modules/common/labels"
 	common_rbac "github.com/openstack-k8s-operators/lib-common/modules/common/rbac"
@@ -191,52 +197,53 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 
 }
 
+// fields to index to reconcile when change
+const (
+	passwordSecretField     = ".spec.secret"
+	transportURLSecretField = ".spec.transportURLSecret"
+	caBundleSecretNameField = ".spec.tls.caBundleSecretName"
+	tlsAPIInternalField     = ".spec.tls.api.internal.secretName"
+	tlsAPIPublicField       = ".spec.tls.api.public.secretName"
+)
+
+var (
+	heatWatchFields = []string{
+		passwordSecretField,
+	}
+	heatAPIWatchFields = []string{
+		passwordSecretField,
+		transportURLSecretField,
+		caBundleSecretNameField,
+		tlsAPIInternalField,
+		tlsAPIPublicField,
+	}
+	heatCfnWatchFields = []string{
+		passwordSecretField,
+		transportURLSecretField,
+		caBundleSecretNameField,
+		tlsAPIInternalField,
+		tlsAPIPublicField,
+	}
+	heatEngineWatchFields = []string{
+		passwordSecretField,
+		transportURLSecretField,
+		caBundleSecretNameField,
+	}
+)
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 
-	// transportURLSecretFn - Watch for changes made to the secret associated with the RabbitMQ
-	// TransportURL created and used by Heat CRs.  Watch functions return a list of namespace-scoped
-	// CRs that then get fed  to the reconciler.  Hence, in this case, we need to know the name of the
-	// Heat CR associated with the secret we are examining in the function.  We could parse the name
-	// out of the "%s-heat-transport" secret label, which would be faster than getting the list of
-	// the Heat CRs and trying to match on each one.  The downside there, however, is that technically
-	// someone could randomly label a secret "something-heat-transport" where "something" actually
-	// matches the name of an existing Heat CR.  In that case changes to that secret would trigger
-	// reconciliation for a Heat CR that does not need it.
-	//
-	// TODO: We also need a watch func to monitor for changes to the secret referenced by Heat.Spec.Secret
-	transportURLSecretFn := func(o client.Object) []reconcile.Request {
-		result := []reconcile.Request{}
-
-		// get all Heat CRs
-		heats := &heatv1beta1.HeatList{}
-		listOpts := []client.ListOption{
-			client.InNamespace(o.GetNamespace()),
-		}
-		if err := r.Client.List(context.Background(), heats, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to retrieve Heat CRs %v")
+	// index passwordSecretField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.Heat{}, passwordSecretField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.Heat)
+		if cr.Spec.Secret == "" {
 			return nil
 		}
-
-		for _, ownerRef := range o.GetOwnerReferences() {
-			if ownerRef.Kind == "TransportURL" {
-				for _, cr := range heats.Items {
-					if ownerRef.Name == fmt.Sprintf("%s-heat-transport", cr.Name) {
-						// return namespace and Name of CR
-						name := client.ObjectKey{
-							Namespace: o.GetNamespace(),
-							Name:      cr.Name,
-						}
-						r.Log.Info(fmt.Sprintf("TransportURL Secret %s belongs to TransportURL belonging to Heat CR %s", o.GetName(), cr.Name))
-						result = append(result, reconcile.Request{NamespacedName: name})
-					}
-				}
-			}
-		}
-		if len(result) > 0 {
-			return result
-		}
-		return nil
+		return []string{cr.Spec.Secret}
+	}); err != nil {
+		return err
 	}
 
 	memcachedFn := func(o client.Object) []reconcile.Request {
@@ -280,12 +287,47 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.Role{}).
 		Owns(&rbacv1.RoleBinding{}).
-		// Watch for TransportURL Secrets which belong to any TransportURLs created by Heat CRs
-		Watches(&source.Kind{Type: &corev1.Secret{}},
-			handler.EnqueueRequestsFromMapFunc(transportURLSecretFn)).
 		Watches(&source.Kind{Type: &memcachedv1.Memcached{}},
 			handler.EnqueueRequestsFromMapFunc(memcachedFn)).
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
+}
+
+func (r *HeatReconciler) findObjectsForSrc(src client.Object) []reconcile.Request {
+	requests := []reconcile.Request{}
+
+	l := log.FromContext(context.Background()).WithName("Controllers").WithName("Heat")
+
+	for _, field := range heatWatchFields {
+		crList := &heatv1beta1.HeatList{}
+		listOps := &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(field, src.GetName()),
+			Namespace:     src.GetNamespace(),
+		}
+		err := r.List(context.TODO(), crList, listOps)
+		if err != nil {
+			return []reconcile.Request{}
+		}
+
+		for _, item := range crList.Items {
+			l.Info(fmt.Sprintf("input source %s changed, reconcile: %s - %s", src.GetName(), item.GetName(), item.GetNamespace()))
+
+			requests = append(requests,
+				reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      item.GetName(),
+						Namespace: item.GetNamespace(),
+					},
+				},
+			)
+		}
+	}
+
+	return requests
 }
 
 func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
@@ -818,6 +860,7 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 		DatabaseHostname:   instance.Status.DatabaseHostname,
 		TransportURLSecret: instance.Status.TransportURLSecret,
 		ServiceAccount:     instance.RbacResourceName(),
+		TLS:                instance.Spec.HeatAPI.TLS.Ca,
 	}
 
 	deployment := &heatv1beta1.HeatEngine{
@@ -884,6 +927,36 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		"MemcachedServers":         strings.Join(mc.Status.ServerList, ","),
 		"MemcachedServersWithInet": strings.Join(mc.Status.ServerListWithInet, ","),
 	}
+
+	// create HeatAPI httpd vhost template parameters
+	httpdVhostConfig := map[string]interface{}{}
+	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
+		endptConfig := map[string]interface{}{}
+		endptConfig["ServerName"] = fmt.Sprintf("%s-%s.%s.svc", heatapi.ServiceName, endpt.String(), instance.Namespace)
+		endptConfig["TLS"] = false // default TLS to false, and set it bellow to true if enabled
+		if instance.Spec.HeatAPI.TLS.API.Enabled(endpt) {
+			endptConfig["TLS"] = true
+			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
+			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
+		}
+		httpdVhostConfig[endpt.String()] = endptConfig
+	}
+	templateParameters["APIvHosts"] = httpdVhostConfig
+
+	// create HeatCfnAPI httpd vhost template parameters
+	httpdVhostConfig = map[string]interface{}{}
+	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
+		endptConfig := map[string]interface{}{}
+		endptConfig["ServerName"] = fmt.Sprintf("%s-%s.%s.svc", heatcfnapi.ServiceName, endpt.String(), instance.Namespace)
+		endptConfig["TLS"] = false // default TLS to false, and set it bellow to true if enabled
+		if instance.Spec.HeatCfnAPI.TLS.API.Enabled(endpt) {
+			endptConfig["TLS"] = true
+			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
+			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
+		}
+		httpdVhostConfig[endpt.String()] = endptConfig
+	}
+	templateParameters["CfnAPIvHosts"] = httpdVhostConfig
 
 	cms := []util.Template{
 		// ScriptsConfigMap
