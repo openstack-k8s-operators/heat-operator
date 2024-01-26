@@ -21,6 +21,8 @@ import (
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
 	affinity "github.com/openstack-k8s-operators/lib-common/modules/common/affinity"
 	env "github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -38,7 +40,7 @@ func Deployment(
 	instance *heatv1beta1.HeatCfnAPI,
 	configHash string,
 	labels map[string]string,
-) *appsv1.Deployment {
+) (*appsv1.Deployment, error) {
 	runAsUser := int64(0)
 
 	livenessProbe := &corev1.Probe{
@@ -80,6 +82,42 @@ func Deployment(
 			Path: "/",
 			Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatCfnInternalPort)},
 		}
+
+		if instance.Spec.TLS.API.Enabled(service.EndpointPublic) {
+			livenessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
+			readinessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
+		}
+	}
+
+	// create Volume and VolumeMounts
+	volumes := getVolumes(heat.ServiceName, instance.Name)
+	initVolumeMounts := getInitVolumeMounts()
+	volumeMounts := getVolumeMounts()
+
+	// add CA cert if defined
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
+		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+		initVolumeMounts = append(initVolumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
+		if instance.Spec.TLS.API.Enabled(endpt) {
+			var tlsEndptCfg tls.GenericService
+			switch endpt {
+			case service.EndpointPublic:
+				tlsEndptCfg = instance.Spec.TLS.API.Public
+			case service.EndpointInternal:
+				tlsEndptCfg = instance.Spec.TLS.API.Internal
+			}
+
+			svc, err := tlsEndptCfg.ToService()
+			if err != nil {
+				return nil, err
+			}
+			volumes = append(volumes, svc.CreateVolume(endpt.String()))
+			volumeMounts = append(volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
+		}
 	}
 
 	envVars := map[string]env.Setter{}
@@ -117,18 +155,19 @@ func Deployment(
 								RunAsUser: &runAsUser,
 							},
 							Env:            env.MergeEnvs([]corev1.EnvVar{}, envVars),
-							VolumeMounts:   getVolumeMounts(),
+							VolumeMounts:   volumeMounts,
 							Resources:      instance.Spec.Resources,
 							ReadinessProbe: readinessProbe,
 							LivenessProbe:  livenessProbe,
 						},
 					},
 					TerminationGracePeriodSeconds: &terminationGracePeriod,
+					Volumes:                       volumes,
 				},
 			},
 		},
 	}
-	deployment.Spec.Template.Spec.Volumes = getVolumes(heat.ServiceName, instance.Name)
+
 	// If possible two pods of the same service should not
 	// run on the same worker node. If this is not possible
 	// the get still created on the same worker node.
@@ -152,10 +191,10 @@ func Deployment(
 		DBPasswordSelector:        instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
 		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
-		VolumeMounts:              getInitVolumeMounts(),
+		VolumeMounts:              initVolumeMounts,
 		TransportURL:              instance.Spec.TransportURLSecret,
 	}
 	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
 
-	return deployment
+	return deployment, nil
 }

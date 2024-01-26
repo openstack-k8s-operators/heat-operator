@@ -1,0 +1,30 @@
+#
+# Check for:
+#
+# - 4 tls cert secrets
+# - 1 tls ca bundle secrets
+
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cert-heat-api-internal-svc
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cert-heat-api-public-svc
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cert-heat-cfnapi-internal-svc
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: cert-heat-cfnapi-public-svc
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: combined-ca-bundle

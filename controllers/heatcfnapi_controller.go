@@ -24,13 +24,18 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -49,6 +54,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/labels"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 )
 
@@ -157,6 +163,7 @@ func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 			// right now we have no dedicated KeystoneServiceReadyInitMessage and KeystoneEndpointReadyInitMessage
 			condition.UnknownCondition(condition.KeystoneServiceReadyCondition, condition.InitReason, ""),
 			condition.UnknownCondition(condition.KeystoneEndpointReadyCondition, condition.InitReason, ""),
+			condition.UnknownCondition(condition.TLSInputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
 		)
 
 		instance.Status.Conditions.Init(&cl)
@@ -179,6 +186,66 @@ func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
+	// index passwordSecretField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatCfnAPI{}, passwordSecretField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.HeatCfnAPI)
+		if cr.Spec.Secret == "" {
+			return nil
+		}
+		return []string{cr.Spec.Secret}
+	}); err != nil {
+		return err
+	}
+
+	// index transportURLSecretField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatCfnAPI{}, transportURLSecretField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.HeatCfnAPI)
+		if cr.Spec.Secret == "" {
+			return nil
+		}
+		return []string{cr.Spec.TransportURLSecret}
+	}); err != nil {
+		return err
+	}
+
+	// index caBundleSecretNameField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatCfnAPI{}, caBundleSecretNameField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.HeatCfnAPI)
+		if cr.Spec.TLS.CaBundleSecretName == "" {
+			return nil
+		}
+		return []string{cr.Spec.TLS.CaBundleSecretName}
+	}); err != nil {
+		return err
+	}
+
+	// index tlsAPIInternalField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatCfnAPI{}, tlsAPIInternalField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.HeatCfnAPI)
+		if cr.Spec.TLS.API.Internal.SecretName == nil {
+			return nil
+		}
+		return []string{*cr.Spec.TLS.API.Internal.SecretName}
+	}); err != nil {
+		return err
+	}
+
+	// index tlsAPIPublicField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatCfnAPI{}, tlsAPIPublicField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.HeatCfnAPI)
+		if cr.Spec.TLS.API.Public.SecretName == nil {
+			return nil
+		}
+		return []string{*cr.Spec.TLS.API.Public.SecretName}
+	}); err != nil {
+		return err
+	}
 
 	configMapFn := func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
@@ -222,7 +289,45 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		// watch the config CMs we don't own
 		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
 			handler.EnqueueRequestsFromMapFunc(configMapFn)).
+		Watches(
+			&source.Kind{Type: &corev1.Secret{}},
+			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
+			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
+		).
 		Complete(r)
+}
+
+func (r *HeatCfnAPIReconciler) findObjectsForSrc(src client.Object) []reconcile.Request {
+	requests := []reconcile.Request{}
+
+	l := log.FromContext(context.Background()).WithName("Controllers").WithName("HeatCfnAPI")
+
+	for _, field := range heatCfnWatchFields {
+		crList := &heatv1beta1.HeatAPIList{}
+		listOps := &client.ListOptions{
+			FieldSelector: fields.OneTermEqualSelector(field, src.GetName()),
+			Namespace:     src.GetNamespace(),
+		}
+		err := r.List(context.TODO(), crList, listOps)
+		if err != nil {
+			return []reconcile.Request{}
+		}
+
+		for _, item := range crList.Items {
+			l.Info(fmt.Sprintf("input source %s changed, reconcile: %s - %s", src.GetName(), item.GetName(), item.GetNamespace()))
+
+			requests = append(requests,
+				reconcile.Request{
+					NamespacedName: types.NamespacedName{
+						Name:      item.GetName(),
+						Namespace: item.GetNamespace(),
+					},
+				},
+			)
+		}
+	}
+
+	return requests
 }
 
 func (r *HeatCfnAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatCfnAPI, helper *helper.Helper) (ctrl.Result, error) {
@@ -373,7 +478,12 @@ func (r *HeatCfnAPIReconciler) reconcileInit(
 		}
 		// create service - end
 
-		// TODO: TLS, pass in https as protocol, create TLS cert
+		// if TLS is enabled
+		if instance.Spec.TLS.API.Enabled(endpointType) {
+			// set endpoint protocol to https
+			data.Protocol = ptr.To(service.ProtocolHTTPS)
+		}
+
 		apiEndpoints[string(endpointType)], err = svc.GetAPIEndpoint(
 			svcOverride.EndpointURL, data.Protocol, data.Path)
 		if err != nil {
@@ -527,6 +637,54 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	// run check parent Heat CR config maps - end
 
 	//
+	// TLS input validation
+	//
+	// Validate the CA cert secret if provided
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		hash, ctrlResult, err := tls.ValidateCACertSecret(
+			ctx,
+			helper.GetClient(),
+			types.NamespacedName{
+				Name:      instance.Spec.TLS.CaBundleSecretName,
+				Namespace: instance.Namespace,
+			},
+		)
+		if err != nil {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.TLSInputReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				condition.TLSInputErrorMessage,
+				err.Error()))
+			return ctrlResult, err
+		} else if (ctrlResult != ctrl.Result{}) {
+			return ctrlResult, nil
+		}
+
+		if hash != "" {
+			configMapVars[tls.CABundleKey] = env.SetValue(hash)
+		}
+	}
+
+	// Validate API service certs secrets
+	certsHash, ctrlResult, err := instance.Spec.TLS.API.ValidateCertSecrets(ctx, helper, instance.Namespace)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.TLSInputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.TLSInputErrorMessage,
+			err.Error()))
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		return ctrlResult, nil
+	}
+	configMapVars[tls.TLSHashName] = env.SetValue(certsHash)
+
+	// all cert input checks out so report InputReady
+	instance.Status.Conditions.MarkTrue(condition.TLSInputReadyCondition, condition.InputReadyMessage)
+
+	//
 	// Create ConfigMaps required as input for the Service and calculate an overall hash of hashes
 	//
 
@@ -570,7 +728,7 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	}
 
 	// Handle service init
-	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
+	ctrlResult, err = r.reconcileInit(ctx, instance, helper, serviceLabels)
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -592,8 +750,18 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	//
 
 	// Define a new Deployment object
+	deplSpec, err := heatcfnapi.Deployment(instance, inputHash, serviceLabels)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.DeploymentReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.DeploymentReadyErrorMessage,
+			err.Error()))
+		return ctrlResult, err
+	}
 	depl := deployment.NewDeployment(
-		heatcfnapi.Deployment(instance, inputHash, serviceLabels),
+		deplSpec,
 		time.Second*10,
 	)
 
