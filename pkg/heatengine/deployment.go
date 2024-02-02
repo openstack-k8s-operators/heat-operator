@@ -47,36 +47,20 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		PeriodSeconds:  5,
 	}
 
-	args := []string{"-c"}
-	if instance.Spec.Debug.Service {
-		args = append(args, common.DebugCommand)
-		livenessProbe.Exec = &corev1.ExecAction{
-			Command: []string{
-				"/bin/true",
-			},
-		}
+	args := []string{"-c", ServiceCommand}
 
-		readinessProbe.Exec = &corev1.ExecAction{
-			Command: []string{
-				"/bin/true",
-			},
-		}
-	} else {
-		args = append(args, ServiceCommand)
-
-		//
-		// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-		//
-		livenessProbe.Exec = &corev1.ExecAction{
-			Command: []string{
-				"/usr/bin/pgrep", "-r", "DRST", "heat-engine",
-			},
-		}
-		readinessProbe.Exec = &corev1.ExecAction{
-			Command: []string{
-				"/usr/bin/pgrep", "-r", "DRST", "heat-engine",
-			},
-		}
+	//
+	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
+	//
+	livenessProbe.Exec = &corev1.ExecAction{
+		Command: []string{
+			"/usr/bin/pgrep", "-r", "DRST", "heat-engine",
+		},
+	}
+	readinessProbe.Exec = &corev1.ExecAction{
+		Command: []string{
+			"/usr/bin/pgrep", "-r", "DRST", "heat-engine",
+		},
 	}
 
 	envVars := map[string]env.Setter{}
