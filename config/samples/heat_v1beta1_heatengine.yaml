@@ -5,8 +5,6 @@ metadata:
 spec:
   databaseHostname: openstack
   databaseUser: heat
-  debug:
-    service: false
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword

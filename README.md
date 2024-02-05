@@ -20,27 +20,19 @@ spec:
   customServiceConfig: ""
   databaseInstance: openstack
   databaseUser: "heat"
-  debug:
-    dbSync: false
   heatAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
     customServiceConfig: ""
-    debug:
-      service: false
     replicas: 1
     resources: {}
   heatCfnAPI:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
     customServiceConfig: ""
-    debug:
-      service: false
     replicas: 1
     resources: {}
   heatEngine:
     containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
     customServiceConfig: ""
-    debug:
-      service: false
     replicas: 1
     resources: {}
   memcachedInstance: memcached
@@ -60,8 +52,6 @@ spec:
     num_engine_workers=4
   databaseInstance: openstack
   databaseUser: heat
-  debug:
-    dbSync: false
 ```
 
 In this example, we are setting `num_engine_workers` to 4. After this resource has been updated, the controller will
@@ -99,8 +89,6 @@ template:
   customServiceConfig: ''
   databaseInstance: openstack
   databaseUser: heat
-  debug:
-    dbSync: false
   heatAPI:
     replicas: 1
     resources: {}

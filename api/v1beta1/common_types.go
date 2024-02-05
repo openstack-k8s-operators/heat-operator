@@ -52,11 +52,6 @@ type HeatServiceTemplate struct {
 	ContainerImage string `json:"containerImage"`
 
 	// +kubebuilder:validation:Optional
-	// Debug - enable debug for different deploy stages. If an init container is used, it runs and the
-	// actual action pod gets started with sleep infinity
-	Debug HeatServiceDebug `json:"debug,omitempty"`
-
-	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Maximum=32
 	// +kubebuilder:validation:Minimum=0
@@ -107,20 +102,4 @@ type PasswordSelector struct {
 	// +kubebuilder:default="HeatAuthEncryptionKey"
 	// AuthEncryptionKey - Selector to get the heat auth encryption key from the Secret
 	AuthEncryptionKey string `json:"authEncryptionKey"`
-}
-
-// HeatDebug ...
-type HeatDebug struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// DBSync enable debug
-	DBSync bool `json:"dbSync"`
-}
-
-// HeatServiceDebug ...
-type HeatServiceDebug struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// Service enable debug
-	Service bool `json:"service"`
 }

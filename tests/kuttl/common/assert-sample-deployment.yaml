@@ -20,21 +20,13 @@ spec:
     debug = True
   databaseInstance: openstack
   databaseUser: "heat"
-  debug:
-    dbSync: false
   heatAPI:
-    debug:
-      service: false
     replicas: 1
     resources: {}
   heatCfnAPI:
-    debug:
-      service: false
     replicas: 1
     resources: {}
   heatEngine:
-    debug:
-      service: false
     replicas: 1
     resources: {}
   memcachedInstance: memcached
@@ -68,8 +60,6 @@ metadata:
 spec:
   databaseHostname: openstack
   databaseUser: heat
-  debug:
-    service: false
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword
@@ -98,8 +88,6 @@ metadata:
 spec:
   databaseHostname: openstack
   databaseUser: heat
-  debug:
-    service: false
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword
@@ -128,8 +116,6 @@ metadata:
 spec:
   databaseHostname: openstack
   databaseUser: heat
-  debug:
-    service: false
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword
