@@ -6,7 +6,7 @@ replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 
 require (
 	github.com/go-logr/logr v1.4.1
-	github.com/google/uuid v1.5.0
+	github.com/google/uuid v1.6.0
 	github.com/onsi/ginkgo/v2 v2.13.2
 	github.com/onsi/gomega v1.30.0
 	github.com/openstack-k8s-operators/heat-operator/api v0.1.1-0.20230828054057-36837cde8504
@@ -15,10 +15,10 @@ require (
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240110131857-e70e1dec4d14
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240106101723-5f7aa263457f
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240106101723-5f7aa263457f
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.0
 	k8s.io/api v0.26.13
 	k8s.io/apimachinery v0.26.13
 	k8s.io/client-go v0.26.13
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240124160436-36095347284f
 	k8s.io/utils v0.0.0-20240102154912-e7106e64919e
 	sigs.k8s.io/controller-runtime v0.14.7
 )

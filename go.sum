@@ -88,8 +88,8 @@ github.com/google/gofuzz v1.2.0/go.mod h1:dBl0BpW6vV/+mYPU4Po3pmUjxk6FQPldtuIdl/
 github.com/google/pprof v0.0.0-20230323073829-e72429f035bd h1:r8yyd+DJDmsUhGrRBxH5Pj7KeFK5l+Y3FsgT8keqKtk=
 github.com/google/pprof v0.0.0-20230323073829-e72429f035bd/go.mod h1:79YE0hCXdHag9sBkw2o+N/YnZtTkXi0UT9Nnixa5eYk=
 github.com/google/uuid v1.1.2/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
-github.com/google/uuid v1.5.0 h1:1p67kYwdtXjb0gL0BPiP1Av9wiZPo5A8z2cWkTZ+eyU=
-github.com/google/uuid v1.5.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
+github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
+github.com/google/uuid v1.6.0/go.mod h1:TIyPZe4MgqvfeYDBFedMoGGpEw/LqOeaOT+nhxU+yHo=
 github.com/gophercloud/gophercloud v1.8.0 h1:TM3Jawprb2NrdOnvcHhWJalmKmAmOGgfZElM/3oBYCk=
 github.com/gophercloud/gophercloud v1.8.0/go.mod h1:aAVqcocTSXh2vYFZ1JTvx4EQmfgzxRcNupUfxZbBNDM=
 github.com/grpc-ecosystem/grpc-gateway v1.16.0/go.mod h1:BDjrQk3hbvj6Nolgz8mAMFbcEtjT1g+wF4CSlocrBnw=
@@ -139,8 +139,8 @@ github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.2024010
 github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240106101723-5f7aa263457f/go.mod h1:Lb1xXXJpbWxU619nemBD4XQy+rqRhzyNcGji9zZbG20=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240106101723-5f7aa263457f h1:Tbw6HGO793AyaxhheNV7r+ftunFHzVBJKtgFG/RNLc0=
 github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240106101723-5f7aa263457f/go.mod h1:/Jgg0YR7ENME0inyfpIkyhwwcdNRAmVGUyOXsP5uU9A=
-github.com/openstack-k8s-operators/mariadb-operator/api v0.3.0 h1:FB0xB6whYM6W4XIncYo2mPiOJWkFsIOWtCT+UOtvOaQ=
-github.com/openstack-k8s-operators/mariadb-operator/api v0.3.0/go.mod h1:xhiz5wFdKWwVM7BF/VYon4TT3NuUPXp/Pyn2hWcp0CE=
+github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240124160436-36095347284f h1:01HrDX32rjFdvbSOMfz0fBCfxK6Kqthv0BgvimWL7Vc=
+github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240124160436-36095347284f/go.mod h1:gAIo5SMvTTgUomxGC51T3PHIyremhe8xUvz2xpbuCsI=
 github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pkg/errors v0.9.1 h1:FEBLx1zS214owpjy7qsBeixbURkuhQAwrK5UwLGTwt4=
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
