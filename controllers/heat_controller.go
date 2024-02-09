@@ -91,6 +91,8 @@ var keystoneAPI *keystonev1.KeystoneAPI
 // +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds,verbs=get;list;watch;
 // +kubebuilder:rbac:groups=rabbitmq.openstack.org,resources=transporturls,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;
+// +kubebuilder:rbac:groups=mariadb.openstack.org,resources=mariadbaccounts,verbs=get;list;watch;create;update;patch;delete
+// +kubebuilder:rbac:groups=mariadb.openstack.org,resources=mariadbaccounts/finalizers,verbs=update
 
 // service account, role, rolebinding
 // +kubebuilder:rbac:groups="",resources=serviceaccounts,verbs=get;list;watch;create;update
@@ -124,7 +126,6 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 		r.Scheme,
 		r.Log,
 	)
-
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -194,7 +195,6 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 
 	// Handle non-deleted clusters
 	return r.reconcileNormal(ctx, instance, helper)
-
 }
 
 // fields to index to reconcile when change
@@ -233,7 +233,6 @@ var (
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
-
 	// index passwordSecretField
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.Heat{}, passwordSecretField, func(rawObj client.Object) []string {
 		// Extract the secret name from the spec, if one is provided
@@ -281,6 +280,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&heatv1beta1.HeatCfnAPI{}).
 		Owns(&heatv1beta1.HeatEngine{}).
 		Owns(&mariadbv1.MariaDBDatabase{}).
+		Owns(&mariadbv1.MariaDBAccount{}).
 		Owns(&batchv1.Job{}).
 		Owns(&corev1.ConfigMap{}).
 		Owns(&rabbitmqv1.TransportURL{}).
@@ -443,7 +443,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
 	//
 	transportURL, op, err := r.transportURLCreateOrUpdate(instance)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
@@ -686,7 +685,6 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 		helper,
 		instance.Spec.DatabaseInstance,
 	)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBReadyCondition,
@@ -791,7 +789,6 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatAPI, controllerutil.OperationResult, error) {
-
 	heatAPISpec := heatv1beta1.HeatAPISpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatAPITemplate:    instance.Spec.HeatAPI,
@@ -822,7 +819,6 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatCfnAPI, controllerutil.OperationResult, error) {
-
 	heatCfnAPISpec := heatv1beta1.HeatCfnAPISpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatCfnAPITemplate: instance.Spec.HeatCfnAPI,
@@ -853,7 +849,6 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 ) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
-
 	heatEngineSpec := heatv1beta1.HeatEngineSpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatEngineTemplate: instance.Spec.HeatEngine,
@@ -1039,7 +1034,6 @@ func (r *HeatReconciler) ensureStackDomain(
 	instance *heatv1beta1.Heat,
 	secret *corev1.Secret,
 ) (ctrl.Result, error) {
-
 	val, ok := secret.Data[instance.Spec.PasswordSelectors.Service]
 	if !ok {
 		return ctrl.Result{}, fmt.Errorf("%s not found in secret %s", instance.Spec.PasswordSelectors.Service, instance.Spec.Secret)
