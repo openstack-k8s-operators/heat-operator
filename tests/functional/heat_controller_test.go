@@ -343,6 +343,7 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
+			mariadb.SimulateMariaDBAccountCompleted(heatName)
 			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
 		})
 
@@ -399,6 +400,7 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
+			mariadb.SimulateMariaDBAccountCompleted(heatName)
 			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
 			dbSyncJobName := types.NamespacedName{
 				Name:      "heat-db-sync",
