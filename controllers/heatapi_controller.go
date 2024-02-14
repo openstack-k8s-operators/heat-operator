@@ -37,6 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/controller-runtime/pkg/source"
 
 	"github.com/go-logr/logr"
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
@@ -65,13 +66,15 @@ type HeatAPIReconciler struct {
 	Kclient kubernetes.Interface
 }
 
-var keystoneServices = []map[string]string{
-	{
-		"type": heat.ServiceType,
-		"name": heat.ServiceName,
-		"desc": "Heat API service",
-	},
-}
+var (
+	keystoneServices = []map[string]string{
+		{
+			"type": heat.ServiceType,
+			"name": heat.ServiceName,
+			"desc": "Heat API service",
+		},
+	}
+)
 
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/status,verbs=get;update;patch
@@ -179,6 +182,7 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
+
 	// index passwordSecretField
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatAPI{}, passwordSecretField, func(rawObj client.Object) []string {
 		// Extract the secret name from the spec, if one is provided
@@ -239,7 +243,7 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	configMapFn := func(ctx context.Context, o client.Object) []reconcile.Request {
+	configMapFn := func(o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		apis := &heatv1beta1.HeatAPIList{}
@@ -279,17 +283,17 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		// watch the config CMs we don't own
-		Watches(&corev1.ConfigMap{},
+		Watches(&source.Kind{Type: &corev1.ConfigMap{}},
 			handler.EnqueueRequestsFromMapFunc(configMapFn)).
 		Watches(
-			&corev1.Secret{},
+			&source.Kind{Type: &corev1.Secret{}},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
 		Complete(r)
 }
 
-func (r *HeatAPIReconciler) findObjectsForSrc(ctx context.Context, src client.Object) []reconcile.Request {
+func (r *HeatAPIReconciler) findObjectsForSrc(src client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 
 	l := log.FromContext(context.Background()).WithName("Controllers").WithName("HeatAPI")
@@ -603,8 +607,8 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	parentHeatName := heat.GetOwningHeatName(instance)
 
 	configMaps := []string{
-		fmt.Sprintf("%s-scripts", parentHeatName),     // ScriptsConfigMap
-		fmt.Sprintf("%s-config-data", parentHeatName), // ConfigMap
+		fmt.Sprintf("%s-scripts", parentHeatName),     //ScriptsConfigMap
+		fmt.Sprintf("%s-config-data", parentHeatName), //ConfigMap
 	}
 
 	_, err = configmap.GetConfigMaps(ctx, helper, instance, configMaps, instance.Namespace, &configMapVars)
