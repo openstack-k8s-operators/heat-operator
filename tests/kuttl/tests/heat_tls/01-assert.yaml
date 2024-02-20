@@ -147,20 +147,20 @@ spec:
           readOnly: true
           subPath: tls-ca-bundle.pem
       volumes:
-      - configMap:
+      - name: scripts
+        secret:
           defaultMode: 493
-          name: heat-scripts
-        name: scripts
-      - configMap:
+          secretName: heat-scripts
+      - name: config-data
+        secret:
           defaultMode: 416
-          name: heat-config-data
-        name: config-data
+          secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
-      - configMap:
+      - name: config-data-custom
+        secret:
           defaultMode: 416
-          name: heat-api-config-data
-        name: config-data-custom
+          secretName: heat-api-config-data
       - name: combined-ca-bundle
         secret:
           defaultMode: 292
@@ -244,20 +244,20 @@ spec:
           readOnly: true
           subPath: tls-ca-bundle.pem
       volumes:
-      - configMap:
+      - name: scripts
+        secret:
           defaultMode: 493
-          name: heat-scripts
-        name: scripts
-      - configMap:
+          secretName: heat-scripts
+      - name: config-data
+        secret:
           defaultMode: 416
-          name: heat-config-data
-        name: config-data
+          secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
-      - configMap:
+      - name: config-data-custom
+        secret:
           defaultMode: 416
-          name: heat-cfnapi-config-data
-        name: config-data-custom
+          secretName: heat-cfnapi-config-data
       - name: combined-ca-bundle
         secret:
           defaultMode: 292
@@ -325,20 +325,20 @@ spec:
           readOnly: true
           subPath: tls-ca-bundle.pem
       volumes:
-      - configMap:
+      - name: scripts
+        secret:
           defaultMode: 493
-          name: heat-scripts
-        name: scripts
-      - configMap:
+          secretName: heat-scripts
+      - name: config-data
+        secret:
           defaultMode: 416
-          name: heat-config-data
-        name: config-data
+          secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
-      - configMap:
+      - name: config-data-custom
+        secret:
           defaultMode: 416
-          name: heat-engine-config-data
-        name: config-data-custom
+          secretName: heat-engine-config-data
       - name: combined-ca-bundle
         secret:
           defaultMode: 292

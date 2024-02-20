@@ -169,10 +169,8 @@ func Deployment(
 	initContainerDetails := heat.APIDetails{
 		ContainerImage:            instance.Spec.ContainerImage,
 		DatabaseHost:              instance.Spec.DatabaseHostname,
-		DatabaseUser:              instance.Spec.DatabaseUser,
 		DatabaseName:              heat.DatabaseName,
 		OSPSecret:                 instance.Spec.Secret,
-		DBPasswordSelector:        instance.Spec.PasswordSelectors.Database,
 		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
 		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
 		VolumeMounts:              initVolumeMounts,

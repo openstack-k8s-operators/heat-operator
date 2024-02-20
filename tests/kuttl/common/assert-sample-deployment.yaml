@@ -19,7 +19,7 @@ spec:
     [DEFAULT]
     debug = True
   databaseInstance: openstack
-  databaseUser: "heat"
+  databaseAccount: "heat"
   heatAPI:
     replicas: 1
     resources: {}
@@ -33,7 +33,6 @@ spec:
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
     service: HeatPassword
-    database: HeatDatabasePassword
   preserveJobs: false
   rabbitMqClusterName: rabbitmq
   secret: osp-secret
@@ -59,10 +58,9 @@ metadata:
       name: heat
 spec:
   databaseHostname: openstack.heat-kuttl-tests.svc
-  databaseUser: heat
+  databaseAccount: heat
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
-    database: HeatDatabasePassword
     service: HeatPassword
   replicas: 1
   resources: {}
@@ -87,10 +85,9 @@ metadata:
       name: heat
 spec:
   databaseHostname: openstack.heat-kuttl-tests.svc
-  databaseUser: heat
+  databaseAccount: heat
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
-    database: HeatDatabasePassword
     service: HeatPassword
   replicas: 1
   resources: {}
@@ -115,10 +112,9 @@ metadata:
       name: heat
 spec:
   databaseHostname: openstack.heat-kuttl-tests.svc
-  databaseUser: heat
+  databaseAccount: heat
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
-    database: HeatDatabasePassword
     service: HeatPassword
   replicas: 1
   resources: {}
