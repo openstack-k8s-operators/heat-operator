@@ -74,6 +74,12 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 			MountPath: "/var/lib/config-data/merged",
 			ReadOnly:  false,
 		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/my.cnf",
+			SubPath:   "my.cnf",
+			ReadOnly:  true,
+		},
 	}
 
 }
@@ -90,6 +96,12 @@ func GetVolumeMounts() []corev1.VolumeMount {
 			Name:      "config-data-merged",
 			MountPath: "/var/lib/config-data/merged",
 			ReadOnly:  false,
+		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/my.cnf",
+			SubPath:   "my.cnf",
+			ReadOnly:  true,
 		},
 	}
 }

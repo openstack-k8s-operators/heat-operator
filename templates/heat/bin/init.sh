@@ -73,7 +73,7 @@ if [ -n "$AUTH_ENCRYPTION_KEY" ]; then
     crudini --set ${SVC_CFG_MERGED} DEFAULT auth_encryption_key $AUTH_ENCRYPTION_KEY
 fi
 
-crudini --set ${SVC_CFG_MERGED} database connection mysql+pymysql://${DBUSER}:${DBPASSWORD}@${DBHOST}/${DB}
+crudini --set ${SVC_CFG_MERGED} database connection mysql+pymysql://${DBUSER}:${DBPASSWORD}@${DBHOST}/${DB}?read_default_file=/etc/my.cnf
 crudini --set ${SVC_CFG_MERGED} keystone_authtoken password $PASSWORD
 crudini --set ${SVC_CFG_MERGED} DEFAULT stack_domain_admin_password $PASSWORD
 crudini --set ${SVC_CFG_MERGED} trustee password $PASSWORD
