@@ -24,6 +24,15 @@ import (
 
 // HeatEngineTemplate defines the input parameters for the Heat Engine service
 type HeatEngineTemplate struct {
+	HeatEngineTemplateCore `json:",inline"`
+
+	// +kubebuilder:validation:Required
+	// ContainerImage - Container Image URL
+	ContainerImage string `json:"containerImage"`
+}
+
+// HeatEngineTemplate -
+type HeatEngineTemplateCore struct {
 	// Common input parameters for all Heat services
 	HeatServiceTemplate `json:",inline"`
 }

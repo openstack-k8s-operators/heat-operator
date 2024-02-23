@@ -25,6 +25,16 @@ import (
 // HeatCfnAPITemplate defines the input parameters for the Heat Cfn API service
 type HeatCfnAPITemplate struct {
 	// Common input parameters for all Heat services
+	HeatCfnAPITemplateCore `json:",inline"`
+
+	// +kubebuilder:validation:Required
+	// ContainerImage - Container Image URL
+	ContainerImage string `json:"containerImage"`
+}
+
+// HeatCfnAPITemplateCore -
+type HeatCfnAPITemplateCore struct {
+	// Common input parameters for all Heat services
 	HeatServiceTemplate `json:",inline"`
 
 	// +kubebuilder:validation:Optional

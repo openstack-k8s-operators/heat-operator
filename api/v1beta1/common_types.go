@@ -47,9 +47,6 @@ type HeatTemplate struct {
 
 // HeatServiceTemplate -
 type HeatServiceTemplate struct {
-	// +kubebuilder:validation:Required
-	// ContainerImage - Container Image URL
-	ContainerImage string `json:"containerImage"`
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1

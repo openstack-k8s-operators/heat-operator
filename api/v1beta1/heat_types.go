@@ -40,6 +40,40 @@ const (
 
 // HeatSpec defines the desired state of Heat
 type HeatSpec struct {
+	HeatSpecBase `json:",inline"`
+
+	// +kubebuilder:validation:Required
+	// HeatAPI - Spec definition for the API service of this Heat deployment
+	HeatAPI HeatAPITemplate `json:"heatAPI"`
+
+	// +kubebuilder:validation:Required
+	// HeatCfnAPI - Spec definition for the CfnAPI service of this Heat deployment
+	HeatCfnAPI HeatCfnAPITemplate `json:"heatCfnAPI"`
+
+	// +kubebuilder:validation:Required
+	// HeatEngine - Spec definition for the Engine service of this Heat deployment
+	HeatEngine HeatEngineTemplate `json:"heatEngine"`
+}
+
+// HeatSpecCore defines the desired state of Heat, for use with OpenStackControlplane (no containerImages)
+type HeatSpecCore struct {
+	HeatSpecBase `json:",inline"`
+
+	// +kubebuilder:validation:Required
+	// HeatAPI - Spec definition for the API service of this Heat deployment
+	HeatAPI HeatAPITemplateCore `json:"heatAPI"`
+
+	// +kubebuilder:validation:Required
+	// HeatCfnAPI - Spec definition for the CfnAPI service of this Heat deployment
+	HeatCfnAPI HeatCfnAPITemplateCore `json:"heatCfnAPI"`
+
+	// +kubebuilder:validation:Required
+	// HeatEngine - Spec definition for the Engine service of this Heat deployment
+	HeatEngine HeatEngineTemplateCore `json:"heatEngine"`
+}
+
+// HeatSpec defines the desired state of Heat
+type HeatSpecBase struct {
 	// Common input parameters for all Heat services
 	HeatTemplate `json:",inline"`
 
@@ -74,18 +108,6 @@ type HeatSpec struct {
 	// +kubebuilder:validation:Optional
 	// NodeSelector to target subset of worker nodes for running the Heat services
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
-
-	// +kubebuilder:validation:Required
-	// HeatAPI - Spec definition for the API service of this Heat deployment
-	HeatAPI HeatAPITemplate `json:"heatAPI"`
-
-	// +kubebuilder:validation:Required
-	// HeatCfnAPI - Spec definition for the CfnAPI service of this Heat deployment
-	HeatCfnAPI HeatCfnAPITemplate `json:"heatCfnAPI"`
-
-	// +kubebuilder:validation:Required
-	// HeatEngine - Spec definition for the Engine service of this Heat deployment
-	HeatEngine HeatEngineTemplate `json:"heatEngine"`
 
 	// +kubebuilder:validation:Required
 	// +kubebuilder:default=rabbitmq
