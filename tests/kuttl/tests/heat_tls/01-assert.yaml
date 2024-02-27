@@ -95,6 +95,10 @@ spec:
           readOnly: true
         - mountPath: /var/lib/config-data/merged
           name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data-merged
           readOnly: true
@@ -131,6 +135,10 @@ spec:
           readOnly: true
         - mountPath: /var/lib/config-data/merged
           name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /var/lib/config-data/custom
           name: config-data-custom
           readOnly: true
@@ -184,6 +192,10 @@ spec:
           readOnly: true
         - mountPath: /var/lib/config-data/merged
           name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data-merged
           readOnly: true
@@ -220,6 +232,10 @@ spec:
           readOnly: true
         - mountPath: /var/lib/config-data/merged
           name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /var/lib/config-data/custom
           name: config-data-custom
           readOnly: true
@@ -273,6 +289,10 @@ spec:
           readOnly: true
         - mountPath: /var/lib/config-data/merged
           name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data-merged
           readOnly: true
@@ -293,6 +313,10 @@ spec:
           readOnly: true
         - mountPath: /var/lib/config-data/merged
           name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /var/lib/config-data/custom
           name: config-data-custom
           readOnly: true

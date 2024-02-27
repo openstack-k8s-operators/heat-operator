@@ -246,7 +246,7 @@ var _ = Describe("Heat controller", func() {
 				heatName,
 				ConditionGetterFunc(HeatConditionGetter),
 				condition.ServiceConfigReadyCondition,
-				corev1.ConditionFalse,
+				corev1.ConditionUnknown,
 			)
 			th.ExpectCondition(
 				heatName,
@@ -277,6 +277,18 @@ var _ = Describe("Heat controller", func() {
 			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
 			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
 			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(heatName)
+			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
 		})
 
 		It("should have service config ready", func() {
@@ -300,7 +312,7 @@ var _ = Describe("Heat controller", func() {
 			)
 		})
 
-		It("should create a ConfigMap for heat.conf", func() {
+		It("should create a ConfigMap for heat.conf and my.cnf", func() {
 			cm := th.GetConfigMap(heatConfigMapName)
 
 			Expect(cm.Data["heat.conf"]).Should(
@@ -315,6 +327,8 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
 			Expect(cm.Data["heat.conf"]).Should(
 				ContainSubstring("memcached_servers=inet:[memcached-0.memcached]:11211,inet:[memcached-1.memcached]:11211,inet:[memcached-2.memcached]:11211"))
+			Expect(cm.Data["my.cnf"]).To(
+				ContainSubstring("[client]\nssl=0"))
 		})
 	})
 
