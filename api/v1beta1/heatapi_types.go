@@ -24,6 +24,15 @@ import (
 
 // HeatAPITemplate defines the input parameters for the Heat API service
 type HeatAPITemplate struct {
+	HeatAPITemplateCore `json:",inline"`
+
+	// +kubebuilder:validation:Required
+	// ContainerImage - Container Image URL
+	ContainerImage string `json:"containerImage"`
+}
+
+// HeatAPITemplateCore -
+type HeatAPITemplateCore struct {
 	// Common input parameters for all Heat services
 	HeatServiceTemplate `json:",inline"`
 
