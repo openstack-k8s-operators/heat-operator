@@ -20,10 +20,10 @@ import (
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
-	configmap "github.com/openstack-k8s-operators/lib-common/modules/common/configmap"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/job"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
@@ -84,7 +84,7 @@ var keystoneAPI *keystonev1.KeystoneAPI
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatengines/finalizers,verbs=update
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete;
-// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch;
+// +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;create;update;patch;delete;watch
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=mariadb.openstack.org,resources=mariadbdatabases,verbs=get;list;watch;create;update;patch;delete;
@@ -334,7 +334,7 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 	r.Log.Info("Reconciling Heat delete")
 
 	// remove db finalizer first
-	db, err := mariadbv1.GetDatabaseByName(ctx, helper, instance.Name)
+	db, err := mariadbv1.GetDatabaseByNameAndAccount(ctx, helper, instance.Name, instance.Spec.DatabaseAccount, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
@@ -568,6 +568,22 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrlResult, err
 	}
 
+	// remove finalizers from previous MariaDBAccounts for which we have
+	// switched.
+	// TODO(zzzeek) - It's not clear if this is called too early here.
+	// at the moment, heat_controller_test.go doesn't seem to have fixtures
+	// I can use to simulate getting all the way to the end of a reconcile
+	// for an instance.  Basically this should be called when any pods have
+	// been restarted to run on an updated set of DB credentials, and the old
+	// ones are no longer needed.  This would allow the scenario where
+	// a new MariaDBAccount is created and an old MariaDBAccount is marked
+	// deleted at once, where the finalizer will keep the old one around until
+	// it's safe to drop.
+	err = mariadbv1.DeleteUnusedMariaDBAccountFinalizers(ctx, helper, instance.Name, instance.Spec.DatabaseAccount, instance.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	//
 	// normal reconcile tasks
 	//
@@ -583,6 +599,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrl.Result{}, err
 	}
+
 	if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatStackDomainReadyCondition,
@@ -626,6 +643,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrl.Result{}, err
 	}
+
 	if op != controllerutil.OperationResultNone {
 		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
 	}
@@ -678,7 +696,9 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 	// run Heat db sync
 	//
 	dbSyncHash := instance.Status.Hash[heatv1beta1.DbSyncHash]
+
 	jobDef := heat.DBSyncJob(instance, serviceLabels)
+
 	dbSyncjob := job.NewJob(
 		jobDef,
 		heatv1beta1.DbSyncHash,
@@ -690,6 +710,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 		ctx,
 		helper,
 	)
+
 	if (ctrlResult != ctrl.Result{}) {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBSyncReadyCondition,
@@ -707,6 +728,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 			err.Error()))
 		return ctrl.Result{}, err
 	}
+
 	if dbSyncjob.HasChanged() {
 		instance.Status.Hash[heatv1beta1.DbSyncHash] = dbSyncjob.GetHash()
 		if err := r.Client.Status().Update(ctx, instance); err != nil {
@@ -870,6 +892,9 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		return err
 	}
 
+	databaseAccount := db.GetAccount()
+	dbSecret := db.GetSecret()
+
 	templateParameters := map[string]interface{}{
 		"KeystoneInternalURL":      authURL,
 		"ServiceUser":              instance.Spec.ServiceUser,
@@ -877,6 +902,12 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		"StackDomainName":          heat.StackDomainName,
 		"MemcachedServers":         strings.Join(mc.Status.ServerList, ","),
 		"MemcachedServersWithInet": strings.Join(mc.Status.ServerListWithInet, ","),
+		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
+			databaseAccount.Spec.UserName,
+			string(dbSecret.Data[mariadbv1.DatabasePasswordSelector]),
+			instance.Status.DatabaseHostname,
+			heat.DatabaseName,
+		),
 	}
 
 	// create HeatAPI httpd vhost template parameters
@@ -930,7 +961,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 			Labels:        cmLabels,
 		},
 	}
-	return configmap.EnsureConfigMaps(ctx, h, instance, cms, envVars)
+	return secret.EnsureSecrets(ctx, h, instance, cms, envVars)
 }
 
 func (r *HeatReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
@@ -1065,22 +1096,47 @@ func (r *HeatReconciler) ensureDB(
 	h *helper.Helper,
 	instance *heatv1beta1.Heat,
 ) (*mariadbv1.Database, ctrl.Result, error) {
-	db := mariadbv1.NewDatabaseWithNamespace(
-		heat.DatabaseName,
-		instance.Spec.DatabaseUser,
-		instance.Spec.Secret,
-		map[string]string{
-			"dbName": instance.Spec.DatabaseInstance,
-		},
-		"heat",
-		instance.Namespace,
+
+	// ensure MariaDBAccount exists.  This account record may be created by
+	// openstack-operator or the cloud operator up front without a specific
+	// MariaDBDatabase configured yet.   Otherwise, a MariaDBAccount CR is
+	// created here with a generated username as well as a secret with
+	// generated password.   The MariaDBAccount is created without being
+	// yet associated with any MariaDBDatabase.
+	_, _, err := mariadbv1.EnsureMariaDBAccount(
+		ctx, h, instance.Spec.DatabaseAccount,
+		instance.Namespace, false, "heat",
 	)
+
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			mariadbv1.MariaDBAccountReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			mariadbv1.MariaDBAccountNotReadyMessage,
+			err.Error()))
+
+		return nil, ctrl.Result{}, err
+	}
+	instance.Status.Conditions.MarkTrue(
+		mariadbv1.MariaDBAccountReadyCondition,
+		mariadbv1.MariaDBAccountReadyMessage,
+	)
+
+	//
+	// create service DB instance
+	//
+	db := mariadbv1.NewDatabaseForAccount(
+		instance.Spec.DatabaseInstance, // mariadb/galera service to target
+		heat.DatabaseName,              // name used in CREATE DATABASE in mariadb
+		instance.Name,                  // CR name for MariaDBDatabase
+		instance.Spec.DatabaseAccount,  // CR name for MariaDBAccount
+		instance.Namespace,             // namespace
+	)
+
 	// create or patch the DB
-	ctrlResult, err := db.CreateOrPatchDBByName(
-		ctx,
-		h,
-		instance.Spec.DatabaseInstance,
-	)
+	ctrlResult, err := db.CreateOrPatchAll(ctx, h)
+
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBReadyCondition,

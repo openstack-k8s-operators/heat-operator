@@ -51,16 +51,15 @@ spec:
                   added to to /etc/<service>/<service>.conf.d directory as custom.conf
                   file.
                 type: string
+              databaseAccount:
+                default: heat
+                description: DatabaseAccount - optional MariaDBAccount used for heat
+                  DB, defaults to heat.
+                type: string
               databaseInstance:
                 description: MariaDB instance name. Right now required by the maridb-operator
                   to get the credentials from the instance to create the DB. Might
                   not be required in future.
-                type: string
-              databaseUser:
-                default: heat
-                description: 'DatabaseUser - optional username used for heat DB, defaults
-                  to heat. TODO: -> implement needs work in mariadb-operator, right
-                  now only heat.'
                 type: string
               defaultConfigOverwrite:
                 additionalProperties:
@@ -771,7 +770,6 @@ spec:
               passwordSelectors:
                 default:
                   authEncryptionKey: HeatAuthEncryptionKey
-                  database: HeatDatabasePassword
                   service: HeatPassword
                 description: PasswordSelectors - Selectors to identify the DB and
                   ServiceUser password from the Secret
@@ -780,11 +778,6 @@ spec:
                     default: HeatAuthEncryptionKey
                     description: AuthEncryptionKey - Selector to get the heat auth
                       encryption key from the Secret
-                    type: string
-                  database:
-                    default: HeatDatabasePassword
-                    description: 'Database - Selector to get the heat Database user
-                      password from the Secret TODO: not used, need change in mariadb-operator'
                     type: string
                   service:
                     default: HeatPassword

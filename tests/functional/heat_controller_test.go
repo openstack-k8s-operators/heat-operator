@@ -17,6 +17,7 @@ limitations under the License.
 package functional_test
 
 import (
+	"fmt"
 	"os"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -25,6 +26,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
+
+	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
@@ -36,7 +39,7 @@ var _ = Describe("Heat controller", func() {
 
 	var heatName types.NamespacedName
 	var heatTransportURLName types.NamespacedName
-	var heatConfigMapName types.NamespacedName
+	var heatConfigSecretName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var keystoneAPI *keystonev1.KeystoneAPI
 
@@ -50,7 +53,7 @@ var _ = Describe("Heat controller", func() {
 			Namespace: namespace,
 			Name:      heatName.Name + "-heat-transport",
 		}
-		heatConfigMapName = types.NamespacedName{
+		heatConfigSecretName = types.NamespacedName{
 			Namespace: namespace,
 			Name:      heatName.Name + "-config-data",
 		}
@@ -70,7 +73,7 @@ var _ = Describe("Heat controller", func() {
 		It("should have the Spec fields initialized", func() {
 			Heat := GetHeat(heatName)
 			Expect(Heat.Spec.DatabaseInstance).Should(Equal("openstack"))
-			Expect(Heat.Spec.DatabaseUser).Should(Equal("heat"))
+			Expect(Heat.Spec.DatabaseAccount).Should(Equal("heat"))
 			Expect(Heat.Spec.RabbitMqClusterName).Should(Equal("rabbitmq"))
 			Expect(Heat.Spec.ServiceUser).Should(Equal("heat"))
 			Expect(*(Heat.Spec.HeatAPI.Replicas)).Should(Equal(int32(1)))
@@ -130,8 +133,8 @@ var _ = Describe("Heat controller", func() {
 			}, timeout, interval).Should(ContainElement("Heat"))
 		})
 
-		It("should not create a config map", func() {
-			th.AssertConfigMapDoesNotExist(heatConfigMapName)
+		It("should not create a config secret", func() {
+			th.AssertSecretDoesNotExist(heatConfigSecretName)
 		})
 	})
 
@@ -169,8 +172,8 @@ var _ = Describe("Heat controller", func() {
 			)
 		})
 
-		It("should not create a config map", func() {
-			th.AssertConfigMapDoesNotExist(heatConfigMapName)
+		It("should not create a config secret", func() {
+			th.AssertSecretDoesNotExist(heatConfigSecretName)
 		})
 	})
 
@@ -256,8 +259,8 @@ var _ = Describe("Heat controller", func() {
 			)
 		})
 
-		It("should not create a config map", func() {
-			th.AssertConfigMapDoesNotExist(heatConfigMapName)
+		It("should not create a config secret", func() {
+			th.AssertSecretDoesNotExist(heatConfigSecretName)
 		})
 	})
 
@@ -312,8 +315,8 @@ var _ = Describe("Heat controller", func() {
 			)
 		})
 
-		It("should create a ConfigMap for heat.conf and my.cnf", func() {
-			cm := th.GetConfigMap(heatConfigMapName)
+		It("should create a Secret for heat.conf", func() {
+			cm := th.GetSecret(heatConfigSecretName)
 
 			Expect(cm.Data["heat.conf"]).Should(
 				ContainSubstring("stack_domain_admin=heat_stack_domain_admin"))
@@ -444,4 +447,108 @@ var _ = Describe("Heat controller", func() {
 			)
 		})
 	})
+
+	// Run MariaDBAccount suite tests.  these are pre-packaged ginkgo tests
+	// that exercise standard account create / update patterns that should be
+	// common to all controllers that ensure MariaDBAccount CRs.
+	mariadbSuite := &mariadb_test.MariaDBTestHarness{
+		PopulateHarness: func(harness *mariadb_test.MariaDBTestHarness) {
+			harness.Setup(
+				"Heat",
+				heatName.Namespace,
+				heatName.Name,
+				"Heat",
+				mariadb, timeout, interval,
+			)
+		},
+
+		// Generate a fully running service given an accountName
+		// needs to make it all the way to the end where the mariadb finalizers
+		// are removed from unused accounts since that's part of what we are testing
+		SetupCR: func(accountName types.NamespacedName) {
+			spec := GetDefaultHeatSpec()
+			spec["databaseAccount"] = accountName.Name
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(accountName)
+			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
+			dbSyncJobName := types.NamespacedName{
+				Name:      "heat-db-sync",
+				Namespace: namespace,
+			}
+			th.SimulateJobSuccess(dbSyncJobName)
+
+			// TODO(zzzeek) we would prefer to simulate everything else here
+			// so we can get to the end of reconcile:
+			// * ensureStackDomain passes
+			// * engineDeploymentCreateOrUpdate passes
+			// * apiDeploymentCreateOrUpdate passes
+			// * cfnapiDeploymentCreateOrUpdate
+
+			// then in heat_controller we can move
+			// DeleteUnusedMariaDBAccountFinalizers to the end of the reconcile
+			// method.
+		},
+		// Change the account name in the service to a new name
+		UpdateAccount: func(newAccountName types.NamespacedName) {
+
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				heat.Spec.DatabaseAccount = newAccountName.Name
+				g.Expect(th.K8sClient.Update(ctx, heat)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+		},
+		// delete the CR instance to exercise finalizer removal
+		DeleteCR: func() {
+			th.DeleteInstance(GetHeat(heatName))
+		},
+	}
+
+	mariadbSuite.RunBasicSuite()
+
+	mariadbSuite.RunURLAssertSuite(func(accountName types.NamespacedName, username string, password string) {
+		Eventually(func(g Gomega) {
+			cm := th.GetSecret(heatConfigSecretName)
+
+			conf := cm.Data["heat.conf"]
+
+			g.Expect(string(conf)).Should(
+				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/heat?read_default_file=/etc/my.cnf",
+					username, password, namespace)))
+
+		}).Should(Succeed())
+
+	})
+
+	// TODO(zzzeek) we can also do a CONFIG_HASH test here if we have fixtures
+	// that simulate a full deployment
+	/* mariadbSuite.RunConfigHashSuite(func() string {
+		deployment := th.GetDeployment(names.DeploymentName)
+		return GetEnvVarValue(deployment.Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
+	})*/
+
 })

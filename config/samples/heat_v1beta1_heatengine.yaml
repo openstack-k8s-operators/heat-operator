@@ -4,7 +4,7 @@ metadata:
   name: heat-engine
 spec:
   databaseHostname: openstack
-  databaseUser: heat
+  databaseAccount: heat
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
     database: HeatDatabasePassword

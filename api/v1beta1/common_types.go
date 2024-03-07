@@ -30,9 +30,8 @@ type HeatTemplate struct {
 
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=heat
-	// DatabaseUser - optional username used for heat DB, defaults to heat.
-	// TODO: -> implement needs work in mariadb-operator, right now only heat.
-	DatabaseUser string `json:"databaseUser"`
+	// DatabaseAccount - optional MariaDBAccount used for heat DB, defaults to heat.
+	DatabaseAccount string `json:"databaseAccount"`
 
 	// +kubebuilder:validation:Required
 	// Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
@@ -40,7 +39,7 @@ type HeatTemplate struct {
 	Secret string `json:"secret"`
 
 	// +kubebuilder:validation:Optional
-	// +kubebuilder:default={database: HeatDatabasePassword, service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
+	// +kubebuilder:default={service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
 	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
 }
@@ -86,11 +85,6 @@ type APIOverrideSpec struct {
 
 // PasswordSelector ..
 type PasswordSelector struct {
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default="HeatDatabasePassword"
-	// Database - Selector to get the heat Database user password from the Secret
-	// TODO: not used, need change in mariadb-operator
-	Database string `json:"database"`
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default="HeatPassword"
 	// Service - Selector to get the heat service password from the Secret
