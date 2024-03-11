@@ -407,7 +407,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// Check for required memcached used for caching
 	//
-	memcached, err := r.getHeatMemcached(ctx, helper, instance)
+	memcached, err := memcachedv1.GetMemcachedByName(ctx, helper, instance.Spec.MemcachedInstance, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			instance.Status.Conditions.Set(condition.FalseCondition(
@@ -900,8 +900,8 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		"ServiceUser":              instance.Spec.ServiceUser,
 		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
 		"StackDomainName":          heat.StackDomainName,
-		"MemcachedServers":         strings.Join(mc.Status.ServerList, ","),
-		"MemcachedServersWithInet": strings.Join(mc.Status.ServerListWithInet, ","),
+		"MemcachedServers":         mc.GetMemcachedServerListString(),
+		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
 		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
 			databaseAccount.Spec.UserName,
 			string(dbSecret.Data[mariadbv1.DatabasePasswordSelector]),
@@ -1069,26 +1069,6 @@ func (r *HeatReconciler) ensureStackDomain(
 		userID,
 		domainID)
 	return ctrl.Result{}, err
-}
-
-// getHeatMemcached - gets the Memcached instance used for heat cache backend
-func (r *HeatReconciler) getHeatMemcached(
-	ctx context.Context,
-	h *helper.Helper,
-	instance *heatv1beta1.Heat,
-) (*memcachedv1.Memcached, error) {
-	memcached := &memcachedv1.Memcached{}
-	err := h.GetClient().Get(
-		ctx,
-		types.NamespacedName{
-			Name:      instance.Spec.MemcachedInstance,
-			Namespace: instance.Namespace,
-		},
-		memcached)
-	if err != nil {
-		return nil, err
-	}
-	return memcached, err
 }
 
 func (r *HeatReconciler) ensureDB(
