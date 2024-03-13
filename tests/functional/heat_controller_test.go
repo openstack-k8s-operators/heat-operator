@@ -58,7 +58,9 @@ var _ = Describe("Heat controller", func() {
 			Name:      heatName.Name + "-config-data",
 		}
 		memcachedSpec = memcachedv1.MemcachedSpec{
-			Replicas: ptr.To[int32](3),
+			MemcachedSpecCore: memcachedv1.MemcachedSpecCore{
+				Replicas: ptr.To[int32](3),
+			},
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -318,19 +320,22 @@ var _ = Describe("Heat controller", func() {
 		It("should create a Secret for heat.conf", func() {
 			cm := th.GetSecret(heatConfigSecretName)
 
-			Expect(cm.Data["heat.conf"]).Should(
+			heatCfg := string(cm.Data["heat.conf"])
+			Expect(heatCfg).Should(
 				ContainSubstring("stack_domain_admin=heat_stack_domain_admin"))
-			Expect(cm.Data["heat.conf"]).Should(
+			Expect(heatCfg).Should(
 				ContainSubstring("auth_uri=%s/v3/ec2tokens", keystoneAPI.Status.APIEndpoints["internal"]))
-			Expect(cm.Data["heat.conf"]).Should(
+			Expect(heatCfg).Should(
 				ContainSubstring("auth_url=%s", keystoneAPI.Status.APIEndpoints["internal"]))
-			Expect(cm.Data["heat.conf"]).Should(
+			Expect(heatCfg).Should(
 				ContainSubstring("www_authenticate_uri=http://keystone-internal.openstack.svc"))
-			Expect(cm.Data["heat.conf"]).Should(
-				ContainSubstring("memcache_servers=memcached-0.memcached:11211,memcached-1.memcached:11211,memcached-2.memcached:11211"))
-			Expect(cm.Data["heat.conf"]).Should(
-				ContainSubstring("memcached_servers=inet:[memcached-0.memcached]:11211,inet:[memcached-1.memcached]:11211,inet:[memcached-2.memcached]:11211"))
-			Expect(cm.Data["my.cnf"]).To(
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
+					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcached_servers=inet:[memcached-0.memcached.%s.svc]:11211,inet:[memcached-1.memcached.%s.svc]:11211,inet:[memcached-2.memcached.%s.svc]:11211",
+					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+			Expect(string(cm.Data["my.cnf"])).To(
 				ContainSubstring("[client]\nssl=0"))
 		})
 	})
