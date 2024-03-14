@@ -24,19 +24,16 @@ import (
 
 // HeatCfnAPITemplate defines the input parameters for the Heat Cfn API service
 type HeatCfnAPITemplate struct {
-	// Common input parameters for all Heat services
-	HeatCfnAPITemplateCore `json:",inline"`
-
 	// +kubebuilder:validation:Required
 	// ContainerImage - Container Image URL
 	ContainerImage string `json:"containerImage"`
+
+	// Common input parameters for all Heat services
+	HeatCfnAPITemplateCore `json:",inline"`
 }
 
 // HeatCfnAPITemplateCore -
 type HeatCfnAPITemplateCore struct {
-	// Common input parameters for all Heat services
-	HeatServiceTemplate `json:",inline"`
-
 	// +kubebuilder:validation:Optional
 	// Override, provides the ability to override the generated manifest of several child resources.
 	Override APIOverrideSpec `json:"override,omitempty"`
@@ -45,16 +42,13 @@ type HeatCfnAPITemplateCore struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// TLS - Parameters related to the TLS
 	TLS tls.API `json:"tls,omitempty"`
+
+	// Common input parameters for all Heat services
+	HeatServiceTemplate `json:",inline"`
 }
 
 // HeatCfnAPISpec defines the desired state of HeatCfnAPI
 type HeatCfnAPISpec struct {
-	// Common input parameters for all Heat services
-	HeatTemplate `json:",inline"`
-
-	// Input parameters for the Heat Cfn API service
-	HeatCfnAPITemplate `json:",inline"`
-
 	// +kubebuilder:validation:Required
 	// DatabaseHostname - Heat Database Hostname
 	DatabaseHostname string `json:"databaseHostname"`
@@ -66,6 +60,12 @@ type HeatCfnAPISpec struct {
 	// +kubebuilder:validation:Required
 	// ServiceAccount - service account name used internally to provide Heat services the default SA name
 	ServiceAccount string `json:"serviceAccount"`
+
+	// Common input parameters for all Heat services
+	HeatTemplate `json:",inline"`
+
+	// Input parameters for the Heat Cfn API service
+	HeatCfnAPITemplate `json:",inline"`
 }
 
 // HeatCfnAPIStatus defines the observed state of HeatCfnAPI
