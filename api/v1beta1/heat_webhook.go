@@ -84,6 +84,12 @@ func (spec *HeatSpec) Default() {
 	}
 }
 
+// Default - set defaults for this Heat spec core. This version is called
+// by the OpenStackControlplane
+func (spec *HeatSpecCore) Default() {
+	// nothing here yet
+}
+
 // TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
 //+kubebuilder:webhook:path=/validate-heat-openstack-org-v1beta1-heat,mutating=false,failurePolicy=fail,sideEffects=None,groups=heat.openstack.org,resources=heats,verbs=create;update,versions=v1beta1,name=vheat.kb.io,admissionReviewVersions=v1
 
