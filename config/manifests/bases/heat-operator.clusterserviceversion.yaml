@@ -2,10 +2,10 @@ apiVersion: operators.coreos.com/v1alpha1
 kind: ClusterServiceVersion
 metadata:
   annotations:
-    features.operators.openshift.io/fips-compliant: "true"
     alm-examples: '[]'
     capabilities: Basic Install
     features.operators.openshift.io/disconnected: "true"
+    features.operators.openshift.io/fips-compliant: "true"
     operators.openshift.io/infrastructure-features: '["disconnected"]'
     operators.operatorframework.io/operator-type: non-standalone
   name: heat-operator.v0.0.1
@@ -33,6 +33,13 @@ spec:
       displayName: Heat
       kind: Heat
       name: heats.heat.openstack.org
+      specDescriptors:
+      - description: TLS - Parameters related to the TLS
+        displayName: TLS
+        path: heatAPI.tls
+      - description: TLS - Parameters related to the TLS
+        displayName: TLS
+        path: heatCfnAPI.tls
       version: v1beta1
   description: Heat Operator
   displayName: Heat Operator
