@@ -24,6 +24,8 @@ const (
 	CfnServiceName = "heat-cfn"
 	// CfnServiceType -
 	CfnServiceType = "cloudformation"
+	// HeatStackUserRole -
+	HeatStackUserRole = "heat_stack_user"
 	// StackDomainAdminUsername -
 	StackDomainAdminUsername = "heat_stack_domain_admin"
 	// StackDomainName -

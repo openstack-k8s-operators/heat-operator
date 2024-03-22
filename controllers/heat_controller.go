@@ -1049,6 +1049,13 @@ func (r *HeatReconciler) ensureStackDomain(
 		return ctrl.Result{}, err
 	}
 
+	// Create heat_stack_user role as per:
+	// https://docs.openstack.org/heat/2023.2/admin/stack-domain-users.html#usage-workflow
+	_, err = os.CreateRole(r.Log, heat.HeatStackUserRole)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Create Heat user
 	userID, err := os.CreateUser(
 		r.Log,
@@ -1076,7 +1083,6 @@ func (r *HeatReconciler) ensureDB(
 	h *helper.Helper,
 	instance *heatv1beta1.Heat,
 ) (*mariadbv1.Database, ctrl.Result, error) {
-
 	// ensure MariaDBAccount exists.  This account record may be created by
 	// openstack-operator or the cloud operator up front without a specific
 	// MariaDBDatabase configured yet.   Otherwise, a MariaDBAccount CR is
@@ -1087,7 +1093,6 @@ func (r *HeatReconciler) ensureDB(
 		ctx, h, instance.Spec.DatabaseAccount,
 		instance.Namespace, false, "heat",
 	)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			mariadbv1.MariaDBAccountReadyCondition,
@@ -1116,7 +1121,6 @@ func (r *HeatReconciler) ensureDB(
 
 	// create or patch the DB
 	ctrlResult, err := db.CreateOrPatchAll(ctx, h)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBReadyCondition,
