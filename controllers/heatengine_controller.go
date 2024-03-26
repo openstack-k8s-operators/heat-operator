@@ -562,7 +562,7 @@ func (r *HeatEngineReconciler) generateServiceConfigMaps(
 
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
 
-	db, err := mariadbv1.GetDatabaseByName(ctx, h, heat.DatabaseName)
+	db, err := mariadbv1.GetDatabaseByNameAndAccount(ctx, h, instance.Name, instance.Spec.DatabaseAccount, instance.Namespace)
 	if err != nil {
 		return err
 	}
