@@ -30,8 +30,17 @@ const (
 	StackDomainAdminUsername = "heat_stack_domain_admin"
 	// StackDomainName -
 	StackDomainName = "heat_stack"
-	// DatabaseName -
+
+	// DatabaseCRName - Name of the MariaDBDatabase CR
+	DatabaseCRName = "heat"
+
+	// Database - Name of the database used in CREATE DATABASE statement
 	DatabaseName = "heat"
+
+	// DatabaseUsernamePrefix - used by EnsureMariaDBAccount when a new username
+	// is to be generated, e.g. "heat_e5a4", "heat_78bc", etc
+	DatabaseUsernamePrefix = "heat"
+
 	// HeatPublicPort -
 	HeatPublicPort int32 = 8004
 	// HeatInternalPort -
