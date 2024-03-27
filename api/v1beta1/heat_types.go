@@ -74,9 +74,6 @@ type HeatSpecCore struct {
 
 // HeatSpec defines the desired state of Heat
 type HeatSpecBase struct {
-	// Common input parameters for all Heat services
-	HeatTemplate `json:",inline"`
-
 	// +kubebuilder:validation:Required
 	// MariaDB instance name.
 	// Right now required by the maridb-operator to get the credentials from the instance to create the DB.
@@ -88,16 +85,22 @@ type HeatSpecBase struct {
 	// Memcached instance name.
 	MemcachedInstance string `json:"memcachedInstance"`
 
-	// +kubebuilder:validation:Optional
-	// +kubebuilder:default=false
-	// PreserveJobs - do not delete jobs after they finished e.g. to check logs
-	PreserveJobs bool `json:"preserveJobs"`
+	// +kubebuilder:validation:Required
+	// +kubebuilder:default=rabbitmq
+	// RabbitMQ instance name
+	// Needed to request a transportURL that is created and used in Heat
+	RabbitMqClusterName string `json:"rabbitMqClusterName"`
 
 	// +kubebuilder:validation:Optional
 	// CustomServiceConfig - customize the service config using this parameter to change service defaults,
 	// or overwrite rendered information using raw OpenStack config format. The content gets added to
 	// to /etc/<service>/<service>.conf.d directory as custom.conf file.
 	CustomServiceConfig string `json:"customServiceConfig,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=false
+	// PreserveJobs - do not delete jobs after they finished e.g. to check logs
+	PreserveJobs bool `json:"preserveJobs"`
 
 	// +kubebuilder:validation:Optional
 	// ConfigOverwrite - interface to overwrite default config files like e.g. policy.json.
@@ -109,20 +112,17 @@ type HeatSpecBase struct {
 	// NodeSelector to target subset of worker nodes for running the Heat services
 	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
-	// +kubebuilder:validation:Required
-	// +kubebuilder:default=rabbitmq
-	// RabbitMQ instance name
-	// Needed to request a transportURL that is created and used in Heat
-	RabbitMqClusterName string `json:"rabbitMqClusterName"`
+	// Common input parameters for all Heat services
+	HeatTemplate `json:",inline"`
 }
 
 // HeatStatus defines the observed state of Heat
 type HeatStatus struct {
-	// Map of hashes to track e.g. job status
-	Hash map[string]string `json:"hash,omitempty"`
-
 	// Conditions
 	Conditions condition.Conditions `json:"conditions,omitempty" optional:"true"`
+
+	// Map of hashes to track e.g. job status
+	Hash map[string]string `json:"hash,omitempty"`
 
 	// Heat Database Hostname
 	DatabaseHostname string `json:"databaseHostname,omitempty"`
