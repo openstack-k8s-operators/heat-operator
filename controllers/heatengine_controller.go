@@ -442,7 +442,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 
 	serviceLabels := map[string]string{
 		common.AppSelector:       heat.ServiceName,
-		common.ComponentSelector: heat.APIComponent,
+		common.ComponentSelector: heat.EngineComponent,
 	}
 
 	// Handle service init
