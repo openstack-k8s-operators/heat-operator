@@ -30,6 +30,7 @@ import (
 	mariadb_test "github.com/openstack-k8s-operators/mariadb-operator/api/test/helpers"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
@@ -292,8 +293,8 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(heatName)
-			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
 		})
 
 		It("should have service config ready", func() {
@@ -365,8 +366,8 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(heatName)
-			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
 		})
 
 		It("should have db ready condition", func() {
@@ -422,8 +423,8 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
-			mariadb.SimulateMariaDBAccountCompleted(heatName)
-			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
 			dbSyncJobName := types.NamespacedName{
 				Name:      "heat-db-sync",
 				Namespace: namespace,
@@ -461,7 +462,7 @@ var _ = Describe("Heat controller", func() {
 			harness.Setup(
 				"Heat",
 				heatName.Namespace,
-				heatName.Name,
+				heat.DatabaseName,
 				"Heat",
 				mariadb, timeout, interval,
 			)
@@ -499,7 +500,8 @@ var _ = Describe("Heat controller", func() {
 				),
 			)
 			mariadb.SimulateMariaDBAccountCompleted(accountName)
-			mariadb.SimulateMariaDBDatabaseCompleted(heatName)
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+
 			dbSyncJobName := types.NamespacedName{
 				Name:      "heat-db-sync",
 				Namespace: namespace,
