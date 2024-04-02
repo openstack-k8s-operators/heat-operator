@@ -334,7 +334,7 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 	r.Log.Info("Reconciling Heat delete")
 
 	// remove db finalizer first
-	db, err := mariadbv1.GetDatabaseByNameAndAccount(ctx, helper, instance.Name, instance.Spec.DatabaseAccount, instance.Namespace)
+	db, err := mariadbv1.GetDatabaseByNameAndAccount(ctx, helper, heat.DatabaseCRName, instance.Spec.DatabaseAccount, instance.Namespace)
 	if err != nil && !k8s_errors.IsNotFound(err) {
 		return ctrl.Result{}, err
 	}
@@ -579,7 +579,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// a new MariaDBAccount is created and an old MariaDBAccount is marked
 	// deleted at once, where the finalizer will keep the old one around until
 	// it's safe to drop.
-	err = mariadbv1.DeleteUnusedMariaDBAccountFinalizers(ctx, helper, instance.Name, instance.Spec.DatabaseAccount, instance.Namespace)
+	err = mariadbv1.DeleteUnusedMariaDBAccountFinalizers(ctx, helper, heat.DatabaseCRName, instance.Spec.DatabaseAccount, instance.Namespace)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -1049,6 +1049,13 @@ func (r *HeatReconciler) ensureStackDomain(
 		return ctrl.Result{}, err
 	}
 
+	// Create heat_stack_user role as per:
+	// https://docs.openstack.org/heat/2023.2/admin/stack-domain-users.html#usage-workflow
+	_, err = os.CreateRole(r.Log, heat.HeatStackUserRole)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Create Heat user
 	userID, err := os.CreateUser(
 		r.Log,
@@ -1076,7 +1083,6 @@ func (r *HeatReconciler) ensureDB(
 	h *helper.Helper,
 	instance *heatv1beta1.Heat,
 ) (*mariadbv1.Database, ctrl.Result, error) {
-
 	// ensure MariaDBAccount exists.  This account record may be created by
 	// openstack-operator or the cloud operator up front without a specific
 	// MariaDBDatabase configured yet.   Otherwise, a MariaDBAccount CR is
@@ -1085,9 +1091,8 @@ func (r *HeatReconciler) ensureDB(
 	// yet associated with any MariaDBDatabase.
 	_, _, err := mariadbv1.EnsureMariaDBAccount(
 		ctx, h, instance.Spec.DatabaseAccount,
-		instance.Namespace, false, "heat",
+		instance.Namespace, false, heat.DatabaseUsernamePrefix,
 	)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			mariadbv1.MariaDBAccountReadyCondition,
@@ -1109,14 +1114,13 @@ func (r *HeatReconciler) ensureDB(
 	db := mariadbv1.NewDatabaseForAccount(
 		instance.Spec.DatabaseInstance, // mariadb/galera service to target
 		heat.DatabaseName,              // name used in CREATE DATABASE in mariadb
-		instance.Name,                  // CR name for MariaDBDatabase
+		heat.DatabaseCRName,            // CR name for MariaDBDatabase
 		instance.Spec.DatabaseAccount,  // CR name for MariaDBAccount
 		instance.Namespace,             // namespace
 	)
 
 	// create or patch the DB
 	ctrlResult, err := db.CreateOrPatchAll(ctx, h)
-
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DBReadyCondition,

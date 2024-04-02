@@ -442,7 +442,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 
 	serviceLabels := map[string]string{
 		common.AppSelector:       heat.ServiceName,
-		common.ComponentSelector: heat.APIComponent,
+		common.ComponentSelector: heat.EngineComponent,
 	}
 
 	// Handle service init
@@ -562,7 +562,7 @@ func (r *HeatEngineReconciler) generateServiceConfigMaps(
 
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
 
-	db, err := mariadbv1.GetDatabaseByName(ctx, h, heat.DatabaseName)
+	db, err := mariadbv1.GetDatabaseByNameAndAccount(ctx, h, heat.DatabaseCRName, instance.Spec.DatabaseAccount, instance.Namespace)
 	if err != nil {
 		return err
 	}
