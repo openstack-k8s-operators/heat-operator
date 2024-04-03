@@ -775,6 +775,12 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	}
 	// create Deployment - end
 
+	// We reached the end of the Reconcile, update the Ready condition based on
+	// the sub conditions
+	if instance.Status.Conditions.AllSubConditionIsTrue() {
+		instance.Status.Conditions.MarkTrue(
+			condition.ReadyCondition, condition.ReadyMessage)
+	}
 	r.Log.Info("Reconciled CfnAPI successfully")
 	return ctrl.Result{}, nil
 }
