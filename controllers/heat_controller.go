@@ -691,6 +691,8 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.ReadyCondition, condition.ReadyMessage)
 	}
 	r.Log.Info("Reconciled Heat successfully")
+	instance.Status.ObservedGeneration = instance.Generation
+
 	return ctrl.Result{}, nil
 }
 
