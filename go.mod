@@ -10,7 +10,7 @@ require (
 	github.com/onsi/ginkgo/v2 v2.17.1
 	github.com/onsi/gomega v1.32.0
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
-	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240403153038-cacd7b514718
+	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240408085033-bddcca32ce6e
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240402154848-e5f862707f49
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240404123425-54f145c97484
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240404123425-54f145c97484
