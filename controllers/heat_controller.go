@@ -911,6 +911,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		"StackDomainName":          heat.StackDomainName,
 		"MemcachedServers":         mc.GetMemcachedServerListString(),
 		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
+		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),
 		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
 			databaseAccount.Spec.UserName,
 			string(dbSecret.Data[mariadbv1.DatabasePasswordSelector]),
