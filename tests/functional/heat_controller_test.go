@@ -336,6 +336,8 @@ var _ = Describe("Heat controller", func() {
 			Expect(heatCfg).Should(
 				ContainSubstring(fmt.Sprintf("memcached_servers=inet:[memcached-0.memcached.%s.svc]:11211,inet:[memcached-1.memcached.%s.svc]:11211,inet:[memcached-2.memcached.%s.svc]:11211",
 					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+			Expect(heatCfg).Should(
+				ContainSubstring("tls_enabled=false"))
 			Expect(string(cm.Data["my.cnf"])).To(
 				ContainSubstring("[client]\nssl=0"))
 		})
@@ -451,6 +453,83 @@ var _ = Describe("Heat controller", func() {
 				heatv1.HeatStackDomainReadyCondition,
 				corev1.ConditionFalse,
 			)
+		})
+	})
+
+	When("heatAPI is configured with CA bundle", func() {
+		BeforeEach(func() {
+			spec := GetDefaultHeatSpec()
+			heatAPI := GetDefaultHeatAPISpec()
+			heatAPI["tls"] = map[string]interface{}{
+				"caBundleSecretName": "combined-ca-bundle",
+			}
+			spec["heatAPI"] = heatAPI
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			// memcached instance support tls
+			infra.SimulateTLSMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			// db supports tls
+			mariadb.SimulateMariaDBTLSDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+		})
+
+		It("should have service config ready", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionTrue,
+			)
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ReadyCondition,
+				corev1.ConditionFalse,
+			)
+		})
+
+		It("should create a Secret for heat.conf with memcached + DB using tls connection", func() {
+			cm := th.GetSecret(heatConfigSecretName)
+
+			heatCfg := string(cm.Data["heat.conf"])
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
+					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcached_servers=inet:[memcached-0.memcached.%s.svc]:11211,inet:[memcached-1.memcached.%s.svc]:11211,inet:[memcached-2.memcached.%s.svc]:11211",
+					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+			Expect(heatCfg).Should(
+				ContainSubstring("tls_enabled=true"))
+			Expect(string(cm.Data["my.cnf"])).To(
+				ContainSubstring("[client]\nssl-ca=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem\nssl=1"))
 		})
 	})
 
