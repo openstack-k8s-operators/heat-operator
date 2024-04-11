@@ -46,7 +46,6 @@ type HeatTemplate struct {
 
 // HeatServiceTemplate -
 type HeatServiceTemplate struct {
-
 	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=1
 	// +kubebuilder:validation:Maximum=32
@@ -55,13 +54,14 @@ type HeatServiceTemplate struct {
 	Replicas *int32 `json:"replicas"`
 
 	// +kubebuilder:validation:Optional
-	// NodeSelector to target subset of worker nodes for running the service
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	// ConfigOverwrite - interface to overwrite default config files like e.g. policy.json.
+	// But can also be used to add additional files. Those get added to the service config dir in /etc/<service> .
+	// TODO: -> implement
+	DefaultConfigOverwrite map[string]string `json:"defaultConfigOverwrite,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// Resources - Compute Resources required by this service (Limits/Requests).
-	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
-	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
+	// NodeSelector to target subset of worker nodes for running the service
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// CustomServiceConfig - customize the service config using this parameter to change service defaults,
@@ -70,10 +70,9 @@ type HeatServiceTemplate struct {
 	CustomServiceConfig string `json:"customServiceConfig,omitempty"`
 
 	// +kubebuilder:validation:Optional
-	// ConfigOverwrite - interface to overwrite default config files like e.g. policy.json.
-	// But can also be used to add additional files. Those get added to the service config dir in /etc/<service> .
-	// TODO: -> implement
-	DefaultConfigOverwrite map[string]string `json:"defaultConfigOverwrite,omitempty"`
+	// Resources - Compute Resources required by this service (Limits/Requests).
+	// https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.

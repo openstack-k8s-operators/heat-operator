@@ -24,11 +24,11 @@ import (
 
 // HeatEngineTemplate defines the input parameters for the Heat Engine service
 type HeatEngineTemplate struct {
-	HeatEngineTemplateCore `json:",inline"`
-
 	// +kubebuilder:validation:Required
 	// ContainerImage - Container Image URL
 	ContainerImage string `json:"containerImage"`
+
+	HeatEngineTemplateCore `json:",inline"`
 }
 
 // HeatEngineTemplate -
@@ -39,12 +39,6 @@ type HeatEngineTemplateCore struct {
 
 // HeatEngineSpec defines the desired state of HeatEngine
 type HeatEngineSpec struct {
-	// Common input parameters for all Heat services
-	HeatTemplate `json:",inline"`
-
-	// Input parameters for the Heat Engine service
-	HeatEngineTemplate `json:",inline"`
-
 	// +kubebuilder:validation:Required
 	// DatabaseHostname - Heat Database Hostname
 	DatabaseHostname string `json:"databaseHostname"`
@@ -61,6 +55,12 @@ type HeatEngineSpec struct {
 	// +operator-sdk:csv:customresourcedefinitions:type=spec
 	// TLS - Parameters related to the TLS
 	TLS tls.Ca `json:"tls,omitempty"`
+
+	// Common input parameters for all Heat services
+	HeatTemplate `json:",inline"`
+
+	// Input parameters for the Heat Engine service
+	HeatEngineTemplate `json:",inline"`
 }
 
 // HeatEngineStatus defines the observed state of HeatEngine
