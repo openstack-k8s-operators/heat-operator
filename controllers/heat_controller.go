@@ -23,7 +23,6 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/job"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
@@ -303,7 +302,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *HeatReconciler) findObjectsForSrc(ctx context.Context, src client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 
-	l := log.FromContext(context.Background()).WithName("Controllers").WithName("Heat")
+	l := log.FromContext(ctx).WithName("Controllers").WithName("Heat")
 
 	for _, field := range heatWatchFields {
 		crList := &heatv1beta1.HeatList{}
@@ -311,7 +310,7 @@ func (r *HeatReconciler) findObjectsForSrc(ctx context.Context, src client.Objec
 			FieldSelector: fields.OneTermEqualSelector(field, src.GetName()),
 			Namespace:     src.GetNamespace(),
 		}
-		err := r.List(context.TODO(), crList, listOps)
+		err := r.List(ctx, crList, listOps)
 		if err != nil {
 			return []reconcile.Request{}
 		}
@@ -530,7 +529,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
-	_, err = r.createHashOfInputHashes(ctx, instance, configMapVars)
+	_, err = r.createHashOfInputHashes(instance, configMapVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -560,13 +559,13 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// Handle service update
-	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
+	ctrlResult, err = r.reconcileUpdate()
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
 
 	// Handle service upgrade
-	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
+	ctrlResult, err = r.reconcileUpgrade()
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -814,7 +813,7 @@ func (r *HeatReconciler) reconcileInit(ctx context.Context,
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatReconciler) reconcileUpdate() (ctrl.Result, error) {
 	r.Log.Info("Reconciling Heat update")
 
 	// TODO: should have minor update tasks if required
@@ -1032,10 +1031,10 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 			Labels:        cmLabels,
 		},
 	}
-	return secret.EnsureSecrets(ctx, h, instance, cms, envVars)
+	return oko_secret.EnsureSecrets(ctx, h, instance, cms, envVars)
 }
 
-func (r *HeatReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.Heat, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatReconciler) reconcileUpgrade() (ctrl.Result, error) {
 	r.Log.Info("Reconciling Heat upgrade")
 
 	// TODO(bshephar): should have major version upgrade tasks
@@ -1048,7 +1047,6 @@ func (r *HeatReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1b
 // createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart
 // if any of the input resources change, like configs, passwords, ...
 func (r *HeatReconciler) createHashOfInputHashes(
-	ctx context.Context,
 	instance *heatv1beta1.Heat,
 	envVars map[string]env.Setter,
 ) (string, error) {

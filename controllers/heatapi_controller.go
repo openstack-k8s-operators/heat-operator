@@ -295,7 +295,7 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *HeatAPIReconciler) findObjectsForSrc(ctx context.Context, src client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 
-	l := log.FromContext(context.Background()).WithName("Controllers").WithName("HeatAPI")
+	l := log.FromContext(ctx).WithName("Controllers").WithName("HeatAPI")
 
 	for _, field := range heatAPIWatchFields {
 		crList := &heatv1beta1.HeatAPIList{}
@@ -303,7 +303,7 @@ func (r *HeatAPIReconciler) findObjectsForSrc(ctx context.Context, src client.Ob
 			FieldSelector: fields.OneTermEqualSelector(field, src.GetName()),
 			Namespace:     src.GetNamespace(),
 		}
-		err := r.List(context.TODO(), crList, listOps)
+		err := r.List(ctx, crList, listOps)
 		if err != nil {
 			return []reconcile.Request{}
 		}
@@ -690,7 +690,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	// create hash over all the different input resources to identify if any those changed
 	// and a restart/recreate is required.
 	//
-	inputHash, err := r.createHashOfInputHashes(ctx, instance, configMapVars)
+	inputHash, err := r.createHashOfInputHashes(instance, configMapVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -717,13 +717,13 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	}
 
 	// Handle service update
-	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
+	ctrlResult, err = r.reconcileUpdate()
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
 
 	// Handle service upgrade
-	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
+	ctrlResult, err = r.reconcileUpgrade()
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -787,7 +787,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatAPIReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatAPIReconciler) reconcileUpdate() (ctrl.Result, error) {
 	r.Log.Info("Reconciling API update")
 
 	// TODO: should have minor update tasks if required
@@ -797,7 +797,7 @@ func (r *HeatAPIReconciler) reconcileUpdate(ctx context.Context, instance *heatv
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatAPIReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatAPIReconciler) reconcileUpgrade() (ctrl.Result, error) {
 	r.Log.Info("Reconciling API upgrade")
 
 	// TODO: should have major version upgrade tasks
@@ -897,7 +897,6 @@ func (r *HeatAPIReconciler) generateServiceConfigMaps(
 // createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart
 // if any of the input resources change, like configs, passwords, ...
 func (r *HeatAPIReconciler) createHashOfInputHashes(
-	ctx context.Context,
 	instance *heatv1beta1.HeatAPI,
 	envVars map[string]env.Setter,
 ) (string, error) {
