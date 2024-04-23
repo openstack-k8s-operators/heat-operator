@@ -180,6 +180,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 		condition.UnknownCondition(condition.RoleBindingReadyCondition, condition.InitReason, condition.RoleBindingReadyInitMessage),
 	)
 	instance.Status.Conditions.Init(&cl)
+	instance.Status.ObservedGeneration = instance.Generation
 
 	// If we're not deleting this and the service object doesn't have our finalizer, add it.
 	if instance.DeletionTimestamp.IsZero() && controllerutil.AddFinalizer(instance, helper.GetFinalizer()) || isNewInstance {
@@ -691,6 +692,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.ReadyCondition, condition.ReadyMessage)
 	}
 	r.Log.Info("Reconciled Heat successfully")
+
 	return ctrl.Result{}, nil
 }
 
