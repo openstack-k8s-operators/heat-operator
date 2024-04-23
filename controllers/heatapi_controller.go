@@ -766,9 +766,14 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			condition.DeploymentReadyRunningMessage))
 		return ctrlResult, nil
 	}
-	instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
-	if instance.Status.ReadyCount > 0 {
-		instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
+
+	// Update the ReadyCount and evaluate the readiness only when the last
+	// ObservedGeneration is seen
+	if depl.GetDeployment().Generation == depl.GetDeployment().Status.ObservedGeneration {
+		instance.Status.ReadyCount = depl.GetDeployment().Status.ReadyReplicas
+		if instance.Status.ReadyCount > 0 {
+			instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
+		}
 	}
 	// create Deployment - end
 

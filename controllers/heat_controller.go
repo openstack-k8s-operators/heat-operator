@@ -623,16 +623,38 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
-	}
-	// Mirror HeatEngine status' ReadyCount to this parent CR
-	instance.Status.HeatEngineReadyCount = heatEngine.Status.ReadyCount
 
-	// Mirror HeatEngine's condition status
-	c := heatEngine.Status.Conditions.Mirror(heatv1beta1.HeatEngineReadyCondition)
-	if c != nil {
-		instance.Status.Conditions.Set(c)
+	// Check the observed Generation and mirror the condition from the
+	// underlying resource reconciliation
+	ngObsGen, err := r.checkHeatEngineGeneration(instance)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			heatv1beta1.HeatEngineReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			err.Error()))
+		return ctrl.Result{}, err
+	}
+	// Only mirror the underlying condition if the observedGeneration is
+	// the last seen
+	if !ngObsGen {
+		instance.Status.Conditions.Set(condition.UnknownCondition(
+			heatv1beta1.HeatEngineReadyCondition,
+			condition.InitReason,
+			heatv1beta1.HeatEngineReadyInitMessage,
+		))
+	} else {
+		// Mirror HeatEngine status' ReadyCount to this parent CR
+		instance.Status.HeatEngineReadyCount = heatEngine.Status.ReadyCount
+
+		// Mirror HeatEngine's condition status
+		c := heatEngine.Status.Conditions.Mirror(heatv1beta1.HeatEngineReadyCondition)
+		if c != nil {
+			instance.Status.Conditions.Set(c)
+		}
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		}
 	}
 
 	// deploy heat-api
@@ -647,17 +669,39 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	// Check the observed Generation and mirror the condition from the
+	// underlying resource reconciliation
+	apiObsGen, err := r.checkHeatAPIGeneration(instance)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			heatv1beta1.HeatAPIReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			heatv1beta1.HeatAPIReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
 	}
+	// Only mirror the underlying condition if the observedGeneration is
+	// the last seen
+	if !apiObsGen {
+		instance.Status.Conditions.Set(condition.UnknownCondition(
+			heatv1beta1.HeatAPIReadyCondition,
+			condition.InitReason,
+			heatv1beta1.HeatAPIReadyInitMessage,
+		))
+	} else {
+		// Mirror HeatAPI status' ReadyCount to this parent CR
+		instance.Status.HeatAPIReadyCount = heatAPI.Status.ReadyCount
 
-	// Mirror HeatAPI status' ReadyCount to this parent CR
-	instance.Status.HeatAPIReadyCount = heatAPI.Status.ReadyCount
+		// Mirror HeatAPI's condition status
+		c := heatAPI.Status.Conditions.Mirror(heatv1beta1.HeatAPIReadyCondition)
+		if c != nil {
+			instance.Status.Conditions.Set(c)
+		}
 
-	// Mirror HeatAPI's condition status
-	c = heatAPI.Status.Conditions.Mirror(heatv1beta1.HeatAPIReadyCondition)
-	if c != nil {
-		instance.Status.Conditions.Set(c)
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		}
 	}
 
 	// deploy heat-api-cfn
@@ -671,22 +715,40 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	if op != controllerutil.OperationResultNone {
-		r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+	// Check the observed Generation and mirror the condition from the
+	// underlying resource reconciliation
+	cfnObsGen, err := r.checkHeatCfnGeneration(instance)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			heatv1beta1.HeatCfnAPIReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			heatv1beta1.HeatAPIReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, err
 	}
-
-	// Mirror HeatCfnAPI status' ReadyCount to this parent CR
-	instance.Status.HeatCfnAPIReadyCount = heatCfnAPI.Status.ReadyCount
-
-	// Mirror HeatCfnAPI's condition status
-	c = heatCfnAPI.Status.Conditions.Mirror(heatv1beta1.HeatCfnAPIReadyCondition)
-	if c != nil {
-		instance.Status.Conditions.Set(c)
+	// Only mirror the underlying condition if the observedGeneration is
+	// the last seen
+	if !cfnObsGen {
+		instance.Status.Conditions.Set(condition.UnknownCondition(
+			heatv1beta1.HeatCfnAPIReadyCondition,
+			condition.InitReason,
+			heatv1beta1.HeatCfnAPIReadyInitMessage,
+		))
+	} else {
+		// Mirror HeatCfnAPI status' ReadyCount to this parent CR
+		instance.Status.HeatCfnAPIReadyCount = heatCfnAPI.Status.ReadyCount
+		// Mirror HeatCfnAPI's condition status
+		c := heatCfnAPI.Status.Conditions.Mirror(heatv1beta1.HeatCfnAPIReadyCondition)
+		if c != nil {
+			instance.Status.Conditions.Set(c)
+		}
+		if op != controllerutil.OperationResultNone {
+			r.Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		}
 	}
-
 	// We reached the end of the Reconcile, update the Ready condition based on
 	// the sub conditions
-	instance.Status.ObservedGeneration = instance.Generation
 	if instance.Status.Conditions.AllSubConditionIsTrue() {
 		instance.Status.Conditions.MarkTrue(
 			condition.ReadyCondition, condition.ReadyMessage)
@@ -1174,4 +1236,64 @@ func (r *HeatReconciler) ensureDB(
 	instance.Status.DatabaseHostname = db.GetDatabaseHostname()
 	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, condition.DBReadyMessage)
 	return db, ctrlResult, nil
+}
+
+// checkHeatAPIGeneration -
+func (r *HeatReconciler) checkHeatAPIGeneration(
+	instance *heatv1beta1.Heat,
+) (bool, error) {
+	api := &heatv1beta1.HeatAPIList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+	}
+	if err := r.Client.List(context.Background(), api, listOpts...); err != nil {
+		r.Log.Error(err, "Unable to retrieve HeatAPI CR %w")
+		return false, err
+	}
+	for _, item := range api.Items {
+		if item.Generation != item.Status.ObservedGeneration {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// checkHeatEngineGeneration -
+func (r *HeatReconciler) checkHeatEngineGeneration(
+	instance *heatv1beta1.Heat,
+) (bool, error) {
+	ng := &heatv1beta1.HeatEngineList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+	}
+	if err := r.Client.List(context.Background(), ng, listOpts...); err != nil {
+		r.Log.Error(err, "Unable to retrieve HeatEngine CR %w")
+		return false, err
+	}
+	for _, item := range ng.Items {
+		if item.Generation != item.Status.ObservedGeneration {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
+// checkHeatCfnGeneration -
+func (r *HeatReconciler) checkHeatCfnGeneration(
+	instance *heatv1beta1.Heat,
+) (bool, error) {
+	cf := &heatv1beta1.HeatCfnAPIList{}
+	listOpts := []client.ListOption{
+		client.InNamespace(instance.Namespace),
+	}
+	if err := r.Client.List(context.Background(), cf, listOpts...); err != nil {
+		r.Log.Error(err, "Unable to retrieve HeatCfnApi CR %w")
+		return false, err
+	}
+	for _, item := range cf.Items {
+		if item.Generation != item.Status.ObservedGeneration {
+			return false, nil
+		}
+	}
+	return true, nil
 }
