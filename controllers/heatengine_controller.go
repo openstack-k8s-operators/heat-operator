@@ -149,7 +149,7 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(ctx, instance, helper)
+		return r.reconcileDelete(instance, helper)
 	}
 
 	// Handle non-deleted clusters
@@ -242,7 +242,7 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *HeatEngineReconciler) findObjectsForSrc(ctx context.Context, src client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 
-	l := log.FromContext(context.Background()).WithName("Controllers").WithName("HeatEngine")
+	l := log.FromContext(ctx).WithName("Controllers").WithName("HeatEngine")
 
 	for _, field := range heatEngineWatchFields {
 		crList := &heatv1beta1.HeatEngineList{}
@@ -250,7 +250,7 @@ func (r *HeatEngineReconciler) findObjectsForSrc(ctx context.Context, src client
 			FieldSelector: fields.OneTermEqualSelector(field, src.GetName()),
 			Namespace:     src.GetNamespace(),
 		}
-		err := r.List(context.TODO(), crList, listOps)
+		err := r.List(ctx, crList, listOps)
 		if err != nil {
 			return []reconcile.Request{}
 		}
@@ -272,7 +272,7 @@ func (r *HeatEngineReconciler) findObjectsForSrc(ctx context.Context, src client
 	return requests
 }
 
-func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatEngineReconciler) reconcileDelete(instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Engine Delete")
 
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
@@ -281,12 +281,7 @@ func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *he
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatEngineReconciler) reconcileInit(
-	ctx context.Context,
-	instance *heatv1beta1.HeatEngine,
-	helper *helper.Helper,
-	serviceLabels map[string]string,
-) (ctrl.Result, error) {
+func (r *HeatEngineReconciler) reconcileInit() (ctrl.Result, error) {
 	r.Log.Info("Reconciling Engine init")
 
 	// TODO(tkajinam): Do we need this ?
@@ -429,7 +424,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	// create hash over all the different input resources to identify if any those changed
 	// and a restart/recreate is required.
 	//
-	inputHash, err := r.createHashOfInputHashes(ctx, instance, configMapVars)
+	inputHash, err := r.createHashOfInputHashes(instance, configMapVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -448,19 +443,19 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	}
 
 	// Handle service init
-	ctrlResult, err = r.reconcileInit(ctx, instance, helper, serviceLabels)
+	ctrlResult, err = r.reconcileInit()
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
 
 	// Handle service update
-	ctrlResult, err = r.reconcileUpdate(ctx, instance, helper)
+	ctrlResult, err = r.reconcileUpdate()
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
 
 	// Handle service upgrade
-	ctrlResult, err = r.reconcileUpgrade(ctx, instance, helper)
+	ctrlResult, err = r.reconcileUpgrade()
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -506,7 +501,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatEngineReconciler) reconcileUpdate(ctx context.Context, instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatEngineReconciler) reconcileUpdate() (ctrl.Result, error) {
 	r.Log.Info("Reconciling Engine update")
 
 	// TODO: should have minor update tasks if required
@@ -516,7 +511,7 @@ func (r *HeatEngineReconciler) reconcileUpdate(ctx context.Context, instance *he
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatEngineReconciler) reconcileUpgrade(ctx context.Context, instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatEngineReconciler) reconcileUpgrade() (ctrl.Result, error) {
 	r.Log.Info("Reconciling Engine upgrade")
 
 	// TODO: should have major version upgrade tasks
@@ -614,7 +609,6 @@ func (r *HeatEngineReconciler) generateServiceConfigMaps(
 // createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart
 // if any of the input resources change, like configs, passwords, ...
 func (r *HeatEngineReconciler) createHashOfInputHashes(
-	ctx context.Context,
 	instance *heatv1beta1.HeatEngine,
 	envVars map[string]env.Setter,
 ) (string, error) {
