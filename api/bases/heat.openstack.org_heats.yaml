@@ -69,6 +69,11 @@ spec:
                   files. Those get added to the service config dir in /etc/<service>
                   . TODO: -> implement'
                 type: object
+              enableSecureRBAC:
+                default: true
+                description: EnableSecureRBAC - Enable Consistent and Secure RBAC
+                  policies
+                type: boolean
               heatAPI:
                 description: HeatAPI - Spec definition for the API service of this
                   Heat deployment

@@ -53,6 +53,11 @@ type HeatSpec struct {
 	// +kubebuilder:validation:Required
 	// HeatEngine - Spec definition for the Engine service of this Heat deployment
 	HeatEngine HeatEngineTemplate `json:"heatEngine"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=true
+	// EnableSecureRBAC - Enable Consistent and Secure RBAC policies
+	EnableSecureRBAC bool `json:"enableSecureRBAC"`
 }
 
 // HeatSpecCore defines the desired state of Heat, for use with OpenStackControlplane (no containerImages)
