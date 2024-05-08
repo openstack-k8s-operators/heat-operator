@@ -22,7 +22,9 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 )
@@ -103,5 +105,69 @@ var _ = Describe("Heat Webhook", func() {
 				return fmt.Sprintf("%s", err)
 			}).Should(ContainSubstring("Changing the DatabaseInstance is not supported for existing deployments"))
 		})
+	})
+
+	It("rejects with wrong HeatAPI service override endpoint type", func() {
+		spec := GetDefaultHeatSpec()
+		apiSpec := GetDefaultHeatAPISpec()
+		apiSpec["override"] = map[string]interface{}{
+			"service": map[string]interface{}{
+				"internal": map[string]interface{}{},
+				"wrooong":  map[string]interface{}{},
+			},
+		}
+		spec["heatAPI"] = apiSpec
+
+		raw := map[string]interface{}{
+			"apiVersion": "heat.openstack.org/v1beta1",
+			"kind":       "Heat",
+			"metadata": map[string]interface{}{
+				"name":      heatName.Name,
+				"namespace": heatName.Namespace,
+			},
+			"spec": spec,
+		}
+
+		unstructuredObj := &unstructured.Unstructured{Object: raw}
+		_, err := controllerutil.CreateOrPatch(
+			th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(
+			ContainSubstring(
+				"invalid: spec.heatAPI.override.service[wrooong]: " +
+					"Invalid value: \"wrooong\": invalid endpoint type: wrooong"),
+		)
+	})
+
+	It("rejects with wrong HeatCfnAPI service override endpoint type", func() {
+		spec := GetDefaultHeatSpec()
+		apiSpec := GetDefaultHeatAPISpec()
+		apiSpec["override"] = map[string]interface{}{
+			"service": map[string]interface{}{
+				"internal": map[string]interface{}{},
+				"wrooong":  map[string]interface{}{},
+			},
+		}
+		spec["heatCfnAPI"] = apiSpec
+
+		raw := map[string]interface{}{
+			"apiVersion": "heat.openstack.org/v1beta1",
+			"kind":       "Heat",
+			"metadata": map[string]interface{}{
+				"name":      heatName.Name,
+				"namespace": heatName.Namespace,
+			},
+			"spec": spec,
+		}
+
+		unstructuredObj := &unstructured.Unstructured{Object: raw}
+		_, err := controllerutil.CreateOrPatch(
+			th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(
+			ContainSubstring(
+				"invalid: spec.heatCfnAPI.override.service[wrooong]: " +
+					"Invalid value: \"wrooong\": invalid endpoint type: wrooong"),
+		)
 	})
 })
