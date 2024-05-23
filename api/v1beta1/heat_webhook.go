@@ -25,6 +25,7 @@ package v1beta1
 import (
 	"fmt"
 
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -99,8 +100,53 @@ var _ webhook.Validator = &Heat{}
 func (r *Heat) ValidateCreate() (admission.Warnings, error) {
 	heatlog.Info("validate create", "name", r.Name)
 
-	// TODO(user): fill in your validation logic upon object creation.
+	var allErrs field.ErrorList
+	basePath := field.NewPath("spec")
+	if err := r.Spec.ValidateCreate(basePath); err != nil {
+		allErrs = append(allErrs, err...)
+	}
+
+	if len(allErrs) != 0 {
+		return nil, apierrors.NewInvalid(
+			schema.GroupKind{Group: "heat.openstack.org", Kind: "Heat"},
+			r.Name, allErrs)
+	}
+
 	return nil, nil
+}
+
+// ValidateCreate - Exported function wrapping non-exported validate functions,
+// this function can be called externally to validate an heat spec.
+func (r *HeatSpec) ValidateCreate(basePath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatAPI").Child("override").Child("service"),
+		r.HeatAPI.Override.Service)...)
+
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatCfnAPI").Child("override").Child("service"),
+		r.HeatCfnAPI.Override.Service)...)
+
+	return allErrs
+}
+
+func (r *HeatSpecCore) ValidateCreate(basePath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatAPI").Child("override").Child("service"),
+		r.HeatAPI.Override.Service)...)
+
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatCfnAPI").Child("override").Child("service"),
+		r.HeatCfnAPI.Override.Service)...)
+
+	return allErrs
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -112,25 +158,72 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 			fmt.Errorf("Expected a Heatv1 object, but got %T", oldHeat))
 	}
 
-	var errors field.ErrorList
+	var allErrs field.ErrorList
+	basePath := field.NewPath("spec")
+
+	if err := r.Spec.ValidateUpdate(oldHeat.Spec, basePath); err != nil {
+		allErrs = append(allErrs, err...)
+	}
+
+	if len(allErrs) != 0 {
+		return nil, apierrors.NewInvalid(
+			schema.GroupKind{Group: "heat.openstack.org", Kind: "Heat"},
+			r.Name, allErrs)
+	}
+
+	return nil, nil
+}
+
+// ValidateUpdate - Exported function wrapping non-exported validate functions,
+// this function can be called externally to validate an barbican spec.
+func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
 	// We currently have no logic in place to perform database migrations. Changing databases
 	// would render all of the existing stacks unmanageable. We should block changes to the
 	// databaseInstance to protect existing workloads.
-	if r.Spec.DatabaseInstance != oldHeat.Spec.DatabaseInstance {
-		errors = append(errors, field.Forbidden(
+	if r.DatabaseInstance != old.DatabaseInstance {
+		allErrs = append(allErrs, field.Forbidden(
 			field.NewPath("spec.databaseInstance"),
 			"Changing the DatabaseInstance is not supported for existing deployments"))
 	}
 
-	if errors != nil {
-		return nil, apierrors.NewInvalid(
-			schema.GroupKind{Group: "heat.openstack.org", Kind: "Heat"},
-			r.Name,
-			errors,
-		)
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatAPI").Child("override").Child("service"),
+		r.HeatAPI.Override.Service)...)
+
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatCfnAPI").Child("override").Child("service"),
+		r.HeatCfnAPI.Override.Service)...)
+
+	return allErrs
+}
+
+func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// We currently have no logic in place to perform database migrations. Changing databases
+	// would render all of the existing stacks unmanageable. We should block changes to the
+	// databaseInstance to protect existing workloads.
+	if r.DatabaseInstance != old.DatabaseInstance {
+		allErrs = append(allErrs, field.Forbidden(
+			field.NewPath("spec.databaseInstance"),
+			"Changing the DatabaseInstance is not supported for existing deployments"))
 	}
 
-	return nil, nil
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatAPI").Child("override").Child("service"),
+		r.HeatAPI.Override.Service)...)
+
+	// validate the service override key is valid
+	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatCfnAPI").Child("override").Child("service"),
+		r.HeatCfnAPI.Override.Service)...)
+
+	return allErrs
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type
