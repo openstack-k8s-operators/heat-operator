@@ -36,6 +36,8 @@ const (
 	HeatCfnAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
 	// HeatEngineContainerImage - default fall-back container image for HeatEngine if associated env var not provided
 	HeatEngineContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
+	// HeatDatabaseMigrationAnnotation - Allows users to bypass the webhook validations for changes to databaseInstance
+	HeatDatabaseMigrationAnnotation = "heat.openstack.org/database-migration"
 )
 
 // HeatSpec defines the desired state of Heat
