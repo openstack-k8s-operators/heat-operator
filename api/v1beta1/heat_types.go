@@ -77,6 +77,7 @@ type HeatSpecCore struct {
 // HeatSpec defines the desired state of Heat
 type HeatSpecBase struct {
 	// +kubebuilder:validation:Required
+	// +kubebuilder:default=openstack
 	// MariaDB instance name.
 	// Right now required by the maridb-operator to get the credentials from the instance to create the DB.
 	// Might not be required in future.
