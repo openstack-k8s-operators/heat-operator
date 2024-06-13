@@ -26,6 +26,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
+	routev1 "github.com/openshift/api/route/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -964,10 +965,23 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
+	var cfnAPIRouteFound bool
+	var heatMetadataServerURL string
+	cfnRouteName := fmt.Sprintf("%s-cfnapi-public", instance.Name)
+	cfnAPIRoute, err := r.getHeatRoute(instance, cfnRouteName)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			cfnAPIRouteFound = false
+		}
+	}
+
+	if cfnAPIRouteFound {
+		heatMetadataServerURL = cfnAPIRoute.Status.Ingress[0].Host
+	}
+
 	templateParameters := map[string]interface{}{
-		"KeystoneInternalURL":      authURL,
-		"ServiceUser":              instance.Spec.ServiceUser,
-		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
+		"KeystoneInternalURL": authURL,
+		"ServiceUser":         instance.Spec.ServiceUser, "StackDomainAdminUsername": heat.StackDomainAdminUsername,
 		"StackDomainName":          heat.StackDomainName,
 		"MemcachedServers":         mc.GetMemcachedServerListString(),
 		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
@@ -978,6 +992,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 			instance.Status.DatabaseHostname,
 			heat.DatabaseName,
 		),
+		"HeatMetadataServerUrl": heatMetadataServerURL,
 	}
 
 	// create HeatAPI httpd vhost template parameters
@@ -1288,4 +1303,13 @@ func (r *HeatReconciler) checkHeatCfnGeneration(
 		}
 	}
 	return true, nil
+}
+
+func (r *HeatReconciler) getHeatRoute(instance *heatv1beta1.Heat, name string) (route *routev1.Route, err error) {
+	route = &routev1.Route{}
+	routeKey := client.ObjectKey{Namespace: instance.Namespace, Name: name}
+
+	err = r.Client.Get(context.Background(), routeKey, route)
+
+	return
 }
