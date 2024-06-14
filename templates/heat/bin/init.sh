@@ -26,7 +26,10 @@ SVC_CFG=/etc/heat/heat.conf
 SVC_CFG_MERGED=/var/lib/config-data/merged/heat.conf
 
 # expect that the common.sh is in the same dir as the calling script
-SCRIPTPATH="$( cd "$(dirname "$0")" >/dev/null 2>&1 ; pwd -P )"
+SCRIPTPATH="$(
+    cd "$(dirname "$0")" >/dev/null 2>&1
+    pwd -P
+)"
 . ${SCRIPTPATH}/common.sh --source-only
 
 # Copy default service config from container image as base
@@ -49,14 +52,14 @@ done
 # and have it automatically detected, or would we have to somehow change the call
 # to the heat binary to tell it to use that custom conf dir?
 echo merging /var/lib/config-data/default/custom.conf into ${SVC_CFG_MERGED}
-crudini --merge ${SVC_CFG_MERGED} < /var/lib/config-data/default/custom.conf
+crudini --merge ${SVC_CFG_MERGED} </var/lib/config-data/default/custom.conf
 
 # TODO: a cleaner way to handle this?
 # There might be service-specific extra custom conf that needs to be merged
 # with the main heat.conf for this particular service
 if [ -n "$CUSTOMCONF" ]; then
     echo merging /var/lib/config-data/custom/${CUSTOMCONF} into ${SVC_CFG_MERGED}
-    crudini --merge ${SVC_CFG_MERGED} < /var/lib/config-data/custom/${CUSTOMCONF}
+    crudini --merge ${SVC_CFG_MERGED} </var/lib/config-data/custom/${CUSTOMCONF}
 fi
 
 # set secrets
@@ -66,7 +69,7 @@ fi
 
 # set auth_encryption_key
 if [ -n "$AUTH_ENCRYPTION_KEY" ]; then
-    crudini --set ${SVC_CFG_MERGED} DEFAULT auth_encryption_key $AUTH_ENCRYPTION_KEY
+    crudini --set ${SVC_CFG_MERGED} DEFAULT auth_encryption_key "${AUTH_ENCRYPTION_KEY}"
 fi
 
 crudini --set ${SVC_CFG_MERGED} keystone_authtoken password $PASSWORD
