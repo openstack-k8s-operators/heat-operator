@@ -277,6 +277,35 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return nil
 	}
 
+	routeFn := func(ctx context.Context, o client.Object) []reconcile.Request {
+		result := []reconcile.Request{}
+
+		// get all Heat CRs
+		heats := &heatv1beta1.HeatList{}
+		listOpts := []client.ListOption{
+			client.InNamespace(o.GetNamespace()),
+		}
+		if err := r.Client.List(context.Background(), heats, listOpts...); err != nil {
+			r.Log.Error(err, "Unable to retrieve Heat CRs %w")
+			return nil
+		}
+
+		for _, cr := range heats.Items {
+			if o.GetName() == fmt.Sprintf("%s-cfiapi-public", cr.Name) {
+				name := client.ObjectKey{
+					Namespace: o.GetNamespace(),
+					Name:      cr.Name,
+				}
+				r.Log.Info(fmt.Sprintf("Route %s is used by Heat CR %s", o.GetName(), cr.Name))
+				result = append(result, reconcile.Request{NamespacedName: name})
+			}
+		}
+		if len(result) > 0 {
+			return result
+		}
+		return nil
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.Heat{}).
 		Owns(&heatv1beta1.HeatAPI{}).
@@ -292,6 +321,8 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&rbacv1.RoleBinding{}).
 		Watches(&memcachedv1.Memcached{},
 			handler.EnqueueRequestsFromMapFunc(memcachedFn)).
+		Watches(&routev1.Route{},
+			handler.EnqueueRequestsFromMapFunc(routeFn)).
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),

@@ -94,3 +94,29 @@ func HeatConditionGetter(name types.NamespacedName) condition.Conditions {
 	instance := GetHeat(name)
 	return instance.Status.Conditions
 }
+
+func CreateHeatCFNRoute(name types.NamespacedName) client.Object {
+
+	raw := map[string]interface{}{
+		"apiVersion": "route.openshift.io/v1",
+		"kind":       "Route",
+		"metadata": map[string]interface{}{
+			"name":      name.Name,
+			"namespace": name.Namespace,
+		},
+		"spec": map[string]interface{}{
+			"host": "heat-cfnapi-public.host.test",
+			"port": map[string]interface{}{
+				"targetPort": "heat-cfnapi-public",
+			},
+			"to": map[string]interface{}{
+				"kind":           "Service",
+				"name":           "heat-cfnapi-public",
+				"weight":         100,
+				"wildcardPolicy": "None",
+			},
+		},
+	}
+
+	return th.CreateUnstructured(raw)
+}

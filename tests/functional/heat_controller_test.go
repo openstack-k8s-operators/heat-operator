@@ -46,6 +46,7 @@ var _ = Describe("Heat controller", func() {
 	var heatConfigSecretName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var keystoneAPI *keystonev1.KeystoneAPI
+	var heatCfnAPIRouteName types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -66,9 +67,14 @@ var _ = Describe("Heat controller", func() {
 				Replicas: ptr.To[int32](3),
 			},
 		}
+		heatCfnAPIRouteName = types.NamespacedName{
+			Namespace: namespace,
+			Name:      heatName.Name + "-cfnapi-public",
+		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
 		Expect(err).NotTo(HaveOccurred())
+		CreateHeatCFNRoute(heatCfnAPIRouteName)
 	})
 
 	When("A Heat instance is created", func() {
