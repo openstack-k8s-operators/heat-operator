@@ -970,7 +970,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
-	heatCfnAPIRoute, err := r.getHeatCFNAPIRoute(instance)
+	heatCfnAPIRoute, err := r.getHeatCfnAPIRoute(instance)
 	if err != nil {
 		return err
 	}
