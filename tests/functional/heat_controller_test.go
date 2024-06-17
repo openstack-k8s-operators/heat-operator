@@ -42,6 +42,7 @@ import (
 var _ = Describe("Heat controller", func() {
 
 	var heatName types.NamespacedName
+	var heatCfnAPIName types.NamespacedName
 	var heatTransportURLName types.NamespacedName
 	var heatConfigSecretName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
@@ -51,6 +52,10 @@ var _ = Describe("Heat controller", func() {
 
 		heatName = types.NamespacedName{
 			Name:      "heat",
+			Namespace: namespace,
+		}
+		heatCfnAPIName = types.NamespacedName{
+			Name:      "heat-cfnapi",
 			Namespace: namespace,
 		}
 		heatTransportURLName = types.NamespacedName{
@@ -272,9 +277,9 @@ var _ = Describe("Heat controller", func() {
 
 	When("keystoneAPI instance is available", func() {
 		BeforeEach(func() {
-			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			infra.SimulateMemcachedReady(types.NamespacedName{
 				Name:      "memcached",
@@ -298,6 +303,9 @@ var _ = Describe("Heat controller", func() {
 			)
 			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
 			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+			DeferCleanup(th.DeleteInstance, CreateHeatCfnAPI(heatCfnAPIName, GetDefaultHeatCfnAPISpec()))
+			keystone.SimulateKeystoneServiceReady(types.NamespacedName{Namespace: namespace, Name: "heat-cfn"})
+			keystone.SimulateKeystoneEndpointReady(types.NamespacedName{Namespace: namespace, Name: "heat-cfn"})
 		})
 
 		It("should have service config ready", func() {
@@ -331,6 +339,8 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring("auth_uri=%s/v3/ec2tokens", keystoneAPI.Status.APIEndpoints["internal"]))
 			Expect(heatCfg).Should(
 				ContainSubstring("auth_url=%s", keystoneAPI.Status.APIEndpoints["internal"]))
+			Eventually(heatCfg).Should(
+				ContainSubstring("heat_metadata_server_url=%s", "https://heat-cfnapi-public-openstack.test"))
 			Expect(heatCfg).Should(
 				ContainSubstring("www_authenticate_uri=http://keystone-internal.openstack.svc"))
 			Expect(heatCfg).Should(
