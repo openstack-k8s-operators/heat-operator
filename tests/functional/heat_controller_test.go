@@ -136,7 +136,7 @@ var _ = Describe("Heat controller", func() {
 			// it to run
 			Eventually(func() []string {
 				return GetHeat(heatName).Finalizers
-			}, timeout, interval).Should(ContainElement("Heat"))
+			}, timeout, interval).Should(ContainElement("openstack.org/heat"))
 		})
 
 		It("should not create a config secret", func() {
@@ -545,7 +545,7 @@ var _ = Describe("Heat controller", func() {
 				"Heat",
 				heatName.Namespace,
 				heat.DatabaseName,
-				"Heat",
+				"openstack.org/heat",
 				mariadb, timeout, interval,
 			)
 		},
