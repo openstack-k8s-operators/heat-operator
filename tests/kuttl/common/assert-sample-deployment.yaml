@@ -48,7 +48,7 @@ apiVersion: heat.openstack.org/v1beta1
 kind: HeatAPI
 metadata:
   finalizers:
-    - HeatAPI
+    - openstack.org/heatapi
   name: heat-api
   ownerReferences:
     - apiVersion: heat.openstack.org/v1beta1
@@ -75,7 +75,7 @@ apiVersion: heat.openstack.org/v1beta1
 kind: HeatCfnAPI
 metadata:
   finalizers:
-    - HeatCfnAPI
+    - openstack.org/heatcfnapi
   name: heat-cfnapi
   ownerReferences:
     - apiVersion: heat.openstack.org/v1beta1
@@ -102,7 +102,7 @@ apiVersion: heat.openstack.org/v1beta1
 kind: HeatEngine
 metadata:
   finalizers:
-    - HeatEngine
+    - openstack.org/heatengine
   name: heat-engine
   ownerReferences:
     - apiVersion: heat.openstack.org/v1beta1
