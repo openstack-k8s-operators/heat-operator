@@ -989,7 +989,8 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 			instance.Status.DatabaseHostname,
 			heat.DatabaseName,
 		),
-		"HeatMetadataServerUrl": heatCfnAPIRoute,
+		"HeatMetadataServerUrl":      heatCfnAPIRoute,
+		"HeatWaitConditionServerUrl": heatCfnAPIRoute,
 	}
 
 	// create HeatAPI httpd vhost template parameters
