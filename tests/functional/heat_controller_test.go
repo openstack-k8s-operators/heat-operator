@@ -341,6 +341,8 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring("auth_url=%s", keystoneAPI.Status.APIEndpoints["internal"]))
 			Eventually(heatCfg).Should(
 				ContainSubstring("heat_metadata_server_url=%s", "https://heat-cfnapi-public-openstack.test"))
+			Eventually(heatCfg).Should(
+				ContainSubstring("heat_waitcondition_server_url=%s", "https://heat-cfnapi-public-openstack.test/v1/waitcondition"))
 			Expect(heatCfg).Should(
 				ContainSubstring("www_authenticate_uri=http://keystone-internal.openstack.svc"))
 			Expect(heatCfg).Should(

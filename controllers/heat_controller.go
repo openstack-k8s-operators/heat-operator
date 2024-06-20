@@ -970,11 +970,6 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
-	heatCfnAPIRoute, err := r.getHeatCfnAPIRoute(instance)
-	if err != nil {
-		return err
-	}
-
 	templateParameters := map[string]interface{}{
 		"KeystoneInternalURL":      authURL,
 		"ServiceUser":              instance.Spec.ServiceUser,
