@@ -7,7 +7,6 @@ spec:
   databaseAccount: heat
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
-    database: HeatDatabasePassword
     service: HeatPassword
   replicas: 1
   resources: {}
