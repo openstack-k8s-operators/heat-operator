@@ -101,7 +101,6 @@ template:
   memcachedInstance: memcached
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
-    database: HeatDatabasePassword
     service: HeatPassword
   preserveJobs: false
   rabbitMqClusterName: rabbitmq
