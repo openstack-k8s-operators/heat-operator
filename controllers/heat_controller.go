@@ -996,6 +996,10 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		httpdVhostConfig[endpt.String()] = endptConfig
 	}
 	templateParameters["APIvHosts"] = httpdVhostConfig
+	templateParameters["APIGlobal"] = map[string]interface{}{
+		"APILogFile":      heatapi.HeatAPILogFile,
+		"APIErrorLogFile": heatapi.HeatAPIErrorLogFile,
+	}
 
 	// create HeatCfnAPI httpd vhost template parameters
 	httpdVhostConfig = map[string]interface{}{}
