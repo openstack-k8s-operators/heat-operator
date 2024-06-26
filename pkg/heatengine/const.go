@@ -18,4 +18,7 @@ package heatengine
 const (
 	// KollaConfig -
 	KollaConfig = "/var/lib/config-data/merged/heat-engine-config.json"
+
+	// HeatEngineLogFile -
+	HeatEngineLogFile = "/var/log/heat/heat-engine.log"
 )

@@ -42,6 +42,7 @@ import (
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	heatapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatapi"
 	heatcfnapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatcfnapi"
+	heatengine "github.com/openstack-k8s-operators/heat-operator/pkg/heatengine"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	labels "github.com/openstack-k8s-operators/lib-common/modules/common/labels"
 	common_rbac "github.com/openstack-k8s-operators/lib-common/modules/common/rbac"
@@ -972,6 +973,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		"MemcachedServers":         mc.GetMemcachedServerListString(),
 		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
 		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),
+		"LogFile":                  heatengine.HeatEngineLogFile,
 		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
 			databaseAccount.Spec.UserName,
 			string(dbSecret.Data[mariadbv1.DatabasePasswordSelector]),
