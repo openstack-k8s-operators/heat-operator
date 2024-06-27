@@ -33,7 +33,7 @@ func GetDefaultHeatSpec() map[string]interface{} {
 		"secret":           SecretName,
 		"heatEngine":       GetDefaultHeatEngineSpec(),
 		"heatAPI":          GetDefaultHeatAPISpec(),
-		"heatCfnAPI":       GetDefaultHeatCFNAPISpec(),
+		"heatCfnAPI":       GetDefaultHeatCfnAPISpec(),
 	}
 }
 
@@ -45,8 +45,29 @@ func GetDefaultHeatEngineSpec() map[string]interface{} {
 	return map[string]interface{}{}
 }
 
-func GetDefaultHeatCFNAPISpec() map[string]interface{} {
-	return map[string]interface{}{}
+func GetDefaultHeatCfnAPISpec() map[string]interface{} {
+
+	serviceOverride := map[string]interface{}{}
+	serviceOverride["public"] = map[string]interface{}{
+		"endpointURL": "https://heat-cfnapi-public-openstack.test",
+		"metadata": map[string]map[string]string{
+			"labels": {
+				"osctlplane":         "",
+				"osctlplane-service": "heat-cfn",
+			},
+		},
+	}
+	return map[string]interface{}{
+		"databaseHostname":   "openstack",
+		"secret":             SecretName,
+		"containerImage":     "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified",
+		"serviceAccount":     "heat",
+		"transportURLSecret": "rabbitmq-secret",
+
+		"override": map[string]interface{}{
+			"service": serviceOverride,
+		},
+	}
 }
 
 func CreateHeat(name types.NamespacedName, spec map[string]interface{}) client.Object {
@@ -63,8 +84,42 @@ func CreateHeat(name types.NamespacedName, spec map[string]interface{}) client.O
 	return th.CreateUnstructured(raw)
 }
 
+func CreateHeatCfnAPI(name types.NamespacedName, spec map[string]interface{}) client.Object {
+
+	parent := GetHeat(types.NamespacedName{Namespace: namespace, Name: "heat"})
+	raw := map[string]interface{}{
+		"apiVersion": "heat.openstack.org/v1beta1",
+		"kind":       "HeatCfnAPI",
+		"metadata": map[string]interface{}{
+			"name":      name.Name,
+			"namespace": name.Namespace,
+			"ownerReferences": []map[string]interface{}{
+				{
+					"apiVersion":         "heat.openstack.org/v1beta1",
+					"blockOwnerDeletion": true,
+					"controller":         true,
+					"kind":               "Heat",
+					"name":               parent.GetObjectMeta().GetName(),
+					"uid":                parent.GetObjectMeta().GetUID(),
+				},
+			},
+		},
+		"spec": spec,
+	}
+	return th.CreateUnstructured(raw)
+
+}
+
 func GetHeat(name types.NamespacedName) *heatv1.Heat {
 	instance := &heatv1.Heat{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
+	}, timeout, interval).Should(Succeed())
+	return instance
+}
+
+func GetHeatCfnAPI(name types.NamespacedName) *heatv1.HeatCfnAPI {
+	instance := &heatv1.HeatCfnAPI{}
 	Eventually(func(g Gomega) {
 		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
 	}, timeout, interval).Should(Succeed())

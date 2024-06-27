@@ -714,6 +714,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrl.Result{}, err
 	}
+
 	// Check the observed Generation and mirror the condition from the
 	// underlying resource reconciliation
 	cfnObsGen, err := r.checkHeatCfnGeneration(instance)
@@ -961,6 +962,11 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		return err
 	}
 
+	var heatCfnAPIRoute string
+	if _, ok := instance.Spec.HeatCfnAPI.Override.Service["public"]; ok {
+		heatCfnAPIRoute = *instance.Spec.HeatCfnAPI.Override.Service["public"].EndpointURL
+	}
+
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
@@ -978,6 +984,7 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 			instance.Status.DatabaseHostname,
 			heat.DatabaseName,
 		),
+		"HeatMetadataServerUrl": heatCfnAPIRoute,
 	}
 
 	// create HeatAPI httpd vhost template parameters
