@@ -129,6 +129,25 @@ func Deployment(
 					ServiceAccountName: instance.Spec.ServiceAccount,
 					Containers: []corev1.Container{
 						{
+							Name: instance.Name + "-logs",
+							Command: []string{
+								"/bin/bash",
+							},
+							Args: []string{
+								"-c",
+								"find /var/log/httpd -type f -exec tail -n+1 -F {} +",
+							},
+							Image: instance.Spec.ContainerImage,
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: &runAsUser,
+							},
+							Env:            env.MergeEnvs([]corev1.EnvVar{}, envVars),
+							VolumeMounts:   volumeMounts,
+							Resources:      instance.Spec.Resources,
+							ReadinessProbe: readinessProbe,
+							LivenessProbe:  livenessProbe,
+						},
+						{
 							Name: heat.ServiceName + "-" + heat.CfnAPIComponent,
 							Command: []string{
 								"/bin/bash",

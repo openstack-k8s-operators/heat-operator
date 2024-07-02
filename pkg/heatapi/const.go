@@ -21,4 +21,10 @@ const (
 
 	// ServiceName -
 	ServiceName = "heat-api"
+
+	// HeatAPILogFile -
+	HeatAPILogFile = "/var/log/httpd/heat-api"
+
+	// HeatAPIErrorLogFile -
+	HeatAPIErrorLogFile = "/var/log/httpd/heat-api-error"
 )

@@ -49,6 +49,18 @@ func GetVolumes(name string) []corev1.Volume {
 				EmptyDir: &corev1.EmptyDirVolumeSource{Medium: ""},
 			},
 		},
+		{
+			Name: "heat-logs",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{Medium: ""},
+			},
+		},
+		{
+			Name: "httpd-logs",
+			VolumeSource: corev1.VolumeSource{
+				EmptyDir: &corev1.EmptyDirVolumeSource{Medium: ""},
+			},
+		},
 	}
 }
 
@@ -76,8 +88,12 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 			SubPath:   "my.cnf",
 			ReadOnly:  true,
 		},
+		{
+			Name:      "heat-logs",
+			MountPath: "/var/log/heat",
+			ReadOnly:  false,
+		},
 	}
-
 }
 
 // GetVolumeMounts ...
@@ -98,6 +114,16 @@ func GetVolumeMounts() []corev1.VolumeMount {
 			MountPath: "/etc/my.cnf",
 			SubPath:   "my.cnf",
 			ReadOnly:  true,
+		},
+		{
+			Name:      "heat-logs",
+			MountPath: "/var/log/heat",
+			ReadOnly:  false,
+		},
+		{
+			Name:      "httpd-logs",
+			MountPath: "/var/log/httpd",
+			ReadOnly:  false,
 		},
 	}
 }

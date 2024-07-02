@@ -88,6 +88,51 @@ spec:
       containers:
       - args:
         - -c
+        - find /var/log/httpd -type f -exec tail -n+1 -F {} +
+        command:
+        - /bin/bash
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /usr/local/bin/container-scripts
+          name: scripts
+          readOnly: true
+        - mountPath: /var/lib/config-data/merged
+          name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
+        - mountPath: /var/log/httpd
+          name: httpd-logs
+        - mountPath: /var/lib/kolla/config_files/config.json
+          name: config-data-merged
+          readOnly: true
+          subPath: heat-api-config.json
+        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+          name: combined-ca-bundle
+          readOnly: true
+          subPath: tls-ca-bundle.pem
+        - mountPath: /var/lib/config-data/tls/certs/internal.crt
+          name: internal-tls-certs
+          readOnly: true
+          subPath: tls.crt
+        - mountPath: /var/lib/config-data/tls/private/internal.key
+          name: internal-tls-certs
+          readOnly: true
+          subPath: tls.key
+        - mountPath: /var/lib/config-data/tls/certs/public.crt
+          name: public-tls-certs
+          readOnly: true
+          subPath: tls.crt
+        - mountPath: /var/lib/config-data/tls/private/public.key
+          name: public-tls-certs
+          readOnly: true
+          subPath: tls.key
+      - args:
+        - -c
         - /usr/local/bin/kolla_httpd_setup && /usr/local/bin/kolla_start
         volumeMounts:
         - mountPath: /usr/local/bin/container-scripts
@@ -99,6 +144,10 @@ spec:
           name: config-data
           readOnly: true
           subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
+        - mountPath: /var/log/httpd
+          name: httpd-logs
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data-merged
           readOnly: true
@@ -139,6 +188,8 @@ spec:
           name: config-data
           readOnly: true
           subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
         - mountPath: /var/lib/config-data/custom
           name: config-data-custom
           readOnly: true
@@ -157,6 +208,10 @@ spec:
           secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
+      - emptyDir: {}
+        name: heat-logs
+      - emptyDir: {}
+        name: httpd-logs
       - name: config-data-custom
         secret:
           defaultMode: 416
@@ -185,6 +240,51 @@ spec:
       containers:
       - args:
         - -c
+        - find /var/log/httpd -type f -exec tail -n+1 -F {} +
+        command:
+        - /bin/bash
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - mountPath: /usr/local/bin/container-scripts
+          name: scripts
+          readOnly: true
+        - mountPath: /var/lib/config-data/merged
+          name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
+        - mountPath: /var/log/httpd
+          name: httpd-logs
+        - mountPath: /var/lib/kolla/config_files/config.json
+          name: config-data-merged
+          readOnly: true
+          subPath: heat-cfnapi-config.json
+        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+          name: combined-ca-bundle
+          readOnly: true
+          subPath: tls-ca-bundle.pem
+        - mountPath: /var/lib/config-data/tls/certs/internal.crt
+          name: internal-tls-certs
+          readOnly: true
+          subPath: tls.crt
+        - mountPath: /var/lib/config-data/tls/private/internal.key
+          name: internal-tls-certs
+          readOnly: true
+          subPath: tls.key
+        - mountPath: /var/lib/config-data/tls/certs/public.crt
+          name: public-tls-certs
+          readOnly: true
+          subPath: tls.crt
+        - mountPath: /var/lib/config-data/tls/private/public.key
+          name: public-tls-certs
+          readOnly: true
+          subPath: tls.key
+      - args:
+        - -c
         - /usr/local/bin/kolla_httpd_setup && /usr/local/bin/kolla_start
         volumeMounts:
         - mountPath: /usr/local/bin/container-scripts
@@ -196,6 +296,10 @@ spec:
           name: config-data
           readOnly: true
           subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
+        - mountPath: /var/log/httpd
+          name: httpd-logs
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data-merged
           readOnly: true
@@ -236,6 +340,8 @@ spec:
           name: config-data
           readOnly: true
           subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
         - mountPath: /var/lib/config-data/custom
           name: config-data-custom
           readOnly: true
@@ -254,6 +360,10 @@ spec:
           secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
+      - emptyDir: {}
+        name: heat-logs
+      - emptyDir: {}
+        name: httpd-logs
       - name: config-data-custom
         secret:
           defaultMode: 416
@@ -281,6 +391,37 @@ spec:
     spec:
       containers:
       - args:
+        - --single-child
+        - --
+        - /usr/bin/tail
+        - -n+1
+        - -F
+        - /var/log/heat/heat-engine.log
+        command:
+        - /usr/bin/dumb-init
+        volumeMounts:
+        - mountPath: /usr/local/bin/container-scripts
+          name: scripts
+          readOnly: true
+        - mountPath: /var/lib/config-data/merged
+          name: config-data-merged
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
+        - mountPath: /var/log/httpd
+          name: httpd-logs
+        - mountPath: /var/lib/kolla/config_files/config.json
+          name: config-data-merged
+          readOnly: true
+          subPath: heat-engine-config.json
+        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
+          name: combined-ca-bundle
+          readOnly: true
+          subPath: tls-ca-bundle.pem
+      - args:
         - -c
         - /usr/local/bin/kolla_start
         volumeMounts:
@@ -293,6 +434,10 @@ spec:
           name: config-data
           readOnly: true
           subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
+        - mountPath: /var/log/httpd
+          name: httpd-logs
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data-merged
           readOnly: true
@@ -317,6 +462,8 @@ spec:
           name: config-data
           readOnly: true
           subPath: my.cnf
+        - mountPath: /var/log/heat
+          name: heat-logs
         - mountPath: /var/lib/config-data/custom
           name: config-data-custom
           readOnly: true
@@ -335,6 +482,10 @@ spec:
           secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
+      - emptyDir: {}
+        name: heat-logs
+      - emptyDir: {}
+        name: httpd-logs
       - name: config-data-custom
         secret:
           defaultMode: 416

@@ -99,6 +99,27 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 					ServiceAccountName: instance.Spec.ServiceAccount,
 					Containers: []corev1.Container{
 						{
+							Name: instance.Name + "-log",
+							Command: []string{
+								"/usr/bin/dumb-init",
+							},
+							Args: []string{
+								"--single-child",
+								"--",
+								"/usr/bin/tail",
+								"-n+1",
+								"-F",
+								fmt.Sprint(HeatEngineLogFile),
+							},
+							Image: instance.Spec.ContainerImage,
+							SecurityContext: &corev1.SecurityContext{
+								RunAsUser: &runAsUser,
+							},
+							Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
+							VolumeMounts: volumeMounts,
+							Resources:    instance.Spec.Resources,
+						},
+						{
 							Name: fmt.Sprintf("%s-%s", heat.ServiceName, heat.EngineComponent),
 							Command: []string{
 								"/bin/bash",
