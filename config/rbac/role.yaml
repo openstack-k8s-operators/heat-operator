@@ -25,6 +25,7 @@ rules:
   - create
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -104,6 +105,7 @@ rules:
   resources:
   - heatapis/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - heat.openstack.org
@@ -130,6 +132,7 @@ rules:
   resources:
   - heatcfnapis/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - heat.openstack.org
@@ -156,6 +159,7 @@ rules:
   resources:
   - heatengines/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - heat.openstack.org
@@ -182,6 +186,7 @@ rules:
   resources:
   - heats/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - heat.openstack.org
@@ -240,6 +245,7 @@ rules:
   resources:
   - mariadbaccounts/finalizers
   verbs:
+  - patch
   - update
 - apiGroups:
   - mariadb.openstack.org
@@ -281,6 +287,7 @@ rules:
   - create
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:
@@ -291,6 +298,7 @@ rules:
   - create
   - get
   - list
+  - patch
   - update
   - watch
 - apiGroups:

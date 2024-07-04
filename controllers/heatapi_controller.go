@@ -75,7 +75,7 @@ var keystoneServices = []map[string]string{
 
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/status,verbs=get;update;patch
-// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/finalizers,verbs=update
+// +kubebuilder:rbac:groups=heat.openstack.org,resources=heatapis/finalizers,verbs=update;patch
 // +kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=apps,resources=deployments,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;create;update;patch;delete;watch
