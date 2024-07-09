@@ -47,9 +47,6 @@ spec:
       version: v1beta1
   description: Heat Operator
   displayName: Heat Operator
-  icon:
-  - base64data: ""
-    mediatype: ""
   install:
     spec:
       deployments: null
