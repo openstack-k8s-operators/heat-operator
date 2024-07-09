@@ -12,10 +12,10 @@ require (
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
 	github.com/openstack-k8s-operators/infra-operator/apis v0.3.1-0.20240704231227-c7ee9d3de988
 	github.com/openstack-k8s-operators/keystone-operator/api v0.3.1-0.20240704220917-e65444cf5f26
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.3.1-0.20240624132705-6c8da3c0bbfd
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.3.1-0.20240624132705-6c8da3c0bbfd
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.3.1-0.20240624132705-6c8da3c0bbfd
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.3.1-0.20240704221159-db920d37527a
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.4.1-0.20240709142659-5a0b4d5c6176
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20240709142659-5a0b4d5c6176
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.4.1-0.20240709142659-5a0b4d5c6176
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.4.1-0.20240708154702-5f04a31970ae
 	k8s.io/api v0.28.11
 	k8s.io/apimachinery v0.28.11
 	k8s.io/client-go v0.28.11
