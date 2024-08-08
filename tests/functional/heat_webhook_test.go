@@ -185,4 +185,26 @@ var _ = Describe("Heat Webhook", func() {
 			}).Should(Succeed())
 		})
 	})
+
+	When("The DatabaseInstance is changed for existing deployments from null to something valid", func() {
+		BeforeEach(func() {
+
+			heatSpecNullDBInstance := map[string]interface{}{
+				"databaseInstance": "",
+				"secret":           SecretName,
+				"heatEngine":       GetDefaultHeatEngineSpec(),
+				"heatAPI":          GetDefaultHeatAPISpec(),
+				"heatCfnAPI":       GetDefaultHeatCFNAPISpec(),
+			}
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, heatSpecNullDBInstance))
+		})
+
+		It("Should be accepted by the webhook", func() {
+			Eventually(func(g Gomega) {
+				instance := GetHeat(heatName)
+				instance.Spec.DatabaseInstance = "new-database"
+				g.Expect(th.K8sClient.Update(th.Ctx, instance)).Should(Succeed())
+			}).Should(Succeed())
+		})
+	})
 })

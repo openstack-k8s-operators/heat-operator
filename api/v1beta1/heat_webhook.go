@@ -186,7 +186,7 @@ func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotation
 		// We currently have no logic in place to perform database migrations. Changing databases
 		// would render all of the existing stacks unmanageable. We should block changes to the
 		// databaseInstance to protect existing workloads.
-		if r.DatabaseInstance != old.DatabaseInstance {
+		if old.DatabaseInstance != "" && r.DatabaseInstance != old.DatabaseInstance {
 			allErrs = append(allErrs, field.Forbidden(
 				field.NewPath("spec.databaseInstance"),
 				"Changing the DatabaseInstance is not supported for existing deployments"))
