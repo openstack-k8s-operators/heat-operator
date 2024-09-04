@@ -56,46 +56,8 @@ func InitContainer(init APIDetails) []corev1.Container {
 	envVars["DatabaseHost"] = env.SetValue(init.DatabaseHost)
 	envVars["DatabaseName"] = env.SetValue(init.DatabaseName)
 
-	envs := []corev1.EnvVar{
-		{
-			Name: "HeatPassword",
-			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: init.OSPSecret,
-					},
-					Key: init.UserPasswordSelector,
-				},
-			},
-		},
-		{
-			Name: "AuthEncryptionKey",
-			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: init.OSPSecret,
-					},
-					Key: init.AuthEncryptionKeySelector,
-				},
-			},
-		},
-	}
+	envs := []corev1.EnvVar{}
 	envs = env.MergeEnvs(envs, envVars)
-
-	if init.TransportURL != "" {
-		envTransport := corev1.EnvVar{
-			Name: "TransportURL",
-			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: init.TransportURL,
-					},
-					Key: "transport_url",
-				},
-			},
-		}
-		envs = append(envs, envTransport)
-	}
 
 	return []corev1.Container{
 		{

@@ -965,14 +965,30 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 		return err
 	}
 
+	ospSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Spec.Secret, instance.Namespace)
+	if err != nil {
+		return err
+	}
+	password := strings.TrimSuffix(string(ospSecret.Data[instance.Spec.PasswordSelectors.Service]), "\n")
+	authEncryptionKey := strings.TrimSuffix(string(ospSecret.Data[instance.Spec.PasswordSelectors.AuthEncryptionKey]), "\n")
+
+	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
+	if err != nil {
+		return err
+	}
+	transportURL := strings.TrimSuffix(string(transportURLSecret.Data["transport_url"]), "\n")
+
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
 	templateParameters := map[string]interface{}{
 		"KeystoneInternalURL":      authURL,
 		"ServiceUser":              instance.Spec.ServiceUser,
+		"ServicePassword":          password,
 		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
 		"StackDomainName":          heat.StackDomainName,
+		"AuthEncryptionKey":        authEncryptionKey,
+		"TransportURL":             transportURL,
 		"MemcachedServers":         mc.GetMemcachedServerListString(),
 		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
 		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),

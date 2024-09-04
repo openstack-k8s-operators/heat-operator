@@ -15,13 +15,6 @@
 # under the License.
 set -ex
 
-# Secrets are obtained from ENV variables.
-export PASSWORD=${HeatPassword:?"Please specify a HeatPassword variable."}
-export TRANSPORT_URL=${TransportURL:-""}
-export AUTH_ENCRYPTION_KEY=${AuthEncryptionKey:-""}
-
-export CUSTOMCONF=${CustomConf:-""}
-
 SVC_CFG=/etc/heat/heat.conf
 SVC_CFG_MERGED=/var/lib/config-data/merged/heat.conf
 
@@ -54,24 +47,7 @@ done
 echo merging /var/lib/config-data/default/custom.conf into ${SVC_CFG_MERGED}
 crudini --merge ${SVC_CFG_MERGED} </var/lib/config-data/default/custom.conf
 
-# TODO: a cleaner way to handle this?
-# There might be service-specific extra custom conf that needs to be merged
-# with the main heat.conf for this particular service
-if [ -n "$CUSTOMCONF" ]; then
-    echo merging /var/lib/config-data/custom/${CUSTOMCONF} into ${SVC_CFG_MERGED}
-    crudini --merge ${SVC_CFG_MERGED} </var/lib/config-data/custom/${CUSTOMCONF}
-fi
-
 # set secrets
 if [ -n "$TRANSPORT_URL" ]; then
     crudini --set ${SVC_CFG_MERGED} DEFAULT transport_url $TRANSPORT_URL
 fi
-
-# set auth_encryption_key
-if [ -n "$AUTH_ENCRYPTION_KEY" ]; then
-    crudini --set ${SVC_CFG_MERGED} DEFAULT auth_encryption_key "${AUTH_ENCRYPTION_KEY}"
-fi
-
-crudini --set ${SVC_CFG_MERGED} keystone_authtoken password $PASSWORD
-crudini --set ${SVC_CFG_MERGED} DEFAULT stack_domain_admin_password $PASSWORD
-crudini --set ${SVC_CFG_MERGED} trustee password $PASSWORD
