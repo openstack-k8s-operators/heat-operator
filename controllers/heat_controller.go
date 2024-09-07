@@ -284,7 +284,6 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&mariadbv1.MariaDBDatabase{}).
 		Owns(&mariadbv1.MariaDBAccount{}).
 		Owns(&batchv1.Job{}).
-		Owns(&corev1.ConfigMap{}).
 		Owns(&rabbitmqv1.TransportURL{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.Role{}).
@@ -376,8 +375,8 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return rbacResult, err
 	}
 
-	// ConfigMap
-	configMapVars := make(map[string]env.Setter)
+	// Secret
+	secretVars := make(map[string]env.Setter)
 
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
@@ -401,7 +400,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	configMapVars[ospSecret.Name] = env.SetValue(hash)
+	secretVars[ospSecret.Name] = env.SetValue(hash)
 
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
@@ -499,7 +498,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	configMapVars[transportURLSecret.Name] = env.SetValue(hash)
+	secretVars[transportURLSecret.Name] = env.SetValue(hash)
 
 	// run check TransportURL secret - end
 
@@ -513,16 +512,16 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	//
-	// Create ConfigMaps and Secrets required as input for the Service and calculate an overall hash of hashes
+	// Create Secrets required as input for the Service and calculate an overall hash of hashes
 	//
 
 	//
-	// create Configmap required for Heat input
-	// - %-scripts configmap holding scripts to e.g. bootstrap the service
-	// - %-config configmap holding minimal heat config required to get the service up, user can add additional files to be added to the service
+	// create Secret required for Heat input
+	// - %-scripts secret holding scripts to e.g. bootstrap the service
+	// - %-config secret holding minimal heat config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceConfigMaps(ctx, instance, helper, &configMapVars, memcached, db)
+	err = r.generateServiceSecrets(ctx, instance, helper, &secretVars, memcached, db)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -533,7 +532,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
-	_, err = r.createHashOfInputHashes(instance, configMapVars)
+	_, err = r.createHashOfInputHashes(instance, secretVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -544,7 +543,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
-	// Create ConfigMaps and Secrets - end
+	// Create Secrets - end
 
 	instance.Status.Conditions.MarkTrue(condition.ServiceConfigReadyCondition, condition.ServiceConfigReadyMessage)
 
@@ -918,9 +917,9 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 	return deployment, op, err
 }
 
-// generateServiceConfigMaps - create create configmaps which hold scripts and service configuration
+// generateServiceSecrets - create create secrets which hold scripts and service configuration
 // TODO add DefaultConfigOverwrite
-func (r *HeatReconciler) generateServiceConfigMaps(
+func (r *HeatReconciler) generateServiceSecrets(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 	h *helper.Helper,
@@ -929,13 +928,13 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	db *mariadbv1.Database,
 ) error {
 	//
-	// create Configmap/Secret required for heat input
-	// - %-scripts configmap holding scripts to e.g. bootstrap the service
-	// - %-config configmap holding minimal heat config required to get the service up, user can add additional files to be added to the service
+	// create Secret required for heat input
+	// - %-scripts secret holding scripts to e.g. bootstrap the service
+	// - %-config secret holding minimal heat config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the ospSecret via the init container
 	//
 
-	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
+	secretLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
 
 	var tlsCfg *tls.Service
 	if instance.Spec.HeatAPI.TLS.Ca.CaBundleSecretName != "" {
@@ -1014,17 +1013,17 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 	}
 	templateParameters["CfnAPIvHosts"] = httpdVhostConfig
 
-	cms := []util.Template{
-		// ScriptsConfigMap
+	secrets := []util.Template{
+		// ScriptsSecret
 		{
 			Name:               fmt.Sprintf("%s-scripts", instance.Name),
 			Namespace:          instance.Namespace,
 			Type:               util.TemplateTypeScripts,
 			InstanceType:       instance.Kind,
 			AdditionalTemplate: map[string]string{"common.sh": "/common/common.sh"},
-			Labels:             cmLabels,
+			Labels:             secretLabels,
 		},
-		// ConfigMap
+		// Secret
 		{
 			Name:          fmt.Sprintf("%s-config-data", instance.Name),
 			Namespace:     instance.Namespace,
@@ -1032,10 +1031,10 @@ func (r *HeatReconciler) generateServiceConfigMaps(
 			InstanceType:  instance.Kind,
 			CustomData:    customData,
 			ConfigOptions: templateParameters,
-			Labels:        cmLabels,
+			Labels:        secretLabels,
 		},
 	}
-	return oko_secret.EnsureSecrets(ctx, h, instance, cms, envVars)
+	return oko_secret.EnsureSecrets(ctx, h, instance, secrets, envVars)
 }
 
 func (r *HeatReconciler) reconcileUpgrade() (ctrl.Result, error) {
@@ -1084,7 +1083,7 @@ func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) 
 }
 
 // ensureStackDomain creates the OpenStack domain for Heat stacks. It then assigns the user to the Heat stacks domain.
-// This function relies on the keystoneAPI variable that is set globally in generateServiceConfigMaps().
+// This function relies on the keystoneAPI variable that is set globally in generateServiceSecrets().
 func (r *HeatReconciler) ensureStackDomain(
 	ctx context.Context,
 	helper *helper.Helper,

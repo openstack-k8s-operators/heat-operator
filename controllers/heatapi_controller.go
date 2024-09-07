@@ -278,7 +278,6 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		For(&heatv1beta1.HeatAPI{}).
 		Owns(&keystonev1.KeystoneService{}).
 		Owns(&keystonev1.KeystoneEndpoint{}).
-		Owns(&corev1.ConfigMap{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		// watch the config CMs we don't own
@@ -549,8 +548,8 @@ func (r *HeatAPIReconciler) reconcileInit(
 func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Service")
 
-	// ConfigMap
-	configMapVars := make(map[string]env.Setter)
+	// Secret
+	secretVars := make(map[string]env.Setter)
 
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
@@ -574,7 +573,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	configMapVars[ospSecret.Name] = env.SetValue(hash)
+	secretVars[ospSecret.Name] = env.SetValue(hash)
 	// run check OpenStack secret - end
 
 	//
@@ -599,7 +598,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	configMapVars[instance.Spec.TransportURLSecret] = env.SetValue(hash)
+	secretVars[instance.Spec.TransportURLSecret] = env.SetValue(hash)
 	// run check TransportURL secret - end
 
 	//
@@ -607,11 +606,11 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	//
 	parentHeatName := heat.GetOwningHeatName(instance)
 
-	ctrlResult, err := r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-scripts", parentHeatName), &configMapVars)
+	ctrlResult, err := r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-scripts", parentHeatName), &secretVars)
 	if err != nil {
 		return ctrlResult, err
 	}
-	ctrlResult, err = r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-config-data", parentHeatName), &configMapVars)
+	ctrlResult, err = r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-config-data", parentHeatName), &secretVars)
 	// note r.getSecret adds Conditions with condition.InputReadyWaitingMessage
 	// when secret is not found
 	if err != nil {
@@ -653,7 +652,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 		}
 
 		if hash != "" {
-			configMapVars[tls.CABundleKey] = env.SetValue(hash)
+			secretVars[tls.CABundleKey] = env.SetValue(hash)
 		}
 	}
 
@@ -676,19 +675,19 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	configMapVars[tls.TLSHashName] = env.SetValue(certsHash)
+	secretVars[tls.TLSHashName] = env.SetValue(certsHash)
 
 	// all cert input checks out so report InputReady
 	instance.Status.Conditions.MarkTrue(condition.TLSInputReadyCondition, condition.InputReadyMessage)
 
 	//
-	// Create ConfigMaps required as input for the Service and calculate an overall hash of hashes
+	// Create Secrets required as input for the Service and calculate an overall hash of hashes
 	//
 
 	//
-	// create custom Configmap for this heat-api service
+	// create custom Secret for this heat-api service
 	//
-	err = r.generateServiceConfigMaps(ctx, helper, instance, &configMapVars)
+	err = r.generateServiceSecrets(ctx, helper, instance, &secretVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -698,13 +697,12 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	// Create ConfigMaps - end
-	// Create ConfigMaps and Secrets - end
+	// Create Secrets - end
 	//
 	// create hash over all the different input resources to identify if any those changed
 	// and a restart/recreate is required.
 	//
-	inputHash, err := r.createHashOfInputHashes(instance, configMapVars)
+	inputHash, err := r.createHashOfInputHashes(instance, secretVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -856,17 +854,17 @@ func (r *HeatAPIReconciler) getSecret(
 	return ctrl.Result{}, nil
 }
 
-// generateServiceConfigMaps - create custom configmap to hold service-specific config
+// generateServiceSecrets - create custom secret to hold service-specific config
 // TODO add DefaultConfigOverwrite
-func (r *HeatAPIReconciler) generateServiceConfigMaps(
+func (r *HeatAPIReconciler) generateServiceSecrets(
 	ctx context.Context,
 	h *helper.Helper,
 	instance *heatv1beta1.HeatAPI,
 	envVars *map[string]env.Setter,
 ) error {
 	//
-	// create custom Configmap for heat-api-specific config input
-	// - %-config-data configmap holding custom config for the service's heat.conf
+	// create custom Secret for heat-api-specific config input
+	// - %-config-data secret holding custom config for the service's heat.conf
 	//
 
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
@@ -895,7 +893,7 @@ func (r *HeatAPIReconciler) generateServiceConfigMaps(
 	customData[common.CustomServiceConfigFileName] = instance.Spec.CustomServiceConfig
 
 	cms := []util.Template{
-		// Custom ConfigMap
+		// Custom Secret
 		{
 			Name:         fmt.Sprintf("%s-config-data", instance.Name),
 			Namespace:    instance.Namespace,
