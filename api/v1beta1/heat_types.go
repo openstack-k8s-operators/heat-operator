@@ -196,6 +196,27 @@ func (instance Heat) RbacResourceName() string {
 	return "heat-" + instance.Name
 }
 
+// StatusConditionsList - Returns a list of conditions relevant to our Controller.
+func (instance Heat) StatusConditionsList() condition.Conditions {
+	return condition.CreateList(
+		condition.UnknownCondition(condition.ReadyCondition, condition.InitReason, condition.ReadyInitMessage),
+		condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
+		condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
+		condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
+		condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
+		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+		condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
+		condition.UnknownCondition(HeatStackDomainReadyCondition, condition.InitReason, HeatStackDomainReadyInitMessage),
+		condition.UnknownCondition(HeatAPIReadyCondition, condition.InitReason, HeatAPIReadyInitMessage),
+		condition.UnknownCondition(HeatCfnAPIReadyCondition, condition.InitReason, HeatCfnAPIReadyInitMessage),
+		condition.UnknownCondition(HeatEngineReadyCondition, condition.InitReason, HeatEngineReadyInitMessage),
+		// service account, role, rolebinding conditions
+		condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
+		condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
+		condition.UnknownCondition(condition.RoleBindingReadyCondition, condition.InitReason, condition.RoleBindingReadyInitMessage),
+	)
+}
+
 // SetupDefaults - initializes any CRD field defaults based on environment variables (the defaulting mechanism itself is implemented via webhooks)
 func SetupDefaults() {
 	// Acquire environmental defaults and initialize Heat defaults with them

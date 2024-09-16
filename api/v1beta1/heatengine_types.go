@@ -108,6 +108,17 @@ func init() {
 	SchemeBuilder.Register(&HeatEngine{}, &HeatEngineList{})
 }
 
+// StatusConditionsList - Returns a list of conditions relevant to our Controller.
+func (instance HeatEngine) StatusConditionsList() condition.Conditions {
+	return condition.CreateList(
+		condition.UnknownCondition(condition.ReadyCondition, condition.InitReason, condition.ReadyInitMessage),
+		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+		condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
+		condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
+		condition.UnknownCondition(condition.TLSInputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+	)
+}
+
 // IsReady - returns true if HeatEngine is reconciled successfully
 func (instance HeatEngine) IsReady() bool {
 	return instance.Status.Conditions.IsTrue(condition.ReadyCondition)
