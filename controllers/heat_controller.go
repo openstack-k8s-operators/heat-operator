@@ -40,7 +40,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
-	heatapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatapi"
+	"github.com/openstack-k8s-operators/heat-operator/pkg/heatapi"
 	heatcfnapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatcfnapi"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	labels "github.com/openstack-k8s-operators/lib-common/modules/common/labels"
@@ -914,17 +914,7 @@ func (r *HeatReconciler) generateServiceSecrets(
 		tlsCfg = &tls.Service{}
 	}
 
-	// customData hold any customization for the service.
-	// custom.conf is going to /etc/heat/heat.conf.d
-	// all other files get placed into /etc/heat to allow overwrite of e.g. policy.json
-	// TODO: make sure custom.conf can not be overwritten
-	customData := map[string]string{
-		common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
-		"my.cnf":                           db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
-	}
-	for key, data := range instance.Spec.DefaultConfigOverwrite {
-		customData[key] = data
-	}
+	customData := generateCustomData(instance, tlsCfg, db)
 
 	var err error
 	keystoneAPI, err = keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
@@ -953,76 +943,25 @@ func (r *HeatReconciler) generateServiceSecrets(
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
-	templateParameters := map[string]interface{}{
-		"KeystoneInternalURL":      authURL,
-		"ServiceUser":              instance.Spec.ServiceUser,
-		"ServicePassword":          password,
-		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
-		"StackDomainName":          heat.StackDomainName,
-		"AuthEncryptionKey":        authEncryptionKey,
-		"TransportURL":             transportURL,
-		"MemcachedServers":         mc.GetMemcachedServerListString(),
-		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
-		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),
-		"DatabaseConnection": fmt.Sprintf("mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
-			databaseAccount.Spec.UserName,
-			string(dbSecret.Data[mariadbv1.DatabasePasswordSelector]),
-			instance.Status.DatabaseHostname,
-			heat.DatabaseName,
-		),
+	templateParameters := initTemplateParameters(instance, authURL, password, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret)
+
+	// Render vhost configuration for API and CFN
+	var httpdAPIVhostConfig map[string]interface{}
+	var httpdCfnAPIVhostConfig map[string]interface{}
+	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
+		var (
+			apiTLSEnabled    = instance.Spec.HeatAPI.TLS.API.Enabled(endpt)
+			cfnAPITLSEnabled = instance.Spec.HeatCfnAPI.TLS.API.Enabled(endpt)
+		)
+		httpdAPIVhostConfig = renderVhost(instance, endpt, heatapi.ServiceName, apiTLSEnabled)
+		httpdCfnAPIVhostConfig = renderVhost(instance, endpt, heatcfnapi.ServiceName, cfnAPITLSEnabled)
 	}
 
 	// create HeatAPI httpd vhost template parameters
-	httpdVhostConfig := map[string]interface{}{}
-	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
-		endptConfig := map[string]interface{}{}
-		endptConfig["ServerName"] = fmt.Sprintf("%s-%s.%s.svc", heatapi.ServiceName, endpt.String(), instance.Namespace)
-		endptConfig["TLS"] = false // default TLS to false, and set it bellow to true if enabled
-		if instance.Spec.HeatAPI.TLS.API.Enabled(endpt) {
-			endptConfig["TLS"] = true
-			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
-			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
-		}
-		httpdVhostConfig[endpt.String()] = endptConfig
-	}
-	templateParameters["APIvHosts"] = httpdVhostConfig
+	templateParameters["APIvHosts"] = httpdAPIVhostConfig
+	templateParameters["CfnAPIvHosts"] = httpdCfnAPIVhostConfig
 
-	// create HeatCfnAPI httpd vhost template parameters
-	httpdVhostConfig = map[string]interface{}{}
-	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
-		endptConfig := map[string]interface{}{}
-		endptConfig["ServerName"] = fmt.Sprintf("%s-%s.%s.svc", heatcfnapi.ServiceName, endpt.String(), instance.Namespace)
-		endptConfig["TLS"] = false // default TLS to false, and set it bellow to true if enabled
-		if instance.Spec.HeatCfnAPI.TLS.API.Enabled(endpt) {
-			endptConfig["TLS"] = true
-			endptConfig["SSLCertificateFile"] = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
-			endptConfig["SSLCertificateKeyFile"] = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
-		}
-		httpdVhostConfig[endpt.String()] = endptConfig
-	}
-	templateParameters["CfnAPIvHosts"] = httpdVhostConfig
-
-	secrets := []util.Template{
-		// ScriptsSecret
-		{
-			Name:               fmt.Sprintf("%s-scripts", instance.Name),
-			Namespace:          instance.Namespace,
-			Type:               util.TemplateTypeScripts,
-			InstanceType:       instance.Kind,
-			AdditionalTemplate: map[string]string{"common.sh": "/common/common.sh"},
-			Labels:             secretLabels,
-		},
-		// Secret
-		{
-			Name:          fmt.Sprintf("%s-config-data", instance.Name),
-			Namespace:     instance.Namespace,
-			Type:          util.TemplateTypeConfig,
-			InstanceType:  instance.Kind,
-			CustomData:    customData,
-			ConfigOptions: templateParameters,
-			Labels:        secretLabels,
-		},
-	}
+	secrets := createSecretTemplates(instance, customData, templateParameters, secretLabels)
 	return oko_secret.EnsureSecrets(ctx, h, instance, secrets, envVars)
 }
 
@@ -1292,4 +1231,114 @@ func verifyStatusConditions(conditions condition.Conditions) (bool, condition.Co
 	}
 
 	return false, conditions.DeepCopy()
+}
+
+func generateCustomData(instance *heatv1beta1.Heat, tlsCfg *tls.Service, db *mariadbv1.Database) map[string]string {
+	const myCnf string = "my.cnf"
+
+	// customData hold any customization for the service.
+	// custom.conf is going to /etc/heat/heat.conf.d
+	// all other files get placed into /etc/heat to allow overwrite of e.g. policy.json
+	// TODO: make sure custom.conf can not be overwritten
+	customData := map[string]string{
+		common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
+		myCnf:                              db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
+	}
+
+	for key, data := range instance.Spec.DefaultConfigOverwrite {
+		customData[key] = data
+	}
+
+	return customData
+}
+
+// createSecretsTemplates - Takes inputs and renders the templates that will be used for our Secrets
+func createSecretTemplates(instance *heatv1beta1.Heat, customData map[string]string, templateParameters map[string]interface{}, secretLabels map[string]string) []util.Template {
+	var (
+		scriptsSecretName = fmt.Sprintf("%s-scripts", instance.Name)
+		commonScriptPath  = "/common/common.sh"
+		commonScriptName  = "common.sh"
+		secretName        = fmt.Sprintf("%s-config-data", instance.Name)
+		commonScriptMap   = map[string]string{
+			commonScriptName: commonScriptPath,
+		}
+	)
+
+	return []util.Template{
+		// ScriptsSecret
+		{
+			Name:               scriptsSecretName,
+			Namespace:          instance.Namespace,
+			Type:               util.TemplateTypeScripts,
+			InstanceType:       instance.Kind,
+			AdditionalTemplate: commonScriptMap,
+			Labels:             secretLabels,
+		},
+		// Secret
+		{
+			Name:          secretName,
+			Namespace:     instance.Namespace,
+			Type:          util.TemplateTypeConfig,
+			InstanceType:  instance.Kind,
+			CustomData:    customData,
+			ConfigOptions: templateParameters,
+			Labels:        secretLabels,
+		},
+	}
+}
+
+// initTemplateParameters - takes inputs related to external objects in the cluster and renders the
+// initial set of parameters that we will use in the heat.conf file.
+func initTemplateParameters(
+	instance *heatv1beta1.Heat,
+	authURL string,
+	password string,
+	authEncryptionKey string,
+	transportURL string,
+	mc *memcachedv1.Memcached,
+	databaseAccount *mariadbv1.MariaDBAccount,
+	dbSecret *corev1.Secret,
+) map[string]interface{} {
+	mysqlConnectionString := fmt.Sprintf(
+		"mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
+		databaseAccount.Spec.UserName,
+		string(dbSecret.Data[mariadbv1.DatabasePasswordSelector]),
+		instance.Status.DatabaseHostname,
+		heat.DatabaseName,
+	)
+
+	return map[string]interface{}{
+		"KeystoneInternalURL":      authURL,
+		"ServiceUser":              instance.Spec.ServiceUser,
+		"ServicePassword":          password,
+		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
+		"StackDomainName":          heat.StackDomainName,
+		"AuthEncryptionKey":        authEncryptionKey,
+		"TransportURL":             transportURL,
+		"MemcachedServers":         mc.GetMemcachedServerListString(),
+		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
+		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),
+		"DatabaseConnection":       mysqlConnectionString,
+	}
+}
+
+func renderVhost(instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool) map[string]interface{} {
+	httpdVhostConfig := map[string]interface{}{}
+
+	var (
+		ServerNameString = fmt.Sprintf("%s-%s.%s.svc", serviceName, endpt.String(), instance.Namespace)
+		SSLCertFilePath  = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
+		SSLKeyFilePath   = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
+	)
+
+	endptConfig := map[string]interface{}{}
+	endptConfig["ServerName"] = ServerNameString
+	endptConfig["TLS"] = tlsEnabled // default TLS to false, and set it bellow to true if enabled
+	if tlsEnabled {
+		endptConfig["SSLCertificateFile"] = SSLCertFilePath
+		endptConfig["SSLCertificateKeyFile"] = SSLKeyFilePath
+	}
+	httpdVhostConfig[endpt.String()] = endptConfig
+
+	return httpdVhostConfig
 }
