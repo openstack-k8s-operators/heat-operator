@@ -247,7 +247,7 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	memcachedFn := func(ctx context.Context, o client.Object) []reconcile.Request {
+	memcachedFn := func(_ context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		// get all Heat CRs

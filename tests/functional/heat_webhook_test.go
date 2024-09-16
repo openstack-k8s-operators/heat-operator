@@ -96,7 +96,7 @@ var _ = Describe("Heat Webhook", func() {
 		})
 
 		It("Should be blocked by the webhook", func() {
-			Eventually(func(g Gomega) string {
+			Eventually(func(_ Gomega) string {
 				instance := GetHeat(heatName)
 				instance.Spec.DatabaseInstance = "new-database"
 				err := th.K8sClient.Update(th.Ctx, instance)
