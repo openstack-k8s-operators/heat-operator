@@ -22,26 +22,12 @@ func getVolumes(parentName string, name string) []corev1.Volume {
 	return append(heat.GetVolumes(parentName), volumes...)
 }
 
-// getInitVolumeMounts - heat API init task VolumeMounts
-func getInitVolumeMounts() []corev1.VolumeMount {
-
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      "config-data-custom",
-			MountPath: "/var/lib/config-data/custom",
-			ReadOnly:  true,
-		},
-	}
-
-	return append(heat.GetInitVolumeMounts(), volumeMounts...)
-}
-
 // getVolumeMounts - heat API VolumeMounts
 func getVolumeMounts() []corev1.VolumeMount {
 
 	volumeMounts := []corev1.VolumeMount{
 		{
-			Name:      "config-data-merged",
+			Name:      "config-data",
 			MountPath: "/var/lib/kolla/config_files/config.json",
 			SubPath:   "heat-api-config.json",
 			ReadOnly:  true,

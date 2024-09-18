@@ -41,7 +41,6 @@ func DBSyncJob(
 	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 
 	volumes := GetVolumes(ServiceName)
-	initVolumeMounts := GetInitVolumeMounts()
 	volumeMounts := getDBSyncVolumeMounts()
 	secretVolumes, secretMounts := GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
 	volumes = append(volumes, secretVolumes...)
@@ -51,7 +50,6 @@ func DBSyncJob(
 	if instance.Spec.HeatAPI.TLS.CaBundleSecretName != "" {
 		volumes = append(volumes, instance.Spec.HeatAPI.TLS.CreateVolume())
 		volumeMounts = append(volumeMounts, instance.Spec.HeatAPI.TLS.CreateVolumeMounts(nil)...)
-		initVolumeMounts = append(initVolumeMounts, instance.Spec.HeatAPI.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	job := &batchv1.Job{
@@ -83,17 +81,6 @@ func DBSyncJob(
 			},
 		},
 	}
-
-	initContainerDetails := APIDetails{
-		ContainerImage:            instance.Spec.HeatAPI.ContainerImage,
-		DatabaseHost:              instance.Status.DatabaseHostname,
-		DatabaseName:              DatabaseName,
-		OSPSecret:                 instance.Spec.Secret,
-		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
-		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
-		VolumeMounts:              initVolumeMounts,
-	}
-	job.Spec.Template.Spec.InitContainers = InitContainer(initContainerDetails)
 
 	return job
 }

@@ -52,8 +52,8 @@ func GetVolumes(name string) []corev1.Volume {
 	}
 }
 
-// GetInitVolumeMounts ...
-func GetInitVolumeMounts() []corev1.VolumeMount {
+// GetVolumeMounts ...
+func GetVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
 		{
 			Name:      "scripts",
@@ -66,11 +66,6 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 			ReadOnly:  true,
 		},
 		{
-			Name:      "config-data-merged",
-			MountPath: "/var/lib/config-data/merged",
-			ReadOnly:  false,
-		},
-		{
 			Name:      "config-data",
 			MountPath: "/etc/my.cnf",
 			SubPath:   "my.cnf",
@@ -78,44 +73,21 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 		},
 	}
 
-}
-
-// GetVolumeMounts ...
-func GetVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
-		{
-			Name:      "scripts",
-			MountPath: "/usr/local/bin/container-scripts",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "config-data-merged",
-			MountPath: "/var/lib/config-data/merged",
-			ReadOnly:  false,
-		},
-		{
-			Name:      "config-data",
-			MountPath: "/etc/my.cnf",
-			SubPath:   "my.cnf",
-			ReadOnly:  true,
-		},
-	}
 }
 
 // getDBSyncVolumeMounts ...
 func getDBSyncVolumeMounts() []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
-			Name:      "config-data-merged",
+			Name:      "config-data",
 			MountPath: "/etc/heat/heat.conf.d/" + DefaultsConfigFileName,
 			SubPath:   DefaultsConfigFileName,
 			ReadOnly:  true,
 		},
 		{
-			Name:      "config-data-merged",
+			Name:      "config-data",
 			MountPath: "/etc/heat/heat.conf.d/" + CustomConfigFileName,
 			SubPath:   CustomConfigFileName,
-			ReadOnly:  true,
 		},
 	}
 

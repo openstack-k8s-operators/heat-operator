@@ -93,14 +93,14 @@ spec:
         - mountPath: /usr/local/bin/container-scripts
           name: scripts
           readOnly: true
-        - mountPath: /var/lib/config-data/merged
-          name: config-data-merged
+        - mountPath: /var/lib/config-data/default
+          name: config-data
         - mountPath: /etc/my.cnf
           name: config-data
           readOnly: true
           subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
-          name: config-data-merged
+          name: config-data
           readOnly: true
           subPath: heat-api-config.json
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
@@ -123,29 +123,6 @@ spec:
           name: public-tls-certs
           readOnly: true
           subPath: tls.key
-      initContainers:
-      - args:
-        - /usr/local/bin/container-scripts/init.sh
-        volumeMounts:
-        - mountPath: /usr/local/bin/container-scripts
-          name: scripts
-          readOnly: true
-        - mountPath: /var/lib/config-data/default
-          name: config-data
-          readOnly: true
-        - mountPath: /var/lib/config-data/merged
-          name: config-data-merged
-        - mountPath: /etc/my.cnf
-          name: config-data
-          readOnly: true
-          subPath: my.cnf
-        - mountPath: /var/lib/config-data/custom
-          name: config-data-custom
-          readOnly: true
-        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-          name: combined-ca-bundle
-          readOnly: true
-          subPath: tls-ca-bundle.pem
       volumes:
       - name: scripts
         secret:
@@ -190,14 +167,14 @@ spec:
         - mountPath: /usr/local/bin/container-scripts
           name: scripts
           readOnly: true
-        - mountPath: /var/lib/config-data/merged
-          name: config-data-merged
+        - mountPath: /var/lib/config-data/default
+          name: config-data
         - mountPath: /etc/my.cnf
           name: config-data
           readOnly: true
           subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
-          name: config-data-merged
+          name: config-data
           readOnly: true
           subPath: heat-cfnapi-config.json
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
@@ -220,29 +197,6 @@ spec:
           name: public-tls-certs
           readOnly: true
           subPath: tls.key
-      initContainers:
-      - args:
-        - /usr/local/bin/container-scripts/init.sh
-        volumeMounts:
-        - mountPath: /usr/local/bin/container-scripts
-          name: scripts
-          readOnly: true
-        - mountPath: /var/lib/config-data/default
-          name: config-data
-          readOnly: true
-        - mountPath: /var/lib/config-data/merged
-          name: config-data-merged
-        - mountPath: /etc/my.cnf
-          name: config-data
-          readOnly: true
-          subPath: my.cnf
-        - mountPath: /var/lib/config-data/custom
-          name: config-data-custom
-          readOnly: true
-        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-          name: combined-ca-bundle
-          readOnly: true
-          subPath: tls-ca-bundle.pem
       volumes:
       - name: scripts
         secret:
@@ -287,39 +241,16 @@ spec:
         - mountPath: /usr/local/bin/container-scripts
           name: scripts
           readOnly: true
-        - mountPath: /var/lib/config-data/merged
-          name: config-data-merged
+        - mountPath: /var/lib/config-data/default
+          name: config-data
         - mountPath: /etc/my.cnf
           name: config-data
           readOnly: true
           subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
-          name: config-data-merged
+          name: config-data
           readOnly: true
           subPath: heat-engine-config.json
-        - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
-          name: combined-ca-bundle
-          readOnly: true
-          subPath: tls-ca-bundle.pem
-      initContainers:
-      - args:
-        - /usr/local/bin/container-scripts/init.sh
-        volumeMounts:
-        - mountPath: /usr/local/bin/container-scripts
-          name: scripts
-          readOnly: true
-        - mountPath: /var/lib/config-data/default
-          name: config-data
-          readOnly: true
-        - mountPath: /var/lib/config-data/merged
-          name: config-data-merged
-        - mountPath: /etc/my.cnf
-          name: config-data
-          readOnly: true
-          subPath: my.cnf
-        - mountPath: /var/lib/config-data/custom
-          name: config-data-custom
-          readOnly: true
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true

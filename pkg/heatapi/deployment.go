@@ -75,7 +75,6 @@ func Deployment(
 
 	// create Volume and VolumeMounts
 	volumes := getVolumes(heat.ServiceName, instance.Name)
-	initVolumeMounts := getInitVolumeMounts()
 	volumeMounts := getVolumeMounts()
 	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
 	volumes = append(volumes, secretVolumes...)
@@ -85,7 +84,6 @@ func Deployment(
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
-		initVolumeMounts = append(initVolumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
@@ -168,18 +166,6 @@ func Deployment(
 	if instance.Spec.NodeSelector != nil && len(instance.Spec.NodeSelector) > 0 {
 		deployment.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
 	}
-
-	initContainerDetails := heat.APIDetails{
-		ContainerImage:            instance.Spec.ContainerImage,
-		DatabaseHost:              instance.Spec.DatabaseHostname,
-		DatabaseName:              heat.DatabaseName,
-		OSPSecret:                 instance.Spec.Secret,
-		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
-		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
-		VolumeMounts:              initVolumeMounts,
-		TransportURL:              instance.Spec.TransportURLSecret,
-	}
-	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
 
 	return deployment, nil
 }
