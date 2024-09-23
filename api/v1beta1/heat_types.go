@@ -101,6 +101,12 @@ type HeatSpecBase struct {
 	CustomServiceConfig string `json:"customServiceConfig,omitempty"`
 
 	// +kubebuilder:validation:Optional
+	// CustomServiceConfigSecrets - customize the service config using this parameter to specify Secrets
+	// that contain sensitive service config data. The content of each Secret gets added to the
+	// /etc/<service>/<service>.conf.d directory as a custom config file.
+	CustomServiceConfigSecrets []string `json:"customServiceConfigSecrets,omitempty"`
+
+	// +kubebuilder:validation:Optional
 	// +kubebuilder:default=false
 	// PreserveJobs - do not delete jobs after they finished e.g. to check logs
 	PreserveJobs bool `json:"preserveJobs"`

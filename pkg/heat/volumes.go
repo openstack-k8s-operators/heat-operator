@@ -16,6 +16,8 @@ limitations under the License.
 package heat
 
 import (
+	"strconv"
+
 	corev1 "k8s.io/api/core/v1"
 )
 
@@ -114,4 +116,33 @@ func getDBSyncVolumeMounts() []corev1.VolumeMount {
 	}
 
 	return append(GetVolumeMounts(), volumeMounts...)
+}
+
+// GetConfigSecretVolumes - Returns a list of volumes associated with a list of Secret names
+func GetConfigSecretVolumes(secretNames []string) ([]corev1.Volume, []corev1.VolumeMount) {
+	var config0640AccessMode int32 = 0640
+	secretVolumes := []corev1.Volume{}
+	secretMounts := []corev1.VolumeMount{}
+
+	for idx, secretName := range secretNames {
+		secretVol := corev1.Volume{
+			Name: secretName,
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					SecretName:  secretName,
+					DefaultMode: &config0640AccessMode,
+				},
+			},
+		}
+		secretMount := corev1.VolumeMount{
+			Name: secretName,
+			// Each secret needs its own MountPath
+			MountPath: "/var/lib/config-data/secret-" + strconv.Itoa(idx),
+			ReadOnly:  true,
+		}
+		secretVolumes = append(secretVolumes, secretVol)
+		secretMounts = append(secretMounts, secretMount)
+	}
+
+	return secretVolumes, secretMounts
 }

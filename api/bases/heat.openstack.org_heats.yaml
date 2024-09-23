@@ -51,6 +51,14 @@ spec:
                   added to to /etc/<service>/<service>.conf.d directory as custom.conf
                   file.
                 type: string
+              customServiceConfigSecrets:
+                description: CustomServiceConfigSecrets - customize the service config
+                  using this parameter to specify Secrets that contain sensitive service
+                  config data. The content of each Secret gets added to the /etc/<service>/<service>.conf.d
+                  directory as a custom config file.
+                items:
+                  type: string
+                type: array
               databaseAccount:
                 default: heat
                 description: DatabaseAccount - optional MariaDBAccount used for heat
@@ -84,6 +92,15 @@ spec:
                       content gets added to to /etc/<service>/<service>.conf.d directory
                       as custom.conf file.
                     type: string
+                  customServiceConfigSecrets:
+                    description: CustomServiceConfigSecrets - customize the service
+                      config using this parameter to specify Secrets that contain
+                      sensitive service config data. The content of each Secret gets
+                      added to the /etc/<service>/<service>.conf.d directory as a
+                      custom config file.
+                    items:
+                      type: string
+                    type: array
                   defaultConfigOverwrite:
                     additionalProperties:
                       type: string
@@ -384,6 +401,15 @@ spec:
                       content gets added to to /etc/<service>/<service>.conf.d directory
                       as custom.conf file.
                     type: string
+                  customServiceConfigSecrets:
+                    description: CustomServiceConfigSecrets - customize the service
+                      config using this parameter to specify Secrets that contain
+                      sensitive service config data. The content of each Secret gets
+                      added to the /etc/<service>/<service>.conf.d directory as a
+                      custom config file.
+                    items:
+                      type: string
+                    type: array
                   defaultConfigOverwrite:
                     additionalProperties:
                       type: string
@@ -684,6 +710,15 @@ spec:
                       content gets added to to /etc/<service>/<service>.conf.d directory
                       as custom.conf file.
                     type: string
+                  customServiceConfigSecrets:
+                    description: CustomServiceConfigSecrets - customize the service
+                      config using this parameter to specify Secrets that contain
+                      sensitive service config data. The content of each Secret gets
+                      added to the /etc/<service>/<service>.conf.d directory as a
+                      custom config file.
+                    items:
+                      type: string
+                    type: array
                   defaultConfigOverwrite:
                     additionalProperties:
                       type: string

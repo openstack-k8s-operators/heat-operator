@@ -73,6 +73,9 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	volumeMounts := getVolumeMounts()
 	initVolumeMounts := getInitVolumeMounts()
 	volumes := getVolumes(heat.ServiceName, instance.Name)
+	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
+	volumes = append(volumes, secretVolumes...)
+	volumeMounts = append(volumeMounts, secretMounts...)
 
 	// add CA cert if defined
 	if instance.Spec.TLS.CaBundleSecretName != "" {

@@ -16,7 +16,7 @@
 set -ex
 
 SVC_CFG=/etc/heat/heat.conf
-SVC_CFG_MERGED=/var/lib/config-data/merged/heat.conf
+SVC_CFG_MERGED=/var/lib/config-data/merged/00-default.conf
 
 # expect that the common.sh is in the same dir as the calling script
 SCRIPTPATH="$(
@@ -45,7 +45,7 @@ done
 # and have it automatically detected, or would we have to somehow change the call
 # to the heat binary to tell it to use that custom conf dir?
 echo merging /var/lib/config-data/default/custom.conf into ${SVC_CFG_MERGED}
-crudini --merge ${SVC_CFG_MERGED} </var/lib/config-data/default/custom.conf
+crudini --merge ${SVC_CFG_MERGED} </var/lib/config-data/default/01-custom.conf
 
 # set secrets
 if [ -n "$TRANSPORT_URL" ]; then
