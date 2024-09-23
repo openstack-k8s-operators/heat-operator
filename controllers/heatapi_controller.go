@@ -117,16 +117,9 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		return ctrl.Result{}, err
 	}
 
-	// initialize status if Conditions is nil, but do not reset if it already
-	// exists
-	isNewInstance := instance.Status.Conditions == nil
-	if isNewInstance {
-		instance.Status.Conditions = condition.Conditions{}
-	}
-
-	// Save a copy of the condtions so that we can restore the LastTransitionTime
-	// when a condition's state doesn't change.
-	savedConditions := instance.Status.Conditions.DeepCopy()
+	var savedConditions condition.Conditions
+	var isNewInstance bool
+	isNewInstance, savedConditions = verifyStatusConditions(instance.Status.Conditions)
 
 	// Always patch the instance status when exiting this function so we can
 	// persist any changes.
@@ -147,23 +140,14 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	//
 	// initialize status
 	//
-	cl := condition.CreateList(
-		condition.UnknownCondition(condition.ReadyCondition, condition.InitReason, condition.ReadyInitMessage),
-		condition.UnknownCondition(condition.ExposeServiceReadyCondition, condition.InitReason, condition.ExposeServiceReadyInitMessage),
-		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
-		condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
-		condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
-		// right now we have no dedicated KeystoneServiceReadyInitMessage and KeystoneEndpointReadyInitMessage
-		condition.UnknownCondition(condition.KeystoneServiceReadyCondition, condition.InitReason, ""),
-		condition.UnknownCondition(condition.KeystoneEndpointReadyCondition, condition.InitReason, ""),
-		condition.UnknownCondition(condition.TLSInputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
-	)
-
+	//
+	//
+	cl := instance.StatusConditionsList()
 	instance.Status.Conditions.Init(&cl)
 	instance.Status.ObservedGeneration = instance.Generation
 
 	// If we're not deleting this and the service object doesn't have our finalizer, add it.
-	if instance.DeletionTimestamp.IsZero() && controllerutil.AddFinalizer(instance, helper.GetFinalizer()) {
+	if instance.DeletionTimestamp.IsZero() && controllerutil.AddFinalizer(instance, helper.GetFinalizer()) || isNewInstance {
 		return ctrl.Result{}, nil
 	}
 

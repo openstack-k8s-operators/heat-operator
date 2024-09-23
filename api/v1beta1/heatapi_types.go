@@ -112,6 +112,21 @@ func init() {
 	SchemeBuilder.Register(&HeatAPI{}, &HeatAPIList{})
 }
 
+// StatusConditionsList - Returns a list of conditions relevant to our Controller.
+func (instance HeatAPI) StatusConditionsList() condition.Conditions {
+	return condition.CreateList(
+		condition.UnknownCondition(condition.ReadyCondition, condition.InitReason, condition.ReadyInitMessage),
+		condition.UnknownCondition(condition.ExposeServiceReadyCondition, condition.InitReason, condition.ExposeServiceReadyInitMessage),
+		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+		condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
+		condition.UnknownCondition(condition.DeploymentReadyCondition, condition.InitReason, condition.DeploymentReadyInitMessage),
+		// right now we have no dedicated KeystoneServiceReadyInitMessage and KeystoneEndpointReadyInitMessage
+		condition.UnknownCondition(condition.KeystoneServiceReadyCondition, condition.InitReason, ""),
+		condition.UnknownCondition(condition.KeystoneEndpointReadyCondition, condition.InitReason, ""),
+		condition.UnknownCondition(condition.TLSInputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
+	)
+}
+
 // IsReady - returns true if HeatAPI is reconciled successfully
 func (instance HeatAPI) IsReady() bool {
 	return instance.Status.Conditions.IsTrue(condition.ReadyCondition)

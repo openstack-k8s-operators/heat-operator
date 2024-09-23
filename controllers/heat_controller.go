@@ -129,16 +129,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 		return ctrl.Result{}, err
 	}
 
-	// initialize status if Conditions is nil, but do not reset if it already
-	// exists
-	isNewInstance := instance.Status.Conditions == nil
-	if isNewInstance {
-		instance.Status.Conditions = condition.Conditions{}
-	}
-
-	// Save a copy of the condtions so that we can restore the LastTransitionTime
-	// when a condition's state doesn't change.
-	savedConditions := instance.Status.Conditions.DeepCopy()
+	isNewInstance, savedConditions := verifyStatusConditions(instance.Status.Conditions)
 
 	// Always patch the instance status when exiting this function so we can
 	// persist any changes.
@@ -159,25 +150,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 	//
 	// initialize status
 	//
-	instance.Status.Conditions = condition.Conditions{}
-
-	cl := condition.CreateList(
-		condition.UnknownCondition(condition.ReadyCondition, condition.InitReason, condition.ReadyInitMessage),
-		condition.UnknownCondition(condition.DBReadyCondition, condition.InitReason, condition.DBReadyInitMessage),
-		condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
-		condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
-		condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
-		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
-		condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
-		condition.UnknownCondition(heatv1beta1.HeatStackDomainReadyCondition, condition.InitReason, heatv1beta1.HeatStackDomainReadyInitMessage),
-		condition.UnknownCondition(heatv1beta1.HeatAPIReadyCondition, condition.InitReason, heatv1beta1.HeatAPIReadyInitMessage),
-		condition.UnknownCondition(heatv1beta1.HeatCfnAPIReadyCondition, condition.InitReason, heatv1beta1.HeatCfnAPIReadyInitMessage),
-		condition.UnknownCondition(heatv1beta1.HeatEngineReadyCondition, condition.InitReason, heatv1beta1.HeatEngineReadyInitMessage),
-		// service account, role, rolebinding conditions
-		condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
-		condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
-		condition.UnknownCondition(condition.RoleBindingReadyCondition, condition.InitReason, condition.RoleBindingReadyInitMessage),
-	)
+	cl := instance.StatusConditionsList()
 	instance.Status.Conditions.Init(&cl)
 	instance.Status.ObservedGeneration = instance.Generation
 
@@ -1307,4 +1280,16 @@ func (r *HeatReconciler) checkHeatCfnGeneration(
 		}
 	}
 	return true, nil
+}
+
+// verifyStatusConditions - Check to see if we have existing conditions.
+// Return empty condition.Conditions{} if none currently exist. Otherwise,
+// return a DeepCopy of the existing Conditions. If the condition state is
+// unchanged, we will use this copy to restore the LastTransitinTime.
+func verifyStatusConditions(conditions condition.Conditions) (bool, condition.Conditions) {
+	if conditions == nil {
+		return true, condition.Conditions{}
+	}
+
+	return false, conditions.DeepCopy()
 }
