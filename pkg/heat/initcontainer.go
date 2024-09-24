@@ -41,17 +41,6 @@ const (
 
 // InitContainer ..
 func InitContainer(init APIDetails) []corev1.Container {
-	runAsUser := int64(0)
-	trueVar := true
-
-	securityContext := &corev1.SecurityContext{
-		RunAsUser: &runAsUser,
-	}
-
-	if init.Privileged {
-		securityContext.Privileged = &trueVar
-	}
-
 	envVars := map[string]env.Setter{}
 	envVars["DatabaseHost"] = env.SetValue(init.DatabaseHost)
 	envVars["DatabaseName"] = env.SetValue(init.DatabaseName)
@@ -63,7 +52,7 @@ func InitContainer(init APIDetails) []corev1.Container {
 		{
 			Name:            "init",
 			Image:           init.ContainerImage,
-			SecurityContext: securityContext,
+			SecurityContext: GetHeatSecurityContext(),
 			Command: []string{
 				"/bin/bash",
 			},

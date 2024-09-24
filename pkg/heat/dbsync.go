@@ -26,7 +26,7 @@ import (
 
 // DBSyncCommand
 const (
-	DBSyncCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
+	DBSyncCommand = "/usr/bin/heat-manage --config-dir /etc/heat/heat.conf.d db_sync"
 )
 
 // DBSyncJob function
@@ -34,8 +34,6 @@ func DBSyncJob(
 	instance *heatv1beta1.Heat,
 	labels map[string]string,
 ) *batchv1.Job {
-	runAsUser := int64(0)
-
 	args := []string{"-c", DBSyncCommand}
 
 	envVars := map[string]env.Setter{}
@@ -73,13 +71,11 @@ func DBSyncJob(
 							Command: []string{
 								"/bin/bash",
 							},
-							Args:  args,
-							Image: instance.Spec.HeatEngine.ContainerImage,
-							SecurityContext: &corev1.SecurityContext{
-								RunAsUser: &runAsUser,
-							},
-							Env:          env.MergeEnvs([]corev1.EnvVar{}, envVars),
-							VolumeMounts: volumeMounts,
+							Args:            args,
+							Image:           instance.Spec.HeatEngine.ContainerImage,
+							SecurityContext: GetHeatSecurityContext(),
+							Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
+							VolumeMounts:    volumeMounts,
 						},
 					},
 					Volumes: volumes,

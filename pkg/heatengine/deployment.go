@@ -36,7 +36,7 @@ const (
 
 // Deployment func
 func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[string]string) *appsv1.Deployment {
-	runAsUser := int64(0)
+	runAsUser := heat.HeatUID
 
 	livenessProbe := &corev1.Probe{
 		TimeoutSeconds: 5,

@@ -7,15 +7,13 @@ import (
 
 // getVolumes -
 func getVolumes(parentName string, name string) []corev1.Volume {
-	var config0640AccessMode int32 = 0640
 
 	volumes := []corev1.Volume{
 		{
 			Name: "config-data-custom",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0640AccessMode,
-					SecretName:  name + "-config-data",
+					SecretName: name + "-config-data",
 				},
 			},
 		},

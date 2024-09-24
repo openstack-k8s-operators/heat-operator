@@ -24,7 +24,6 @@ import (
 // GetVolumes ...
 func GetVolumes(name string) []corev1.Volume {
 	var scriptsVolumeDefaultMode int32 = 0755
-	var config0640AccessMode int32 = 0640
 
 	return []corev1.Volume{
 		{
@@ -40,8 +39,7 @@ func GetVolumes(name string) []corev1.Volume {
 			Name: "config-data",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0640AccessMode,
-					SecretName:  name + "-config-data",
+					SecretName: name + "-config-data",
 				},
 			},
 		},
@@ -109,8 +107,14 @@ func getDBSyncVolumeMounts() []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
 			Name:      "config-data-merged",
-			MountPath: "/var/lib/kolla/config_files/config.json",
-			SubPath:   "db-sync-config.json",
+			MountPath: "/etc/heat/heat.conf.d/" + DefaultsConfigFileName,
+			SubPath:   DefaultsConfigFileName,
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data-merged",
+			MountPath: "/etc/heat/heat.conf.d/" + CustomConfigFileName,
+			SubPath:   CustomConfigFileName,
 			ReadOnly:  true,
 		},
 	}
