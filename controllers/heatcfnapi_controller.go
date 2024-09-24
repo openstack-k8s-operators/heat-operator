@@ -228,7 +228,7 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	configMapFn := func(ctx context.Context, o client.Object) []reconcile.Request {
+	configMapFn := func(_ context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		apis := &heatv1beta1.HeatCfnAPIList{}
