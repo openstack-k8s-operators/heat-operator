@@ -23,18 +23,8 @@ import (
 
 // GetVolumes ...
 func GetVolumes(name string) []corev1.Volume {
-	var scriptsVolumeDefaultMode int32 = 0755
 
 	return []corev1.Volume{
-		{
-			Name: "scripts",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &scriptsVolumeDefaultMode,
-					SecretName:  name + "-scripts",
-				},
-			},
-		},
 		{
 			Name: "config-data",
 			VolumeSource: corev1.VolumeSource{
@@ -55,11 +45,6 @@ func GetVolumes(name string) []corev1.Volume {
 // GetVolumeMounts ...
 func GetVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
-		{
-			Name:      "scripts",
-			MountPath: "/usr/local/bin/container-scripts",
-			ReadOnly:  true,
-		},
 		{
 			Name:      "config-data",
 			MountPath: "/var/lib/config-data/default",
