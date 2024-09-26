@@ -343,6 +343,10 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring("tls_enabled=false"))
 			Expect(string(cm.Data["my.cnf"])).To(
 				ContainSubstring("[client]\nssl=0"))
+			Expect(string(cm.Data["heat-api-httpd.conf"])).To(
+				ContainSubstring(fmt.Sprintf("heat-api-public.%s.svc", heatName.Namespace)))
+			Expect(string(cm.Data["heat-cfnapi-httpd.conf"])).To(
+				ContainSubstring(fmt.Sprintf("heat-cfnapi-public.%s.svc", heatName.Namespace)))
 		})
 	})
 
