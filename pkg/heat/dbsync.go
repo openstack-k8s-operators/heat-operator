@@ -26,7 +26,7 @@ import (
 
 // DBSyncCommand
 const (
-	DBSyncCommand = "/usr/local/bin/kolla_set_configs && su heat -s /bin/bash -c 'heat-manage --config-file /etc/heat/heat.conf db_sync'"
+	DBSyncCommand = "/usr/local/bin/kolla_set_configs && /usr/local/bin/kolla_start"
 )
 
 // DBSyncJob function
@@ -45,6 +45,9 @@ func DBSyncJob(
 	volumes := GetVolumes(ServiceName)
 	initVolumeMounts := GetInitVolumeMounts()
 	volumeMounts := getDBSyncVolumeMounts()
+	secretVolumes, secretMounts := GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
+	volumes = append(volumes, secretVolumes...)
+	volumeMounts = append(volumeMounts, secretMounts...)
 
 	// add CA cert if defined
 	if instance.Spec.HeatAPI.TLS.CaBundleSecretName != "" {

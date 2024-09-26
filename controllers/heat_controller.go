@@ -174,16 +174,18 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 
 // fields to index to reconcile when change
 const (
-	passwordSecretField     = ".spec.secret"
-	transportURLSecretField = ".spec.transportURLSecret"
-	caBundleSecretNameField = ".spec.tls.caBundleSecretName"
-	tlsAPIInternalField     = ".spec.tls.api.internal.secretName"
-	tlsAPIPublicField       = ".spec.tls.api.public.secretName"
+	passwordSecretField      = ".spec.secret"
+	transportURLSecretField  = ".spec.transportURLSecret"
+	caBundleSecretNameField  = ".spec.tls.caBundleSecretName"
+	tlsAPIInternalField      = ".spec.tls.api.internal.secretName"
+	tlsAPIPublicField        = ".spec.tls.api.public.secretName"
+	customServiceConfigField = ".spec.customServiceConfigSecrets"
 )
 
 var (
 	heatWatchFields = []string{
 		passwordSecretField,
+		customServiceConfigField,
 	}
 	heatAPIWatchFields = []string{
 		passwordSecretField,
@@ -191,6 +193,7 @@ var (
 		caBundleSecretNameField,
 		tlsAPIInternalField,
 		tlsAPIPublicField,
+		customServiceConfigField,
 	}
 	heatCfnWatchFields = []string{
 		passwordSecretField,
@@ -198,11 +201,13 @@ var (
 		caBundleSecretNameField,
 		tlsAPIInternalField,
 		tlsAPIPublicField,
+		customServiceConfigField,
 	}
 	heatEngineWatchFields = []string{
 		passwordSecretField,
 		transportURLSecretField,
 		caBundleSecretNameField,
+		customServiceConfigField,
 	}
 )
 
@@ -891,7 +896,6 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 }
 
 // generateServiceSecrets - create create secrets which hold scripts and service configuration
-// TODO add DefaultConfigOverwrite
 func (r *HeatReconciler) generateServiceSecrets(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
@@ -915,6 +919,24 @@ func (r *HeatReconciler) generateServiceSecrets(
 	}
 
 	customData := generateCustomData(instance, tlsCfg, db)
+
+	customSecrets := ""
+	for _, secretName := range instance.Spec.CustomServiceConfigSecrets {
+		secret, _, err := oko_secret.GetSecret(ctx, h, secretName, instance.Namespace)
+		if err != nil {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				condition.InputReadyErrorMessage,
+				err.Error()))
+			return err
+		}
+		for _, data := range secret.Data {
+			customSecrets += string(data) + "\n"
+		}
+	}
+	customData[heat.CustomConfigSecretsFileName] = customSecrets
 
 	var err error
 	keystoneAPI, err = keystonev1.GetKeystoneAPI(ctx, h, instance.Namespace, map[string]string{})
@@ -1241,8 +1263,8 @@ func generateCustomData(instance *heatv1beta1.Heat, tlsCfg *tls.Service, db *mar
 	// all other files get placed into /etc/heat to allow overwrite of e.g. policy.json
 	// TODO: make sure custom.conf can not be overwritten
 	customData := map[string]string{
-		common.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
-		myCnf:                              db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
+		heat.CustomConfigFileName: instance.Spec.CustomServiceConfig,
+		myCnf:                     db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
 	}
 
 	for key, data := range instance.Spec.DefaultConfigOverwrite {

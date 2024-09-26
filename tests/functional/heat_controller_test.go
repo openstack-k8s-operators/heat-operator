@@ -324,7 +324,7 @@ var _ = Describe("Heat controller", func() {
 		It("should create a Secret for heat.conf", func() {
 			cm := th.GetSecret(heatConfigSecretName)
 
-			heatCfg := string(cm.Data["heat.conf"])
+			heatCfg := string(cm.Data["00-default.conf"])
 			Expect(heatCfg).Should(
 				ContainSubstring("stack_domain_admin=heat_stack_domain_admin"))
 			Expect(heatCfg).Should(
@@ -526,7 +526,7 @@ var _ = Describe("Heat controller", func() {
 		It("should create a Secret for heat.conf with memcached + DB using tls connection", func() {
 			cm := th.GetSecret(heatConfigSecretName)
 
-			heatCfg := string(cm.Data["heat.conf"])
+			heatCfg := string(cm.Data["00-default.conf"])
 			Expect(heatCfg).Should(
 				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
 					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
@@ -627,7 +627,7 @@ var _ = Describe("Heat controller", func() {
 		Eventually(func(g Gomega) {
 			cm := th.GetSecret(heatConfigSecretName)
 
-			conf := cm.Data["heat.conf"]
+			conf := cm.Data["00-default.conf"]
 
 			g.Expect(string(conf)).Should(
 				ContainSubstring(fmt.Sprintf("connection=mysql+pymysql://%s:%s@hostname-for-openstack.%s.svc/heat?read_default_file=/etc/my.cnf",
