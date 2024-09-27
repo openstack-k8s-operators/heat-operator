@@ -49,6 +49,9 @@ const (
 	HeatCfnPublicPort int32 = 8000
 	// HeatCfnInternalPort -
 	HeatCfnInternalPort int32 = 8000
+	// heat:heat
+	HeatUID int64 = 42418
+	HeatGID int64 = 42418
 	// KollaConfigDbSync -
 	KollaConfigDbSync = "/var/lib/config-data/merged/db-sync-config.json"
 	// APIComponent -

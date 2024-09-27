@@ -153,13 +153,13 @@ spec:
           secretName: heat-scripts
       - name: config-data
         secret:
-          defaultMode: 416
+          defaultMode: 420
           secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
       - name: config-data-custom
         secret:
-          defaultMode: 416
+          defaultMode: 420
           secretName: heat-api-config-data
       - name: combined-ca-bundle
         secret:
@@ -250,13 +250,13 @@ spec:
           secretName: heat-scripts
       - name: config-data
         secret:
-          defaultMode: 416
+          defaultMode: 420
           secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
       - name: config-data-custom
         secret:
-          defaultMode: 416
+          defaultMode: 420
           secretName: heat-cfnapi-config-data
       - name: combined-ca-bundle
         secret:
@@ -331,13 +331,13 @@ spec:
           secretName: heat-scripts
       - name: config-data
         secret:
-          defaultMode: 416
+          defaultMode: 420
           secretName: heat-config-data
       - emptyDir: {}
         name: config-data-merged
       - name: config-data-custom
         secret:
-          defaultMode: 416
+          defaultMode: 420
           secretName: heat-engine-config-data
       - name: combined-ca-bundle
         secret:

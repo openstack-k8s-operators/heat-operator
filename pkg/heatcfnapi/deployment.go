@@ -41,7 +41,7 @@ func Deployment(
 	configHash string,
 	labels map[string]string,
 ) (*appsv1.Deployment, error) {
-	runAsUser := int64(0)
+	runAsUser := heat.HeatUID
 
 	livenessProbe := &corev1.Probe{
 		TimeoutSeconds:      10,
