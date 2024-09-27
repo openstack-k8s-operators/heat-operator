@@ -343,11 +343,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	//
 	parentHeatName := heat.GetOwningHeatName(instance)
 
-	ctrlResult, err := r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-scripts", parentHeatName), &secretVars)
-	if err != nil {
-		return ctrlResult, err
-	}
-	ctrlResult, err = r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-config-data", parentHeatName), &secretVars)
+	ctrlResult, err := r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-config-data", parentHeatName), &secretVars)
 	// note r.getSecret adds Conditions with condition.InputReadyWaitingMessage
 	// when secret is not found
 	if err != nil {

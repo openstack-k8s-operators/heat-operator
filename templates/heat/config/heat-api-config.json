@@ -2,21 +2,21 @@
   "command": "/usr/sbin/httpd -DFOREGROUND",
   "config_files": [
     {
-      "source": "/var/lib/config-data/merged/0*.conf",
+      "source": "/var/lib/config-data/default/0*.conf",
       "dest": "/etc/heat/heat.conf.d/",
       "merge": false,
       "preserve_properties": true,
       "perm": "0644"
     },
     {
-      "source": "/var/lib/config-data/merged/heat-api-httpd.conf",
+      "source": "/var/lib/config-data/default/heat-api-httpd.conf",
       "dest": "/etc/httpd/conf/httpd.conf",
       "merge": false,
       "preserve_properties": true,
       "perm": "0644"
     },
     {
-      "source": "/var/lib/config-data/merged/ssl.conf",
+      "source": "/var/lib/config-data/default/ssl.conf",
       "dest": "/etc/httpd/conf.d/ssl.conf",
       "owner": "heat",
       "perm": "0644"

@@ -2,7 +2,7 @@
   "command": "/usr/bin/heat-engine --config-dir /etc/heat/heat.conf.d",
   "config_files": [
     {
-      "source": "/var/lib/config-data/merged/0*.conf",
+      "source": "/var/lib/config-data/default/0*.conf",
       "dest": "/etc/heat/heat.conf.d/",
       "merge": false,
       "preserve_properties": true,

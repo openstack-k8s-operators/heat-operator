@@ -71,7 +71,6 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	terminationGracePeriod := int64(60)
 
 	volumeMounts := getVolumeMounts()
-	initVolumeMounts := getInitVolumeMounts()
 	volumes := getVolumes(heat.ServiceName, instance.Name)
 	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
 	volumes = append(volumes, secretVolumes...)
@@ -81,7 +80,6 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
 		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
-		initVolumeMounts = append(initVolumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
 	}
 
 	deployment := &appsv1.Deployment{
@@ -138,18 +136,6 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 	if instance.Spec.NodeSelector != nil && len(instance.Spec.NodeSelector) > 0 {
 		deployment.Spec.Template.Spec.NodeSelector = instance.Spec.NodeSelector
 	}
-
-	initContainerDetails := heat.APIDetails{
-		ContainerImage:            instance.Spec.ContainerImage,
-		DatabaseHost:              instance.Spec.DatabaseHostname,
-		DatabaseName:              heat.DatabaseName,
-		OSPSecret:                 instance.Spec.Secret,
-		UserPasswordSelector:      instance.Spec.PasswordSelectors.Service,
-		AuthEncryptionKeySelector: instance.Spec.PasswordSelectors.AuthEncryptionKey,
-		VolumeMounts:              initVolumeMounts,
-		TransportURL:              instance.Spec.TransportURLSecret,
-	}
-	deployment.Spec.Template.Spec.InitContainers = heat.InitContainer(initContainerDetails)
 
 	return deployment
 }

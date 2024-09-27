@@ -495,7 +495,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 
 	//
 	// create Secret required for Heat input
-	// - %-scripts secret holding scripts to e.g. bootstrap the service
 	// - %-config secret holding minimal heat config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
@@ -895,7 +894,7 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 	return deployment, op, err
 }
 
-// generateServiceSecrets - create create secrets which hold scripts and service configuration
+// generateServiceSecrets - create secrets which hold service configuration
 func (r *HeatReconciler) generateServiceSecrets(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
@@ -906,7 +905,6 @@ func (r *HeatReconciler) generateServiceSecrets(
 ) error {
 	//
 	// create Secret required for heat input
-	// - %-scripts secret holding scripts to e.g. bootstrap the service
 	// - %-config secret holding minimal heat config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the ospSecret via the init container
 	//
@@ -1277,25 +1275,10 @@ func generateCustomData(instance *heatv1beta1.Heat, tlsCfg *tls.Service, db *mar
 // createSecretsTemplates - Takes inputs and renders the templates that will be used for our Secrets
 func createSecretTemplates(instance *heatv1beta1.Heat, customData map[string]string, templateParameters map[string]interface{}, secretLabels map[string]string) []util.Template {
 	var (
-		scriptsSecretName = fmt.Sprintf("%s-scripts", instance.Name)
-		commonScriptPath  = "/common/common.sh"
-		commonScriptName  = "common.sh"
-		secretName        = fmt.Sprintf("%s-config-data", instance.Name)
-		commonScriptMap   = map[string]string{
-			commonScriptName: commonScriptPath,
-		}
+		secretName = fmt.Sprintf("%s-config-data", instance.Name)
 	)
 
 	return []util.Template{
-		// ScriptsSecret
-		{
-			Name:               scriptsSecretName,
-			Namespace:          instance.Namespace,
-			Type:               util.TemplateTypeScripts,
-			InstanceType:       instance.Kind,
-			AdditionalTemplate: commonScriptMap,
-			Labels:             secretLabels,
-		},
 		// Secret
 		{
 			Name:          secretName,

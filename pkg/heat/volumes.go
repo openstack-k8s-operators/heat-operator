@@ -23,18 +23,8 @@ import (
 
 // GetVolumes ...
 func GetVolumes(name string) []corev1.Volume {
-	var scriptsVolumeDefaultMode int32 = 0755
 
 	return []corev1.Volume{
-		{
-			Name: "scripts",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &scriptsVolumeDefaultMode,
-					SecretName:  name + "-scripts",
-				},
-			},
-		},
 		{
 			Name: "config-data",
 			VolumeSource: corev1.VolumeSource{
@@ -52,25 +42,15 @@ func GetVolumes(name string) []corev1.Volume {
 	}
 }
 
-// GetInitVolumeMounts ...
-func GetInitVolumeMounts() []corev1.VolumeMount {
+// GetVolumeMounts ...
+func GetVolumeMounts() []corev1.VolumeMount {
 	return []corev1.VolumeMount{
-		{
-			Name:      "scripts",
-			MountPath: "/usr/local/bin/container-scripts",
-			ReadOnly:  true,
-		},
 		{
 			Name:      "config-data",
 			MountPath: "/var/lib/config-data/default",
 			ReadOnly:  true,
 		},
 		{
-			Name:      "config-data-merged",
-			MountPath: "/var/lib/config-data/merged",
-			ReadOnly:  false,
-		},
-		{
 			Name:      "config-data",
 			MountPath: "/etc/my.cnf",
 			SubPath:   "my.cnf",
@@ -78,44 +58,21 @@ func GetInitVolumeMounts() []corev1.VolumeMount {
 		},
 	}
 
-}
-
-// GetVolumeMounts ...
-func GetVolumeMounts() []corev1.VolumeMount {
-	return []corev1.VolumeMount{
-		{
-			Name:      "scripts",
-			MountPath: "/usr/local/bin/container-scripts",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "config-data-merged",
-			MountPath: "/var/lib/config-data/merged",
-			ReadOnly:  false,
-		},
-		{
-			Name:      "config-data",
-			MountPath: "/etc/my.cnf",
-			SubPath:   "my.cnf",
-			ReadOnly:  true,
-		},
-	}
 }
 
 // getDBSyncVolumeMounts ...
 func getDBSyncVolumeMounts() []corev1.VolumeMount {
 	volumeMounts := []corev1.VolumeMount{
 		{
-			Name:      "config-data-merged",
+			Name:      "config-data",
 			MountPath: "/etc/heat/heat.conf.d/" + DefaultsConfigFileName,
 			SubPath:   DefaultsConfigFileName,
 			ReadOnly:  true,
 		},
 		{
-			Name:      "config-data-merged",
+			Name:      "config-data",
 			MountPath: "/etc/heat/heat.conf.d/" + CustomConfigFileName,
 			SubPath:   CustomConfigFileName,
-			ReadOnly:  true,
 		},
 	}
 
