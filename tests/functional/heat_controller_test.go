@@ -644,4 +644,59 @@ var _ = Describe("Heat controller", func() {
 		return GetEnvVarValue(deployment.Spec.Template.Spec.Containers[0].Env, "CONFIG_HASH", "")
 	})*/
 
+	When("HeatAuthEncryptionKey is too short", func() {
+
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPI := keystone.CreateKeystoneAPI(namespace)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPI)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+			dbSyncJobName := types.NamespacedName{
+				Name:      "heat-db-sync",
+				Namespace: namespace,
+			}
+			th.SimulateJobSuccess(dbSyncJobName)
+
+		})
+
+		It("Should complain about the Key length", func() {
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				heat.Spec.PasswordSelectors.AuthEncryptionKey = "TooShortAuthEncKey"
+				g.Expect(th.K8sClient.Update(ctx, heat)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.ServiceConfigReadyCondition,
+				corev1.ConditionFalse,
+			)
+
+			conditions := HeatConditionGetter(heatName)
+			message := &conditions.Get(condition.ServiceConfigReadyCondition).Message
+			Expect(*message).Should(ContainSubstring("AuthEncryptionKey must be at least 32 characters"))
+		})
+	})
 })
