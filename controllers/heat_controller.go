@@ -966,15 +966,15 @@ func (r *HeatReconciler) generateServiceSecrets(
 	templateParameters := initTemplateParameters(instance, authURL, password, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret)
 
 	// Render vhost configuration for API and CFN
-	var httpdAPIVhostConfig map[string]interface{}
-	var httpdCfnAPIVhostConfig map[string]interface{}
+	httpdAPIVhostConfig := map[string]interface{}{}
+	httpdCfnAPIVhostConfig := map[string]interface{}{}
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
 		var (
 			apiTLSEnabled    = instance.Spec.HeatAPI.TLS.API.Enabled(endpt)
 			cfnAPITLSEnabled = instance.Spec.HeatCfnAPI.TLS.API.Enabled(endpt)
 		)
-		httpdAPIVhostConfig = renderVhost(instance, endpt, heatapi.ServiceName, apiTLSEnabled)
-		httpdCfnAPIVhostConfig = renderVhost(instance, endpt, heatcfnapi.ServiceName, cfnAPITLSEnabled)
+		renderVhost(httpdAPIVhostConfig, instance, endpt, heatapi.ServiceName, apiTLSEnabled)
+		renderVhost(httpdCfnAPIVhostConfig, instance, endpt, heatcfnapi.ServiceName, cfnAPITLSEnabled)
 	}
 
 	// create HeatAPI httpd vhost template parameters
@@ -1327,9 +1327,7 @@ func initTemplateParameters(
 	}
 }
 
-func renderVhost(instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool) map[string]interface{} {
-	httpdVhostConfig := map[string]interface{}{}
-
+func renderVhost(httpdVhostConfig map[string]interface{}, instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool) {
 	var (
 		ServerNameString = fmt.Sprintf("%s-%s.%s.svc", serviceName, endpt.String(), instance.Namespace)
 		SSLCertFilePath  = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
@@ -1344,6 +1342,4 @@ func renderVhost(instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName
 		endptConfig["SSLCertificateKeyFile"] = SSLKeyFilePath
 	}
 	httpdVhostConfig[endpt.String()] = endptConfig
-
-	return httpdVhostConfig
 }

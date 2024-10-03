@@ -27,15 +27,12 @@
         heat_tempest_plugin.*
       cifmw_test_operator_tempest_exclude_list: |
         heat_tempest_plugin.tests.functional.test_os_wait_condition.OSWaitCondition.test_create_stack_with_multi_signal_waitcondition
-        heat_tempest_plugin.tests.functional.test_software_config.ParallelDeploymentsTest.test_deployments_metadata
         heat_tempest_plugin.tests.scenario.test_server_cfn_init.CfnInitIntegrationTest.test_server_cfn_init
         heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
         heat_tempest_plugin.tests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
         heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_raw
         heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_software_config
         heat_tempest_plugin.tests.scenario.test_server_software_config.SoftwareConfigIntegrationTest.test_server_software_config
-        heat_tempest_plugin.tests.scenario.test_remote_deeply_nested.RemoteDeeplyNestedStackTest.test_remote_nested
-        heat_tempest_plugin.tests.functional.test_remote_stack.RemoteStackTest
       external_plugin: "opendev.org/openstack/heat-tempest-plugin"
       change_item: "{{ zuul['items'] | selectattr('project.canonical_name', 'equalto', external_plugin) }}"
       cifmw_test_operator_tempest_external_plugin: "{{ [] if change_item | length < 1 else [ { 'repository': 'https://' + external_plugin + '.git', 'changeRepository': 'https://review' + external_plugin, 'changeRefspec': [ 'refs/changes', change_item[0].change[-2:], change_item[0].change, change_item[0].patchset ] | join('/') } ] }}"
