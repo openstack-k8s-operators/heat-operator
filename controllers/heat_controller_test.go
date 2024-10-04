@@ -19,7 +19,6 @@ func TestRenderVhost(t *testing.T) {
 		endpt       service.Endpoint
 		serviceName string
 		tlsEnabled  bool
-		expected    map[string]interface{}
 	}{
 		{
 			name:        "Basic case with TLS disabled",
@@ -27,12 +26,6 @@ func TestRenderVhost(t *testing.T) {
 			endpt:       "internal",
 			serviceName: "my-service",
 			tlsEnabled:  false,
-			expected: map[string]interface{}{
-				"internal": map[string]interface{}{
-					"ServerName": "my-service-internal.test1HeatNamespace.svc",
-					"TLS":        false,
-				},
-			},
 		},
 		{
 			name:        "Basic case with TLS enabled",
@@ -40,23 +33,26 @@ func TestRenderVhost(t *testing.T) {
 			endpt:       "public",
 			serviceName: "my-service",
 			tlsEnabled:  true,
-			expected: map[string]interface{}{
-				"public": map[string]interface{}{
-					"ServerName":            "my-service-public.test1HeatNamespace.svc",
-					"TLS":                   true,
-					"SSLCertificateFile":    "/etc/pki/tls/certs/public.crt",
-					"SSLCertificateKeyFile": "/etc/pki/tls/private/public.key",
-				},
-			},
 		},
 	}
 
+	expected := map[string]interface{}{
+		"internal": map[string]interface{}{
+			"ServerName": "my-service-internal.test1HeatNamespace.svc",
+			"TLS":        false,
+		},
+		"public": map[string]interface{}{
+			"ServerName":            "my-service-public.test1HeatNamespace.svc",
+			"TLS":                   true,
+			"SSLCertificateFile":    "/etc/pki/tls/certs/public.crt",
+			"SSLCertificateKeyFile": "/etc/pki/tls/private/public.key",
+		},
+	}
+	result := map[string]interface{}{}
 	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := renderVhost(tt.instance, tt.endpt, tt.serviceName, tt.tlsEnabled)
-			if !reflect.DeepEqual(result, tt.expected) {
-				t.Errorf("Expected %v, got %v", tt.expected, result)
-			}
-		})
+		renderVhost(result, tt.instance, tt.endpt, tt.serviceName, tt.tlsEnabled)
+	}
+	if !reflect.DeepEqual(result, expected) {
+		t.Errorf("Expected %v, got %v", expected, result)
 	}
 }
