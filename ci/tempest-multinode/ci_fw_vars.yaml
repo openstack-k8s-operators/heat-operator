@@ -7,7 +7,7 @@
 post_ctlplane_deploy:
   - name: 71 Kustomize control plane to enable heat service
     type: playbook
-    source: "{{ ansible_user_dir }}/{{ zuul.projects['github.com/openstack-k8s-operators/heat-operator'].src_dir }}/ci/tempest/control_plane_hook.yaml"
+    source: "{{ ansible_user_dir }}/{{ zuul.projects['github.com/openstack-k8s-operators/heat-operator'].src_dir }}/ci/tempest-multinode/control_plane_hook.yaml"
   - name: 82 Kustomize and update Control Plane
     type: playbook
     source: control_plane_kustomize_deploy.yml
