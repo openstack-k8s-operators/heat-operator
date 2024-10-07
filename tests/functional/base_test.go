@@ -34,6 +34,9 @@ func GetDefaultHeatSpec() map[string]interface{} {
 		"heatEngine":       GetDefaultHeatEngineSpec(),
 		"heatAPI":          GetDefaultHeatAPISpec(),
 		"heatCfnAPI":       GetDefaultHeatCFNAPISpec(),
+		"passwordSelectors": map[string]interface{}{
+			"AuthEncryptionKey": "HeatAuthEncryptionKey",
+		},
 	}
 }
 
@@ -75,8 +78,8 @@ func CreateHeatSecret(namespace string, name string) *corev1.Secret {
 	return th.CreateSecret(
 		types.NamespacedName{Namespace: namespace, Name: name},
 		map[string][]byte{
-			"HeatPassword":      []byte("12345678"),
-			"AuthEncryptionKey": []byte("1234567812345678123456781212345678345678"),
+			"HeatPassword":          []byte("12345678"),
+			"HeatAuthEncryptionKey": []byte("1234567812345678123456781212345678345678"),
 		},
 	)
 }

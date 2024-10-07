@@ -952,7 +952,10 @@ func (r *HeatReconciler) generateServiceSecrets(
 		return err
 	}
 	password := strings.TrimSuffix(string(ospSecret.Data[instance.Spec.PasswordSelectors.Service]), "\n")
-	authEncryptionKey := strings.TrimSuffix(string(ospSecret.Data[instance.Spec.PasswordSelectors.AuthEncryptionKey]), "\n")
+	authEncryptionKey, err := validateAuthEncryptionKey(instance, ospSecret)
+	if err != nil {
+		return err
+	}
 
 	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
 	if err != nil {
@@ -1342,4 +1345,19 @@ func renderVhost(httpdVhostConfig map[string]interface{}, instance *heatv1beta1.
 		endptConfig["SSLCertificateKeyFile"] = SSLKeyFilePath
 	}
 	httpdVhostConfig[endpt.String()] = endptConfig
+}
+
+// validateAuthEncryptionKey - the heat_auth_encrption_key needs to be 32 characters long. This function validates
+// the length of the user provided key and returns an error if it isn't long enough.
+func validateAuthEncryptionKey(instance *heatv1beta1.Heat, ospSecret *corev1.Secret) (string, error) {
+	const HeatAuthEncKeyLen int = 32
+
+	heatAuthEncKey := strings.TrimSuffix(string(ospSecret.Data[instance.Spec.PasswordSelectors.AuthEncryptionKey]), "\n")
+
+	if len(heatAuthEncKey) < HeatAuthEncKeyLen {
+		return "", fmt.Errorf("AuthEncryptionKey must be at least %d characters", HeatAuthEncKeyLen)
+	}
+
+	return heatAuthEncKey, nil
+
 }
