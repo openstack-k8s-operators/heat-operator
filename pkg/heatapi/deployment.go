@@ -28,6 +28,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/utils/ptr"
 )
 
 const (
@@ -41,7 +42,6 @@ func Deployment(
 	configHash string,
 	labels map[string]string,
 ) (*appsv1.Deployment, error) {
-	runAsUser := heat.HeatUID
 
 	livenessProbe := &corev1.Probe{
 		TimeoutSeconds:      10,
@@ -128,6 +128,12 @@ func Deployment(
 				},
 				Spec: corev1.PodSpec{
 					ServiceAccountName: instance.Spec.ServiceAccount,
+					SecurityContext: &corev1.PodSecurityContext{
+						// httpd needs to have access to the certificates in /etc/pki/tls/certs/...
+						// setting the FSGroup results in everything mounted to the pod to have the
+						// heat group set, now the certs will be mounted
+						FSGroup: ptr.To(heat.HeatGID),
+					},
 					Containers: []corev1.Container{
 						{
 							Name: heat.ServiceName + "-" + heat.APIComponent,
@@ -137,7 +143,7 @@ func Deployment(
 							Args:  args,
 							Image: instance.Spec.ContainerImage,
 							SecurityContext: &corev1.SecurityContext{
-								RunAsUser: &runAsUser,
+								RunAsUser: ptr.To(heat.HeatUID),
 							},
 							Env:            env.MergeEnvs([]corev1.EnvVar{}, envVars),
 							VolumeMounts:   volumeMounts,

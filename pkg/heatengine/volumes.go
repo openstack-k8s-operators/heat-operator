@@ -7,13 +7,15 @@ import (
 
 // getVolumes -
 func getVolumes(parentName string, name string) []corev1.Volume {
+	var config0644AccessMode int32 = 0644
 
 	volumes := []corev1.Volume{
 		{
 			Name: "config-data-custom",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: name + "-config-data",
+					DefaultMode: &config0644AccessMode,
+					SecretName:  name + "-config-data",
 				},
 			},
 		},
@@ -30,6 +32,11 @@ func getVolumeMounts() []corev1.VolumeMount {
 			Name:      "config-data",
 			MountPath: "/var/lib/kolla/config_files/config.json",
 			SubPath:   "heat-engine-config.json",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data-custom",
+			MountPath: "/etc/heat/heat.conf.d",
 			ReadOnly:  true,
 		},
 	}
