@@ -882,6 +882,7 @@ func (r *HeatAPIReconciler) generateServiceSecrets(
 	}
 	customData[heat.DefaultsConfigFileName] = string(heatSecret.Data[heat.DefaultsConfigFileName])
 	customData[heat.CustomConfigFileName] = string(heatSecret.Data[heat.CustomConfigFileName])
+	customData[heat.CustomConfigSecretsFileName] = string(heatSecret.Data[heat.CustomConfigSecretsFileName])
 
 	customSecrets := ""
 	for _, secretName := range instance.Spec.CustomServiceConfigSecrets {
