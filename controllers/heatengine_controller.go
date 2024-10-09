@@ -568,8 +568,8 @@ func (r *HeatEngineReconciler) generateServiceSecrets(
 	}
 
 	// customData hold any customization for the service.
-	// custom.conf is going to /etc/heat/heat.conf.d
-	// TODO: make sure custom.conf can not be overwritten
+	// 02-custom-service.conf is going to /etc/heat/heat.conf.d
+	// TODO: make sure 02-custom-service.conf can not be overwritten
 	customData := map[string]string{
 		heat.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
 		"my.cnf":                         db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf

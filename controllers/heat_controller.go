@@ -1260,9 +1260,9 @@ func generateCustomData(instance *heatv1beta1.Heat, tlsCfg *tls.Service, db *mar
 	const myCnf string = "my.cnf"
 
 	// customData hold any customization for the service.
-	// custom.conf is going to /etc/heat/heat.conf.d
+	// 01-custom.conf is going to /etc/heat/heat.conf.d
 	// all other files get placed into /etc/heat to allow overwrite of e.g. policy.json
-	// TODO: make sure custom.conf can not be overwritten
+	// TODO: make sure 01-custom.conf can not be overwritten
 	customData := map[string]string{
 		heat.CustomConfigFileName: instance.Spec.CustomServiceConfig,
 		myCnf:                     db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
