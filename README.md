@@ -55,16 +55,16 @@ spec:
 ```
 
 In this example, we are setting `num_engine_workers` to 4. After this resource has been updated, the controller will
-regenerate the ConfigMap to include the updated values in the `custom.conf` file.
+regenerate the Secret to include the updated values in the `01-custom.conf` file.
 
 ```sh
-❯ oc get cm heat-config-data -o jsonpath={.data} | jq '."custom.conf"' | sed 's/\\n/\n/g'
+❯ oc get secret heat-config-data -o jsonpath={.data} | jq '."01-custom.conf"' | sed 's/\\n/\n/g'
 "[DEFAULT]
 num_engine_workers=4
 "
 ```
 
-We can see this change reflected in the `/etc/heat/heat.conf.d/custom.conf` file within each of the API and Engine pods:
+We can see this change reflected in the `/etc/heat/heat.conf.d/01-custom.conf` file within each of the API and Engine pods:
 
 ```sh
 ❯ oc get po -l service=heat
@@ -72,7 +72,7 @@ NAME                           READY   STATUS    RESTARTS   AGE
 heat-api-5bd49b9c6d-6cprh      1/1     Running   0          2m51s
 heat-engine-5565547478-v2n4j   1/1     Running   0          2m51s
 
-❯ oc exec -it heat-engine-5565547478-v2n4j -c heat-engine -- cat /etc/heat/heat.conf.d/custom.conf
+❯ oc exec -it heat-engine-5565547478-v2n4j -c heat-engine -- cat /etc/heat/heat.conf.d/01-custom.conf
 [DEFAULT]
 num_engine_workers=4
 ```
