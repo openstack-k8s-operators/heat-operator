@@ -4,6 +4,8 @@ aliases:
   heat-approvers:
   - bshephar
   - rabi
+  - fao89
+  - slagle
   ci-approvers:
   - lewisdenny
   - frenzyfriday
