@@ -92,6 +92,7 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/config-data/default
           name: config-data
+          readOnly: true
         - mountPath: /etc/my.cnf
           name: config-data
           readOnly: true
@@ -100,6 +101,9 @@ spec:
           name: config-data
           readOnly: true
           subPath: heat-api-config.json
+        - mountPath: /etc/heat/heat.conf.d
+          name: config-data-custom
+          readOnly: true
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
@@ -125,8 +129,6 @@ spec:
         secret:
           defaultMode: 420
           secretName: heat-config-data
-      - emptyDir: {}
-        name: config-data-merged
       - name: config-data-custom
         secret:
           defaultMode: 420
@@ -159,6 +161,7 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/config-data/default
           name: config-data
+          readOnly: true
         - mountPath: /etc/my.cnf
           name: config-data
           readOnly: true
@@ -167,6 +170,9 @@ spec:
           name: config-data
           readOnly: true
           subPath: heat-cfnapi-config.json
+        - mountPath: /etc/heat/heat.conf.d
+          name: config-data-custom
+          readOnly: true
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
@@ -192,8 +198,6 @@ spec:
         secret:
           defaultMode: 420
           secretName: heat-config-data
-      - emptyDir: {}
-        name: config-data-merged
       - name: config-data-custom
         secret:
           defaultMode: 420
@@ -226,6 +230,7 @@ spec:
         volumeMounts:
         - mountPath: /var/lib/config-data/default
           name: config-data
+          readOnly: true
         - mountPath: /etc/my.cnf
           name: config-data
           readOnly: true
@@ -234,6 +239,9 @@ spec:
           name: config-data
           readOnly: true
           subPath: heat-engine-config.json
+        - mountPath: /etc/heat/heat.conf.d
+          name: config-data-custom
+          readOnly: true
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
@@ -243,8 +251,6 @@ spec:
         secret:
           defaultMode: 420
           secretName: heat-config-data
-      - emptyDir: {}
-        name: config-data-merged
       - name: config-data-custom
         secret:
           defaultMode: 420
