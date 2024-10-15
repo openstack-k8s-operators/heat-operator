@@ -33,12 +33,6 @@ func GetVolumes(name string) []corev1.Volume {
 				},
 			},
 		},
-		{
-			Name: "config-data-merged",
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{Medium: ""},
-			},
-		},
 	}
 }
 

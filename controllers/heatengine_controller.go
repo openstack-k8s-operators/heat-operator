@@ -50,7 +50,6 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
-	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 )
 
 // HeatEngineReconciler reconciles a Heat object
@@ -559,21 +558,11 @@ func (r *HeatEngineReconciler) generateServiceSecrets(
 
 	cmLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
 
-	db, err := mariadbv1.GetDatabaseByNameAndAccount(ctx, h, heat.DatabaseCRName, instance.Spec.DatabaseAccount, instance.Namespace)
-	if err != nil {
-		return err
-	}
-	var tlsCfg *tls.Service
-	if instance.Spec.TLS.CaBundleSecretName != "" {
-		tlsCfg = &tls.Service{}
-	}
-
 	// customData hold any customization for the service.
 	// 02-custom-service.conf is going to /etc/heat/heat.conf.d
 	// TODO: make sure 02-custom-service.conf can not be overwritten
 	customData := map[string]string{
 		heat.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
-		"my.cnf":                         db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
 	}
 
 	for key, data := range instance.Spec.DefaultConfigOverwrite {
