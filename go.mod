@@ -10,12 +10,12 @@ require (
 	github.com/onsi/ginkgo/v2 v2.20.1
 	github.com/onsi/gomega v1.34.1
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
-	github.com/openstack-k8s-operators/infra-operator/apis v0.4.1-0.20241012224554-129bf9e5a534
+	github.com/openstack-k8s-operators/infra-operator/apis v0.4.1-0.20241015064410-3d0bae9c028a
 	github.com/openstack-k8s-operators/keystone-operator/api v0.4.1-0.20241013092400-3f9337945472
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.4.1-0.20241007071524-66e6544525a3
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20241007071524-66e6544525a3
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.4.1-0.20241007071524-66e6544525a3
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.4.1-0.20241012153655-4666731b845c
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.4.1-0.20241014140317-e5c35d28f3af
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.4.1-0.20241014140317-e5c35d28f3af
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.4.1-0.20241014140317-e5c35d28f3af
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.4.1-0.20241015090956-b0954ab72dcd
 	k8s.io/api v0.29.9
 	k8s.io/apimachinery v0.29.9
 	k8s.io/client-go v0.29.9
