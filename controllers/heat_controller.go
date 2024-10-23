@@ -1081,10 +1081,9 @@ func (r *HeatReconciler) ensureStackDomain(
 	userID, err := os.CreateUser(
 		r.Log,
 		openstack.User{
-			Name:      heat.StackDomainAdminUsername,
-			Password:  password,
-			ProjectID: "service",
-			DomainID:  domainID,
+			Name:     heat.StackDomainAdminUsername,
+			Password: password,
+			DomainID: domainID,
 		})
 	if err != nil {
 		return ctrl.Result{}, err
