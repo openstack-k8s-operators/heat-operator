@@ -1077,13 +1077,19 @@ func (r *HeatReconciler) ensureStackDomain(
 		return ctrl.Result{}, err
 	}
 
+	// We are using the fixed domainID "default" because it is also fixed in 00-default.conf
+	project, err := os.GetProject(r.Log, "service", "default")
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Create Heat user
 	userID, err := os.CreateUser(
 		r.Log,
 		openstack.User{
 			Name:      heat.StackDomainAdminUsername,
 			Password:  password,
-			ProjectID: "service",
+			ProjectID: project.ID,
 			DomainID:  domainID,
 		})
 	if err != nil {
