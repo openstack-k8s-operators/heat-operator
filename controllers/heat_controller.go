@@ -953,6 +953,13 @@ func (r *HeatReconciler) generateServiceSecrets(
 		return err
 	}
 	password := strings.TrimSuffix(string(ospSecret.Data[instance.Spec.PasswordSelectors.Service]), "\n")
+
+	domainAdminPassword := password
+	val, ok := ospSecret.Data[instance.Spec.PasswordSelectors.StackDomainAdminPassword]
+	if ok {
+		domainAdminPassword = strings.TrimSuffix(string(val), "\n")
+	}
+
 	authEncryptionKey, err := validateAuthEncryptionKey(instance, ospSecret)
 	if err != nil {
 		return err
@@ -967,7 +974,7 @@ func (r *HeatReconciler) generateServiceSecrets(
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
-	templateParameters := initTemplateParameters(instance, authURL, password, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret)
+	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret)
 
 	// Render vhost configuration for API and CFN
 	httpdAPIVhostConfig := map[string]interface{}{}
@@ -1048,6 +1055,11 @@ func (r *HeatReconciler) ensureStackDomain(
 	}
 	password := strings.TrimSuffix(string(val), "\n")
 
+	domainAdminPassword := password
+	val, ok = secret.Data[instance.Spec.PasswordSelectors.StackDomainAdminPassword]
+	if ok {
+		domainAdminPassword = strings.TrimSuffix(string(val), "\n")
+	}
 	//
 	// get admin authentication OpenStack
 	//
@@ -1082,7 +1094,7 @@ func (r *HeatReconciler) ensureStackDomain(
 		r.Log,
 		openstack.User{
 			Name:     heat.StackDomainAdminUsername,
-			Password: password,
+			Password: domainAdminPassword,
 			DomainID: domainID,
 		})
 	if err != nil {
@@ -1301,6 +1313,7 @@ func initTemplateParameters(
 	instance *heatv1beta1.Heat,
 	authURL string,
 	password string,
+	domainAdminPassword string,
 	authEncryptionKey string,
 	transportURL string,
 	mc *memcachedv1.Memcached,
@@ -1321,6 +1334,7 @@ func initTemplateParameters(
 		"ServicePassword":          password,
 		"StackDomainAdminUsername": heat.StackDomainAdminUsername,
 		"StackDomainName":          heat.StackDomainName,
+		"StackDomainAdminPassword": domainAdminPassword,
 		"AuthEncryptionKey":        authEncryptionKey,
 		"TransportURL":             transportURL,
 		"MemcachedServers":         mc.GetMemcachedServerListString(),

@@ -101,6 +101,11 @@ spec:
                     description: Service - Selector to get the heat service password
                       from the Secret
                     type: string
+                  stackDomainAdminPassword:
+                    default: HeatStackDomainAdminPassword
+                    description: StackDomainAdminPassword - Selector to get the heat
+                      stack domain admin password from the Secret
+                    type: string
                 type: object
               replicas:
                 default: 1
