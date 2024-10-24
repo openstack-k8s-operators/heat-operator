@@ -4,4 +4,4 @@
     github-check:
       jobs:
         - openstack-k8s-operators-content-provider
-        - heat-operator-tempest-multinode
+        - heat-operator-tempest-multinode-ceph

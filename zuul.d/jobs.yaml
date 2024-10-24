@@ -1,18 +1,18 @@
 ---
 - job:
-    name: heat-operator-tempest-multinode
-    parent: podified-multinode-edpm-deployment-crc
+    name: heat-operator-tempest-multinode-ceph
+    parent: podified-multinode-hci-deployment-crc-1comp-backends
     dependencies: ["openstack-k8s-operators-content-provider"]
     vars:
       cifmw_extras:
         - "@scenarios/centos-9/multinode-ci.yml"
+        - "@scenarios/centos-9/hci_ceph_backends.yml"
         - "@{{ ansible_user_dir }}/{{ zuul.projects['github.com/openstack-k8s-operators/heat-operator'].src_dir }}/ci/tempest/ci_fw_vars.yaml"
       cifmw_run_test_role: test_operator
       cifmw_test_operator_concurrency: 4
       cifmw_test_operator_timeout: 7200
       cifmw_test_operator_tempest_network_attachments:
-        - ctlplane
-      # This value is used to populate the `tempestconfRun` parameter of the Tempest CR: https://openstack-k8s-operators.github.io/test-operator/crds.html#tempest-custom-resource
+        - ctlplane      # This value is used to populate the `tempestconfRun` parameter of the Tempest CR: https://openstack-k8s-operators.github.io/test-operator/crds.html#tempest-custom-resource
       # https://github.com/openstack-k8s-operators/ci-framework/blob/main/roles/test_operator/defaults/main.yml
       # NOTE(gibi): identity.v3_endpoint_type override is a WA to force the
       # publicURL as otherwise tempest gets configured with adminURL and that
@@ -23,13 +23,19 @@
             validation.run_validation true
             identity.v3_endpoint_type public
             identity.v2_admin_endpoint_type public
+            volume.volume_type_multiattach multiattach
+            volume.storage_protocol ceph
+            heat_plugin.vm_to_heat_api_insecure true
+            heat_plugin.dns_servers "192.168.122.80"
+            share.run_share_group_tests false
+            share.capability_storage_protocol cephfs
+            share.suppress_errors_in_cleanup true
       cifmw_test_operator_tempest_include_list: |
         heat_tempest_plugin.*
       cifmw_test_operator_tempest_exclude_list: |
         heat_tempest_plugin.tests.functional.test_os_wait_condition.OSWaitCondition.test_create_stack_with_multi_signal_waitcondition
         heat_tempest_plugin.tests.scenario.test_server_cfn_init.CfnInitIntegrationTest.test_server_cfn_init
         heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
-        heat_tempest_plugin.tests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
         heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_raw
         heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_software_config
         heat_tempest_plugin.tests.scenario.test_server_software_config.SoftwareConfigIntegrationTest.test_server_software_config
