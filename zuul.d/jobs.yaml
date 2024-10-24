@@ -23,6 +23,8 @@
             validation.run_validation true
             identity.v3_endpoint_type public
             identity.v2_admin_endpoint_type public
+            heat_plugin.vm_to_heat_api_insecure true
+            heat_plugin.dns_servers "192.168.122.80"
       cifmw_test_operator_tempest_include_list: |
         heat_tempest_plugin.*
       cifmw_test_operator_tempest_exclude_list: |
@@ -30,8 +32,6 @@
         heat_tempest_plugin.tests.scenario.test_server_cfn_init.CfnInitIntegrationTest.test_server_cfn_init
         heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
         heat_tempest_plugin.tests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
-        heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_raw
-        heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_software_config
         heat_tempest_plugin.tests.scenario.test_server_software_config.SoftwareConfigIntegrationTest.test_server_software_config
       external_plugin: "opendev.org/openstack/heat-tempest-plugin"
       change_item: "{{ zuul['items'] | selectattr('project.canonical_name', 'equalto', external_plugin) }}"
