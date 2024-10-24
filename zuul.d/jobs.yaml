@@ -23,16 +23,18 @@
             validation.run_validation true
             identity.v3_endpoint_type public
             identity.v2_admin_endpoint_type public
+            heat_plugin.vm_to_heat_api_insecure true
+            heat_plugin.dns_servers "192.168.122.80"
+            service_available.ceilometer true
+            service_available.sg_core true
+            service_available.aodh true
+            telemetry.sg_core_service_url "https://ceilometer-internal.openstack.svc.cluster.local:3000"
+            telemetry.prometheus_service_url "https://metric-storage-prometheus.openstack.svc.cluster.local:9090"
+            telemetry.ceilometer_polling_interval 120
+            telemetry.prometheus_scrape_interval 30
+            telemetry.alarm_threshold 50000000000
       cifmw_test_operator_tempest_include_list: |
         heat_tempest_plugin.*
-      cifmw_test_operator_tempest_exclude_list: |
-        heat_tempest_plugin.tests.functional.test_os_wait_condition.OSWaitCondition.test_create_stack_with_multi_signal_waitcondition
-        heat_tempest_plugin.tests.scenario.test_server_cfn_init.CfnInitIntegrationTest.test_server_cfn_init
-        heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
-        heat_tempest_plugin.tests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
-        heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_raw
-        heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_software_config
-        heat_tempest_plugin.tests.scenario.test_server_software_config.SoftwareConfigIntegrationTest.test_server_software_config
       external_plugin: "opendev.org/openstack/heat-tempest-plugin"
       change_item: "{{ zuul['items'] | selectattr('project.canonical_name', 'equalto', external_plugin) }}"
       cifmw_test_operator_tempest_external_plugin: "{{ [] if change_item | length < 1 else [ { 'repository': 'https://' + external_plugin + '.git', 'changeRepository': 'https://review' + external_plugin, 'changeRefspec': [ 'refs/changes', change_item[0].change[-2:], change_item[0].change, change_item[0].patchset ] | join('/') } ] }}"
