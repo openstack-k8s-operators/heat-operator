@@ -98,4 +98,8 @@ type PasswordSelector struct {
 	// +kubebuilder:default="HeatAuthEncryptionKey"
 	// AuthEncryptionKey - Selector to get the heat auth encryption key from the Secret
 	AuthEncryptionKey string `json:"authEncryptionKey"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="HeatStackDomainAdminPassword"
+	// StackDomainAdminPassword - Selector to get the heat stack domain admin password from the Secret
+	StackDomainAdminPassword string `json:"stackDomainAdminPassword"`
 }
