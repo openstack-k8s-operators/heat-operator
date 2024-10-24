@@ -32,6 +32,7 @@ spec:
   memcachedInstance: memcached
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
+    stackDomainAdminPassword: HeatStackDomainAdminPassword
     service: HeatPassword
   preserveJobs: false
   rabbitMqClusterName: rabbitmq
@@ -61,6 +62,7 @@ spec:
   databaseAccount: heat
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
+    stackDomainAdminPassword: HeatStackDomainAdminPassword
     service: HeatPassword
   replicas: 1
   resources: {}
@@ -88,6 +90,7 @@ spec:
   databaseAccount: heat
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
+    stackDomainAdminPassword: HeatStackDomainAdminPassword
     service: HeatPassword
   replicas: 1
   resources: {}
@@ -115,6 +118,7 @@ spec:
   databaseAccount: heat
   passwordSelectors:
     authEncryptionKey: HeatAuthEncryptionKey
+    stackDomainAdminPassword: HeatStackDomainAdminPassword
     service: HeatPassword
   replicas: 1
   resources: {}
