@@ -227,6 +227,18 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// index customServiceConfigSecrets
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatCfnAPI{}, customServiceConfigField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.HeatCfnAPI)
+		if cr.Spec.CustomServiceConfigSecrets == nil {
+			return nil
+		}
+		return cr.Spec.CustomServiceConfigSecrets
+	}); err != nil {
+		return err
+	}
+
 	configMapFn := func(_ context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
