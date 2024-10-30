@@ -341,6 +341,8 @@ var _ = Describe("Heat controller", func() {
 					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
 			Expect(heatCfg).Should(
 				ContainSubstring("tls_enabled=false"))
+			Expect(heatCfg).Should(
+				ContainSubstring("stack_domain_admin_password=12345678"))
 			Expect(string(cm.Data["my.cnf"])).To(
 				ContainSubstring("[client]\nssl=0"))
 			Expect(string(cm.Data["heat-api-httpd.conf"])).To(
