@@ -44,6 +44,11 @@ spec:
           spec:
             description: HeatSpec defines the desired state of Heat
             properties:
+              apiTimeout:
+                default: 600
+                description: APITimeout for Route and Apache
+                minimum: 60
+                type: integer
               customServiceConfig:
                 description: CustomServiceConfig - customize the service config using
                   this parameter to change service defaults, or overwrite rendered
