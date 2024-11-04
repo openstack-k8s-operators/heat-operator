@@ -1353,6 +1353,7 @@ func initTemplateParameters(
 		"MemcachedServersWithInet": mc.GetMemcachedServerListWithInetString(),
 		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),
 		"DatabaseConnection":       mysqlConnectionString,
+		"Timeout":                  instance.Spec.APITimeout,
 	}
 }
 
