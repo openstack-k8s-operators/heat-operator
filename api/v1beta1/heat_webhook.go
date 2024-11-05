@@ -238,3 +238,30 @@ func (r *Heat) ValidateDelete() (admission.Warnings, error) {
 	// TODO(user): fill in your validation logic upon object deletion.
 	return nil, nil
 }
+
+// SetDefaultRouteAnnotations sets HAProxy timeout values of the route
+// NOTE: it is used by ctlplane webhook on openstack-operator
+func (spec *HeatSpecCore) SetDefaultRouteAnnotations(annotations map[string]string) {
+	const haProxyAnno = "haproxy.router.openshift.io/timeout"
+	// Use a custom annotation to flag when the operator has set the default HAProxy timeout
+	// With the annotation func determines when to overwrite existing HAProxy timeout with the APITimeout
+	const heatAnno = "api.heat.openstack.org/timeout"
+
+	valHeat, okHeat := annotations[heatAnno]
+	valHAProxy, okHAProxy := annotations[haProxyAnno]
+
+	// Human operator set the HAProxy timeout manually
+	if !okHeat && okHAProxy {
+		return
+	}
+
+	// Human operator modified the HAProxy timeout manually without removing the Heat flag
+	if okHeat && okHAProxy && valHeat != valHAProxy {
+		delete(annotations, heatAnno)
+		return
+	}
+
+	timeout := fmt.Sprintf("%ds", spec.APITimeout)
+	annotations[heatAnno] = timeout
+	annotations[haProxyAnno] = timeout
+}
