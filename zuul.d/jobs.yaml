@@ -25,6 +25,7 @@
             identity.v2_admin_endpoint_type public
       cifmw_test_operator_tempest_include_list: |
         heat_tempest_plugin.*
+        heat_integrationtests.*
       cifmw_test_operator_tempest_exclude_list: |
         heat_tempest_plugin.tests.functional.test_os_wait_condition.OSWaitCondition.test_create_stack_with_multi_signal_waitcondition
         heat_tempest_plugin.tests.scenario.test_server_cfn_init.CfnInitIntegrationTest.test_server_cfn_init
