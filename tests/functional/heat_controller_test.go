@@ -46,6 +46,7 @@ var _ = Describe("Heat controller", func() {
 	var heatConfigSecretName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var keystoneAPI *keystonev1.KeystoneAPI
+	var heatDbSyncName types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -66,7 +67,10 @@ var _ = Describe("Heat controller", func() {
 				Replicas: ptr.To[int32](3),
 			},
 		}
-
+		heatDbSyncName = types.NamespacedName{
+			Name:      "heat-db-sync",
+			Namespace: namespace,
+		}
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -539,6 +543,104 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring("tls_enabled=true"))
 			Expect(string(cm.Data["my.cnf"])).To(
 				ContainSubstring("[client]\nssl-ca=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem\nssl=1"))
+		})
+	})
+
+	When("heatAPI is created with nodeSelector", func() {
+		BeforeEach(func() {
+			spec := GetDefaultHeatSpec()
+			spec["nodeSelector"] = map[string]interface{}{
+				"foo": "bar",
+			}
+			heatAPI := GetDefaultHeatAPISpec()
+			spec["heatAPI"] = heatAPI
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+			th.SimulateJobSuccess(heatDbSyncName)
+			// TODO: assert deployment once it's supported in the tests
+		})
+
+		It("sets nodeSelector in resource specs", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("updates nodeSelector in resource specs when changed", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				newNodeSelector := map[string]string{
+					"foo2": "bar2",
+				}
+				heat.Spec.NodeSelector = &newNodeSelector
+				g.Expect(k8sClient.Update(ctx, heat)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo2": "bar2"}))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("removes nodeSelector from resource specs when cleared", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				emptyNodeSelector := map[string]string{}
+				heat.Spec.NodeSelector = &emptyNodeSelector
+				g.Expect(k8sClient.Update(ctx, heat)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(BeNil())
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("removes nodeSelector from resource specs when nilled", func() {
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				heat.Spec.NodeSelector = nil
+				g.Expect(k8sClient.Update(ctx, heat)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(BeNil())
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 
