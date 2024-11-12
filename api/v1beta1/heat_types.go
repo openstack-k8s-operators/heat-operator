@@ -119,7 +119,7 @@ type HeatSpecBase struct {
 
 	// +kubebuilder:validation:Optional
 	// NodeSelector to target subset of worker nodes for running the Heat services
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	NodeSelector *map[string]string `json:"nodeSelector,omitempty"`
 
 	// Common input parameters for all Heat services
 	HeatTemplate `json:",inline"`
