@@ -835,11 +835,12 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 		},
 	}
 
+	if heatAPISpec.NodeSelector == nil {
+		heatAPISpec.NodeSelector = instance.Spec.NodeSelector
+	}
+
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		deployment.Spec = heatAPISpec
-		if len(deployment.Spec.NodeSelector) == 0 {
-			deployment.Spec.NodeSelector = instance.Spec.NodeSelector
-		}
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
@@ -858,6 +859,10 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 		ServiceAccount:     instance.RbacResourceName(),
 	}
 
+	if heatCfnAPISpec.NodeSelector == nil {
+		heatCfnAPISpec.NodeSelector = instance.Spec.NodeSelector
+	}
+
 	deployment := &heatv1beta1.HeatCfnAPI{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-cfnapi", instance.Name),
@@ -867,9 +872,6 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		deployment.Spec = heatCfnAPISpec
-		if len(deployment.Spec.NodeSelector) == 0 {
-			deployment.Spec.NodeSelector = instance.Spec.NodeSelector
-		}
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
@@ -889,6 +891,10 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 		TLS:                instance.Spec.HeatAPI.TLS.Ca,
 	}
 
+	if heatEngineSpec.NodeSelector == nil {
+		heatEngineSpec.NodeSelector = instance.Spec.NodeSelector
+	}
+
 	deployment := &heatv1beta1.HeatEngine{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-engine", instance.Name),
@@ -898,9 +904,6 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		deployment.Spec = heatEngineSpec
-		if len(deployment.Spec.NodeSelector) == 0 {
-			deployment.Spec.NodeSelector = instance.Spec.NodeSelector
-		}
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 

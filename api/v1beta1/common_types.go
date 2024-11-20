@@ -61,7 +61,7 @@ type HeatServiceTemplate struct {
 
 	// +kubebuilder:validation:Optional
 	// NodeSelector to target subset of worker nodes for running the service
-	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+	NodeSelector *map[string]string `json:"nodeSelector,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// CustomServiceConfig - customize the service config using this parameter to change service defaults,
