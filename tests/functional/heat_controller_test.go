@@ -44,6 +44,7 @@ var _ = Describe("Heat controller", func() {
 	var heatName types.NamespacedName
 	var heatTransportURLName types.NamespacedName
 	var heatConfigSecretName types.NamespacedName
+	var memcachedName types.NamespacedName
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var keystoneAPI *keystonev1.KeystoneAPI
 	var heatDbSyncName types.NamespacedName
@@ -61,6 +62,10 @@ var _ = Describe("Heat controller", func() {
 		heatConfigSecretName = types.NamespacedName{
 			Namespace: namespace,
 			Name:      heatName.Name + "-config-data",
+		}
+		memcachedName = types.NamespacedName{
+			Name:      "memcached",
+			Namespace: namespace,
 		}
 		memcachedSpec = memcachedv1.MemcachedSpec{
 			MemcachedSpecCore: memcachedv1.MemcachedSpecCore{
@@ -193,10 +198,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateMemcachedReady(memcachedName)
 		})
 
 		It("should have memcached ready", func() {
@@ -233,10 +235,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateMemcachedReady(memcachedName)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
@@ -280,10 +279,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateMemcachedReady(memcachedName)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
@@ -328,6 +324,7 @@ var _ = Describe("Heat controller", func() {
 		It("should create a Secret for heat.conf", func() {
 			cm := th.GetSecret(heatConfigSecretName)
 
+			memcacheInstance := infra.GetMemcached(memcachedName)
 			heatCfg := string(cm.Data["00-default.conf"])
 			Expect(heatCfg).Should(
 				ContainSubstring("stack_domain_admin=heat_stack_domain_admin"))
@@ -338,11 +335,11 @@ var _ = Describe("Heat controller", func() {
 			Expect(heatCfg).Should(
 				ContainSubstring("www_authenticate_uri=http://keystone-internal.openstack.svc"))
 			Expect(heatCfg).Should(
-				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
-					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+				ContainSubstring("backend = dogpile.cache.memcached"))
 			Expect(heatCfg).Should(
-				ContainSubstring(fmt.Sprintf("memcached_servers=inet:[memcached-0.memcached.%s.svc]:11211,inet:[memcached-1.memcached.%s.svc]:11211,inet:[memcached-2.memcached.%s.svc]:11211",
-					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+				ContainSubstring(fmt.Sprintf("memcache_servers = %s", memcacheInstance.GetMemcachedServerListWithInetString())))
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListWithInetString())))
 			Expect(heatCfg).Should(
 				ContainSubstring("tls_enabled=false"))
 			Expect(heatCfg).Should(
@@ -362,10 +359,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateMemcachedReady(memcachedName)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
@@ -419,10 +413,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateMemcachedReady(memcachedName)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
@@ -483,10 +474,7 @@ var _ = Describe("Heat controller", func() {
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
 			// memcached instance support tls
-			infra.SimulateTLSMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateTLSMemcachedReady(memcachedName)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
@@ -532,13 +520,14 @@ var _ = Describe("Heat controller", func() {
 		It("should create a Secret for heat.conf with memcached + DB using tls connection", func() {
 			cm := th.GetSecret(heatConfigSecretName)
 
+			memcacheInstance := infra.GetMemcached(memcachedName)
 			heatCfg := string(cm.Data["00-default.conf"])
 			Expect(heatCfg).Should(
-				ContainSubstring(fmt.Sprintf("memcache_servers=memcached-0.memcached.%s.svc:11211,memcached-1.memcached.%s.svc:11211,memcached-2.memcached.%s.svc:11211",
-					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+				ContainSubstring("backend = dogpile.cache.pymemcache"))
 			Expect(heatCfg).Should(
-				ContainSubstring(fmt.Sprintf("memcached_servers=inet:[memcached-0.memcached.%s.svc]:11211,inet:[memcached-1.memcached.%s.svc]:11211,inet:[memcached-2.memcached.%s.svc]:11211",
-					heatName.Namespace, heatName.Namespace, heatName.Namespace)))
+				ContainSubstring(fmt.Sprintf("memcache_servers = %s", memcacheInstance.GetMemcachedServerListString())))
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListWithInetString())))
 			Expect(heatCfg).Should(
 				ContainSubstring("tls_enabled=true"))
 			Expect(string(cm.Data["my.cnf"])).To(
@@ -559,10 +548,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateMemcachedReady(memcachedName)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
@@ -669,10 +655,7 @@ var _ = Describe("Heat controller", func() {
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateMemcachedReady(memcachedName)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
@@ -755,10 +738,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
 			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(types.NamespacedName{
-				Name:      "memcached",
-				Namespace: namespace,
-			})
+			infra.SimulateMemcachedReady(memcachedName)
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
