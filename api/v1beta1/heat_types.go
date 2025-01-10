@@ -121,6 +121,12 @@ type HeatSpecBase struct {
 	// NodeSelector to target subset of worker nodes for running the Heat services
 	NodeSelector *map[string]string `json:"nodeSelector,omitempty"`
 
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=600
+	// +kubebuilder:validation:Minimum=60
+	// APITimeout for Route and Apache
+	APITimeout int `json:"apiTimeout"`
+
 	// Common input parameters for all Heat services
 	HeatTemplate `json:",inline"`
 }
