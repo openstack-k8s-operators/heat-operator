@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"gopkg.in/yaml.v2"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
@@ -174,18 +175,23 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 
 // fields to index to reconcile when change
 const (
-	passwordSecretField      = ".spec.secret"
-	transportURLSecretField  = ".spec.transportURLSecret"
-	caBundleSecretNameField  = ".spec.tls.caBundleSecretName"
-	tlsAPIInternalField      = ".spec.tls.api.internal.secretName"
-	tlsAPIPublicField        = ".spec.tls.api.public.secretName"
-	customServiceConfigField = ".spec.customServiceConfigSecrets"
+	passwordSecretField                       = ".spec.secret"
+	transportURLSecretField                   = ".spec.transportURLSecret"
+	caBundleSecretNameField                   = ".spec.tls.caBundleSecretName"
+	tlsAPIInternalField                       = ".spec.tls.api.internal.secretName"
+	tlsAPIPublicField                         = ".spec.tls.api.public.secretName"
+	customServiceConfigField                  = ".spec.customServiceConfigSecrets"
+	httpdCustomServiceConfigSecretField       = ".spec.httpdCustomization.customServiceConfigSecret"
+	apiHttpdCustomServiceConfigSecretField    = ".spec.heatAPI.httpdCustomization.customServiceConfigSecret"
+	cfnapiHttpdCustomServiceConfigSecretField = ".spec.heatCfnAPI.httpdCustomization.customServiceConfigSecret"
 )
 
 var (
 	heatWatchFields = []string{
 		passwordSecretField,
 		customServiceConfigField,
+		apiHttpdCustomServiceConfigSecretField,
+		cfnapiHttpdCustomServiceConfigSecretField,
 	}
 	heatAPIWatchFields = []string{
 		passwordSecretField,
@@ -194,6 +200,7 @@ var (
 		tlsAPIInternalField,
 		tlsAPIPublicField,
 		customServiceConfigField,
+		httpdCustomServiceConfigSecretField,
 	}
 	heatCfnWatchFields = []string{
 		passwordSecretField,
@@ -202,6 +209,7 @@ var (
 		tlsAPIInternalField,
 		tlsAPIPublicField,
 		customServiceConfigField,
+		httpdCustomServiceConfigSecretField,
 	}
 	heatEngineWatchFields = []string{
 		passwordSecretField,
@@ -233,6 +241,30 @@ func (r *HeatReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			return nil
 		}
 		return cr.Spec.CustomServiceConfigSecrets
+	}); err != nil {
+		return err
+	}
+
+	// index apiHttpdCustomServiceConfigSecretField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.Heat{}, apiHttpdCustomServiceConfigSecretField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.Heat)
+		if cr.Spec.HeatAPI.HttpdCustomization.CustomConfigSecret == nil {
+			return nil
+		}
+		return []string{*cr.Spec.HeatAPI.HttpdCustomization.CustomConfigSecret}
+	}); err != nil {
+		return err
+	}
+
+	// index cfnapiHttpdCustomServiceConfigSecretField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.Heat{}, cfnapiHttpdCustomServiceConfigSecretField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.Heat)
+		if cr.Spec.HeatCfnAPI.HttpdCustomization.CustomConfigSecret == nil {
+			return nil
+		}
+		return []string{*cr.Spec.HeatCfnAPI.HttpdCustomization.CustomConfigSecret}
 	}); err != nil {
 		return err
 	}
@@ -991,23 +1023,46 @@ func (r *HeatReconciler) generateServiceSecrets(
 
 	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret)
 
+	httpdAPIOverrideSecret := &corev1.Secret{}
+	if instance.Spec.HeatAPI.HttpdCustomization.CustomConfigSecret != nil && *instance.Spec.HeatAPI.HttpdCustomization.CustomConfigSecret != "" {
+		httpdAPIOverrideSecret, _, err = oko_secret.GetSecret(ctx, h, *instance.Spec.HeatAPI.HttpdCustomization.CustomConfigSecret, instance.Namespace)
+		if err != nil {
+			return err
+		}
+	}
+
+	httpdCfnAPIOverrideSecret := &corev1.Secret{}
+	if instance.Spec.HeatCfnAPI.HttpdCustomization.CustomConfigSecret != nil && *instance.Spec.HeatCfnAPI.HttpdCustomization.CustomConfigSecret != "" {
+		httpdCfnAPIOverrideSecret, _, err = oko_secret.GetSecret(ctx, h, *instance.Spec.HeatCfnAPI.HttpdCustomization.CustomConfigSecret, instance.Namespace)
+		if err != nil {
+			return err
+		}
+	}
+
 	// Render vhost configuration for API and CFN
 	httpdAPIVhostConfig := map[string]interface{}{}
 	httpdCfnAPIVhostConfig := map[string]interface{}{}
+	customTemplates := map[string]string{}
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
 		var (
 			apiTLSEnabled    = instance.Spec.HeatAPI.TLS.API.Enabled(endpt)
 			cfnAPITLSEnabled = instance.Spec.HeatCfnAPI.TLS.API.Enabled(endpt)
 		)
-		renderVhost(httpdAPIVhostConfig, instance, endpt, heatapi.ServiceName, apiTLSEnabled)
-		renderVhost(httpdCfnAPIVhostConfig, instance, endpt, heatcfnapi.ServiceName, cfnAPITLSEnabled)
+		customTemplates = util.MergeMaps(customTemplates,
+			renderVhost(httpdAPIVhostConfig, instance, endpt, heatapi.ServiceName, apiTLSEnabled, httpdAPIOverrideSecret))
+		customTemplates = util.MergeMaps(customTemplates,
+			renderVhost(httpdCfnAPIVhostConfig, instance, endpt, heatcfnapi.ServiceName, cfnAPITLSEnabled, httpdCfnAPIOverrideSecret))
 	}
 
 	// create HeatAPI httpd vhost template parameters
 	templateParameters["APIvHosts"] = httpdAPIVhostConfig
 	templateParameters["CfnAPIvHosts"] = httpdCfnAPIVhostConfig
 
-	secrets := createSecretTemplates(instance, customData, templateParameters, secretLabels)
+	secrets, err := createSecretTemplates(instance, customData, templateParameters, secretLabels, customTemplates)
+	if err != nil {
+		return err
+	}
+
 	return oko_secret.EnsureSecrets(ctx, h, instance, secrets, envVars)
 }
 
@@ -1303,23 +1358,31 @@ func generateCustomData(instance *heatv1beta1.Heat, tlsCfg *tls.Service, db *mar
 }
 
 // createSecretsTemplates - Takes inputs and renders the templates that will be used for our Secrets
-func createSecretTemplates(instance *heatv1beta1.Heat, customData map[string]string, templateParameters map[string]interface{}, secretLabels map[string]string) []util.Template {
+func createSecretTemplates(instance *heatv1beta1.Heat, customData map[string]string, templateParameters map[string]interface{}, secretLabels map[string]string, customTemplates map[string]string) ([]util.Template, error) {
 	var (
 		secretName = fmt.Sprintf("%s-config-data", instance.Name)
 	)
 
+	// Marshal the templateParameters map to YAML
+	yamlData, err := yaml.Marshal(templateParameters)
+	if err != nil {
+		return []util.Template{}, fmt.Errorf("Error marshalling to YAML: %w", err)
+	}
+	customData[common.TemplateParameters] = string(yamlData)
+
 	return []util.Template{
 		// Secret
 		{
-			Name:          secretName,
-			Namespace:     instance.Namespace,
-			Type:          util.TemplateTypeConfig,
-			InstanceType:  instance.Kind,
-			CustomData:    customData,
-			ConfigOptions: templateParameters,
-			Labels:        secretLabels,
+			Name:           secretName,
+			Namespace:      instance.Namespace,
+			Type:           util.TemplateTypeConfig,
+			InstanceType:   instance.Kind,
+			CustomData:     customData,
+			ConfigOptions:  templateParameters,
+			StringTemplate: customTemplates,
+			Labels:         secretLabels,
 		},
-	}
+	}, nil
 }
 
 // initTemplateParameters - takes inputs related to external objects in the cluster and renders the
@@ -1360,7 +1423,9 @@ func initTemplateParameters(
 	}
 }
 
-func renderVhost(httpdVhostConfig map[string]interface{}, instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool) {
+func renderVhost(httpdVhostConfig map[string]interface{}, instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool, httpdOverrideSecret *corev1.Secret) map[string]string {
+	customTemplates := map[string]string{}
+
 	var (
 		ServerNameString = fmt.Sprintf("%s-%s.%s.svc", serviceName, endpt.String(), instance.Namespace)
 		SSLCertFilePath  = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
@@ -1374,7 +1439,19 @@ func renderVhost(httpdVhostConfig map[string]interface{}, instance *heatv1beta1.
 		endptConfig["SSLCertificateFile"] = SSLCertFilePath
 		endptConfig["SSLCertificateKeyFile"] = SSLKeyFilePath
 	}
+
+	endptConfig["Override"] = false
+	if httpdOverrideSecret != nil && len(httpdOverrideSecret.Data) > 0 {
+		endptConfig["Override"] = true
+		for key, data := range httpdOverrideSecret.Data {
+			if len(data) > 0 {
+				customTemplates["httpd_custom_"+serviceName+"_"+endpt.String()+"_"+key] = string(data)
+			}
+		}
+	}
 	httpdVhostConfig[endpt.String()] = endptConfig
+
+	return customTemplates
 }
 
 // validateAuthEncryptionKey - the heat_auth_encrption_key needs to be 32 characters long. This function validates

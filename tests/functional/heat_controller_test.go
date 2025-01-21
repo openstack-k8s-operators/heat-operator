@@ -36,6 +36,7 @@ import (
 	"github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
@@ -627,6 +628,238 @@ var _ = Describe("Heat controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(BeNil())
 			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("A HeatAPI is created with HttpdCustomization.CustomConfigSecret", func() {
+		BeforeEach(func() {
+			customServiceConfigSecretName := types.NamespacedName{Name: "foo", Namespace: namespace}
+			customConfig := []byte(`CustomParam "foo"
+CustomKeystoneInternalURL "{{ .KeystoneInternalURL }}"`)
+			th.CreateSecret(
+				customServiceConfigSecretName,
+				map[string][]byte{
+					"bar.conf": customConfig,
+				},
+			)
+
+			spec := GetDefaultHeatSpec()
+			heatAPI := GetDefaultHeatAPISpec()
+			heatAPI["httpdCustomization"] = map[string]interface{}{
+				"customConfigSecret": customServiceConfigSecretName.Name,
+			}
+			spec["heatAPI"] = heatAPI
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+		})
+
+		It("it renders the custom template and adds it to the config-data secret for HeatAPI", func() {
+			scrt := th.GetSecret(heatConfigSecretName)
+			Expect(scrt).ShouldNot(BeNil())
+			Expect(scrt.Data).Should(HaveKey(common.TemplateParameters))
+			configData := string(scrt.Data[common.TemplateParameters])
+
+			keystoneInternaURL := "http://keystone-internal.openstack.svc:5000"
+			Expect(configData).Should(ContainSubstring(fmt.Sprintf("KeystoneInternalURL: %s", keystoneInternaURL)))
+
+			for _, cfg := range []string{"httpd_custom_heat-api_internal_bar.conf", "httpd_custom_heat-api_public_bar.conf"} {
+				Expect(scrt.Data).Should(HaveKey(cfg))
+				configData := string(scrt.Data[cfg])
+				Expect(configData).Should(ContainSubstring("CustomParam \"foo\""))
+				Expect(configData).Should(ContainSubstring(fmt.Sprintf("CustomKeystoneInternalURL \"%s\"", keystoneInternaURL)))
+			}
+		})
+
+		It("it has NOT renderd the custom template and added it to the config-data secret for HeatCfnAPI", func() {
+			scrt := th.GetSecret(heatConfigSecretName)
+			Expect(scrt).ShouldNot(BeNil())
+			Expect(scrt.Data).Should(HaveKey(common.TemplateParameters))
+			configData := string(scrt.Data[common.TemplateParameters])
+			keystoneInternaURL := "http://keystone-internal.openstack.svc:5000"
+			Expect(configData).Should(ContainSubstring(fmt.Sprintf("KeystoneInternalURL: %s", keystoneInternaURL)))
+
+			Expect(scrt.Data).Should(Not(HaveKey("httpd_custom_heat-cfnapi_internal_bar.conf")))
+			Expect(scrt.Data).Should(Not(HaveKey("httpd_custom_heat-cfnapi_public_bar.conf")))
+		})
+	})
+
+	When("A HeatCfnAPI is created with HttpdCustomization.CustomConfigSecret", func() {
+		BeforeEach(func() {
+			customServiceConfigSecretName := types.NamespacedName{Name: "foo", Namespace: namespace}
+			customConfig := []byte(`CustomParam "foo"
+CustomKeystoneInternalURL "{{ .KeystoneInternalURL }}"`)
+			th.CreateSecret(
+				customServiceConfigSecretName,
+				map[string][]byte{
+					"bar.conf": customConfig,
+				},
+			)
+
+			spec := GetDefaultHeatSpec()
+			heatCfnAPI := GetDefaultHeatCFNAPISpec()
+			heatCfnAPI["httpdCustomization"] = map[string]interface{}{
+				"customConfigSecret": customServiceConfigSecretName.Name,
+			}
+			spec["heatCfnAPI"] = heatCfnAPI
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+		})
+
+		It("it renders the custom template and adds it to the config-data secret for HeatCfnAPI", func() {
+			scrt := th.GetSecret(heatConfigSecretName)
+			Expect(scrt).ShouldNot(BeNil())
+			Expect(scrt.Data).Should(HaveKey(common.TemplateParameters))
+			configData := string(scrt.Data[common.TemplateParameters])
+
+			keystoneInternaURL := "http://keystone-internal.openstack.svc:5000"
+			Expect(configData).Should(ContainSubstring(fmt.Sprintf("KeystoneInternalURL: %s", keystoneInternaURL)))
+
+			for _, cfg := range []string{"httpd_custom_heat-cfnapi_internal_bar.conf", "httpd_custom_heat-cfnapi_public_bar.conf"} {
+				Expect(scrt.Data).Should(HaveKey(cfg))
+				configData := string(scrt.Data[cfg])
+				Expect(configData).Should(ContainSubstring("CustomParam \"foo\""))
+				Expect(configData).Should(ContainSubstring(fmt.Sprintf("CustomKeystoneInternalURL \"%s\"", keystoneInternaURL)))
+			}
+		})
+
+		It("it has NOT renderd the custom template and added it to the config-data secret for HeatAPI", func() {
+			scrt := th.GetSecret(heatConfigSecretName)
+			Expect(scrt).ShouldNot(BeNil())
+			Expect(scrt.Data).Should(HaveKey(common.TemplateParameters))
+			configData := string(scrt.Data[common.TemplateParameters])
+			keystoneInternaURL := "http://keystone-internal.openstack.svc:5000"
+			Expect(configData).Should(ContainSubstring(fmt.Sprintf("KeystoneInternalURL: %s", keystoneInternaURL)))
+
+			Expect(scrt.Data).Should(Not(HaveKey("httpd_custom_heat-api_internal_bar.conf")))
+			Expect(scrt.Data).Should(Not(HaveKey("httpd_custom_heat-api_public_bar.conf")))
+		})
+	})
+
+	When("A HeatAPI _and_ HeatCfnAPI is created with HttpdCustomization.CustomConfigSecret", func() {
+		BeforeEach(func() {
+			customServiceConfigSecretName := types.NamespacedName{Name: "foo", Namespace: namespace}
+			customConfig := []byte(`CustomParam "foo"
+CustomKeystoneInternalURL "{{ .KeystoneInternalURL }}"`)
+			th.CreateSecret(
+				customServiceConfigSecretName,
+				map[string][]byte{
+					"bar.conf": customConfig,
+				},
+			)
+
+			spec := GetDefaultHeatSpec()
+			heatCfnAPI := GetDefaultHeatCFNAPISpec()
+			heatCfnAPI["httpdCustomization"] = map[string]interface{}{
+				"customConfigSecret": customServiceConfigSecretName.Name,
+			}
+
+			spec["heatCfnAPI"] = heatCfnAPI
+
+			heatAPI := GetDefaultHeatAPISpec()
+			heatAPI["httpdCustomization"] = map[string]interface{}{
+				"customConfigSecret": customServiceConfigSecretName.Name,
+			}
+			spec["heatAPI"] = heatAPI
+
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(types.NamespacedName{
+				Name:      "memcached",
+				Namespace: namespace,
+			})
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+		})
+
+		It("it renders the custom template and adds it to the config-data secret for HeatCfnAPI _and_ HeatAPI", func() {
+			scrt := th.GetSecret(heatConfigSecretName)
+			Expect(scrt).ShouldNot(BeNil())
+			Expect(scrt.Data).Should(HaveKey(common.TemplateParameters))
+			configData := string(scrt.Data[common.TemplateParameters])
+
+			keystoneInternaURL := "http://keystone-internal.openstack.svc:5000"
+			Expect(configData).Should(ContainSubstring(fmt.Sprintf("KeystoneInternalURL: %s", keystoneInternaURL)))
+
+			for _, cfg := range []string{
+				"httpd_custom_heat-cfnapi_internal_bar.conf",
+				"httpd_custom_heat-cfnapi_public_bar.conf",
+				"httpd_custom_heat-api_internal_bar.conf",
+				"httpd_custom_heat-api_public_bar.conf",
+			} {
+				Expect(scrt.Data).Should(HaveKey(cfg))
+				configData := string(scrt.Data[cfg])
+				Expect(configData).Should(ContainSubstring("CustomParam \"foo\""))
+				Expect(configData).Should(ContainSubstring(fmt.Sprintf("CustomKeystoneInternalURL \"%s\"", keystoneInternaURL)))
+			}
 		})
 	})
 
