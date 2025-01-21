@@ -239,6 +239,18 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// index httpdOverrideSecretField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatCfnAPI{}, httpdCustomServiceConfigSecretField, func(rawObj client.Object) []string {
+		// Extract the secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.HeatCfnAPI)
+		if cr.Spec.HttpdCustomization.CustomConfigSecret == nil {
+			return nil
+		}
+		return []string{*cr.Spec.HttpdCustomization.CustomConfigSecret}
+	}); err != nil {
+		return err
+	}
+
 	configMapFn := func(_ context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
@@ -279,6 +291,8 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&corev1.Service{}).
 		// watch the config CMs we don't own
 		Watches(&corev1.ConfigMap{},
+			handler.EnqueueRequestsFromMapFunc(configMapFn)).
+		Watches(&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(configMapFn)).
 		Watches(
 			&corev1.Secret{},
@@ -882,6 +896,12 @@ func (r *HeatCfnAPIReconciler) generateServiceSecrets(
 	customData[heat.DefaultsConfigFileName] = string(heatSecret.Data[heat.DefaultsConfigFileName])
 	customData[heat.CustomConfigFileName] = string(heatSecret.Data[heat.CustomConfigFileName])
 	customData[heat.CustomConfigSecretsFileName] = string(heatSecret.Data[heat.CustomConfigSecretsFileName])
+	//customData[common.TemplateParameters] = string(heatSecret.Data[common.TemplateParameters])
+	//for _, key := range maps.Keys(heatSecret.Data) {
+	//	if strings.HasPrefix(key, "httpd_custom_"+heatcfnapi.ServiceName) {
+	//		customData[key] = string(heatSecret.Data[key])
+	//	}
+	//}
 
 	customSecrets := ""
 	for _, secretName := range instance.Spec.CustomServiceConfigSecrets {

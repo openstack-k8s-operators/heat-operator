@@ -4,7 +4,6 @@
     {
       "source": "/var/lib/config-data/default/heat-api-httpd.conf",
       "dest": "/etc/httpd/conf/httpd.conf",
-      "merge": false,
       "preserve_properties": true,
       "perm": "0644"
     },
@@ -29,6 +28,13 @@
       "perm": "0600",
       "optional": true,
       "merge": true
+    },
+    {
+      "source": "/var/lib/config-data/default/httpd_custom_heat-api*",
+      "dest": "/etc/httpd/conf/",
+      "owner": "apache",
+      "perm": "0444",
+      "optional": true
     }
   ],
   "permissions": [
