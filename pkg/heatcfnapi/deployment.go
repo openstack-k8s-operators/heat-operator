@@ -60,11 +60,11 @@ func Deployment(
 	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 	//
 	livenessProbe.HTTPGet = &corev1.HTTPGetAction{
-		Path: "/",
+		Path: "/healthcheck",
 		Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatCfnInternalPort)},
 	}
 	readinessProbe.HTTPGet = &corev1.HTTPGetAction{
-		Path: "/",
+		Path: "/healthcheck",
 		Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatCfnInternalPort)},
 	}
 
