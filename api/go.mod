@@ -3,7 +3,7 @@ module github.com/openstack-k8s-operators/heat-operator/api
 go 1.21
 
 require (
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20250128130522-53b65fcdadca
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.5.1-0.20250205143454-43504d7ad19a
 	k8s.io/api v0.29.13
 	k8s.io/apimachinery v0.29.13
 	sigs.k8s.io/controller-runtime v0.17.6
