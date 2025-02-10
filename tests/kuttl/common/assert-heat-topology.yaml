@@ -1,0 +1,8 @@
+#
+# Check for:
+# - heat-topology CR
+
+apiVersion: topology.openstack.org/v1beta1
+kind: Topology
+metadata:
+  name: heat-topology

@@ -1,0 +1,46 @@
+#
+# Check for:
+#
+# - No Heat CR
+# - No HeatAPI CR
+# - No HeatCfnAPI CR
+# - No HeatEngine CR
+# - No Deployment for HeatAPI CR
+# - No Deployment for HeatCfnAPI CR
+# - No Deployment for HeatEngine CR
+#
+
+apiVersion: heat.openstack.org/v1beta1
+kind: Heat
+metadata:
+  name: heat
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatAPI
+metadata:
+  name: heat-api
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatCfnAPI
+metadata:
+  name: heat-cfnapi
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatEngine
+metadata:
+  name: heat-engine
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-cfnapi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: heat-engine
