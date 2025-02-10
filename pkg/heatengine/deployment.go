@@ -20,6 +20,7 @@ import (
 
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
+	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
 	affinity "github.com/openstack-k8s-operators/lib-common/modules/common/affinity"
 	env "github.com/openstack-k8s-operators/lib-common/modules/common/env"
@@ -36,7 +37,12 @@ const (
 )
 
 // Deployment func
-func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[string]string) *appsv1.Deployment {
+func Deployment(
+	instance *heatv1beta1.HeatEngine,
+	configHash string,
+	labels map[string]string,
+	topology *topologyv1.Topology,
+) *appsv1.Deployment {
 
 	livenessProbe := &corev1.Probe{
 		TimeoutSeconds: 5,
@@ -129,18 +135,32 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		},
 	}
 
-	// If possible two pods of the same service should not
-	// run on the same worker node. If this is not possible
-	// the get still created on the same worker node.
-	deployment.Spec.Template.Spec.Affinity = affinity.DistributePods(
-		common.AppSelector,
-		[]string{
-			heat.ServiceName,
-		},
-		corev1.LabelHostname,
-	)
 	if instance.Spec.NodeSelector != nil {
 		deployment.Spec.Template.Spec.NodeSelector = *instance.Spec.NodeSelector
+	}
+
+	if topology != nil {
+		// Get the Topology .Spec
+		ts := topology.Spec
+		// Process TopologySpreadConstraints if defined in the referenced Topology
+		if ts.TopologySpreadConstraints != nil {
+			deployment.Spec.Template.Spec.TopologySpreadConstraints = *topology.Spec.TopologySpreadConstraints
+		}
+		// Process Affinity if defined in the referenced Topology
+		if ts.Affinity != nil {
+			deployment.Spec.Template.Spec.Affinity = ts.Affinity
+		}
+	} else {
+		// If possible two pods of the same service should not
+		// run on the same worker node. If this is not possible
+		// the get still created on the same worker node.
+		deployment.Spec.Template.Spec.Affinity = affinity.DistributePods(
+			common.AppSelector,
+			[]string{
+				heat.ServiceName,
+			},
+			corev1.LabelHostname,
+		)
 	}
 
 	return deployment

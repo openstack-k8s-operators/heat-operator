@@ -41,6 +41,7 @@ import (
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	heatengine "github.com/openstack-k8s-operators/heat-operator/pkg/heatengine"
+	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/deployment"
@@ -49,6 +50,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/labels"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/topology"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 )
 
@@ -68,6 +70,7 @@ type HeatEngineReconciler struct {
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;create;update;patch;delete;watch
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=keystone.openstack.org,resources=keystoneapis,verbs=get;list;watch;
+// +kubebuilder:rbac:groups=topology.openstack.org,resources=topologies,verbs=get;list;watch;update
 
 // Reconcile is part of the main kubernetes reconciliation loop which aims to
 // move the current state of the cluster closer to the desired state.
@@ -132,9 +135,14 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 		instance.Status.Hash = map[string]string{}
 	}
 
+	// Init Topology condition if there's a reference
+	if instance.Spec.TopologyRef != nil {
+		c := condition.UnknownCondition(condition.TopologyReadyCondition, condition.InitReason, condition.TopologyReadyInitMessage)
+		cl.Set(c)
+	}
 	// Handle service delete
 	if !instance.DeletionTimestamp.IsZero() {
-		return r.reconcileDelete(instance, helper)
+		return r.reconcileDelete(ctx, instance, helper)
 	}
 
 	// Handle non-deleted clusters
@@ -191,6 +199,18 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
+	// index topologyField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatEngine{}, topologyField, func(rawObj client.Object) []string {
+		// Extract the topology name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.HeatEngine)
+		if cr.Spec.TopologyRef == nil {
+			return nil
+		}
+		return []string{cr.Spec.TopologyRef.Name}
+	}); err != nil {
+		return err
+	}
+
 	configMapFn := func(_ context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
@@ -232,6 +252,9 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
+		Watches(&topologyv1.Topology{},
+			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
+			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
 		Complete(r)
 }
 
@@ -269,8 +292,21 @@ func (r *HeatEngineReconciler) findObjectsForSrc(ctx context.Context, src client
 	return requests
 }
 
-func (r *HeatEngineReconciler) reconcileDelete(instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
+func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatEngine, helper *helper.Helper) (ctrl.Result, error) {
 	r.Log.Info("Reconciling Engine Delete")
+
+	// Remove finalizer on the Topology CR
+	if ctrlResult, err := topology.EnsureDeletedTopologyRef(
+		ctx,
+		helper,
+		&topology.TopoRef{
+			Name:      instance.Status.LastAppliedTopology,
+			Namespace: instance.Namespace,
+		},
+		instance.Name,
+	); err != nil {
+		return ctrlResult, err
+	}
 
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
 	r.Log.Info("Reconciled Engine delete successfully")
@@ -461,8 +497,46 @@ func (r *HeatEngineReconciler) reconcileNormal(
 		return ctrlResult, err
 	}
 
+	//
+	// Handle Topology
+	//
+	lastTopologyRef := topology.TopoRef{
+		Name:      instance.Status.LastAppliedTopology,
+		Namespace: instance.Namespace,
+	}
+	topology, err := ensureHeatTopology(
+		ctx,
+		helper,
+		instance.Spec.TopologyRef,
+		&lastTopologyRef,
+		instance.Name,
+		heat.EngineComponent,
+	)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.TopologyReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.TopologyReadyErrorMessage,
+			err.Error()))
+		return ctrl.Result{}, fmt.Errorf("waiting for Topology requirements: %w", err)
+	}
+
+	// If TopologyRef is present and ensureHeatTopology returned a valid
+	// topology object, set .Status.LastAppliedTopology to the referenced one
+	// and mark the condition as true
+	if instance.Spec.TopologyRef != nil {
+		// update the Status with the last retrieved Topology name
+		instance.Status.LastAppliedTopology = instance.Spec.TopologyRef.Name
+		// update the TopologyRef associated condition
+		instance.Status.Conditions.MarkTrue(condition.TopologyReadyCondition, condition.TopologyReadyMessage)
+	} else {
+		// remove LastAppliedTopology from the .Status
+		instance.Status.LastAppliedTopology = ""
+	}
+
 	depl := deployment.NewDeployment(
-		heatengine.Deployment(instance, inputHash, serviceLabels),
+		heatengine.Deployment(instance, inputHash, serviceLabels, topology),
 		time.Second*5,
 	)
 
