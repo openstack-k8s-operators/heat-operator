@@ -18,8 +18,8 @@ package v1beta1
 
 import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/topology"
 	corev1 "k8s.io/api/core/v1"
+	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 )
 
 // HeatTemplate -
@@ -84,7 +84,7 @@ type HeatServiceTemplate struct {
 	// +kubebuilder:validation:Optional
 	// TopologyRef to apply the Topology defined by the associated CR referenced
 	// by name
-	TopologyRef *topology.TopoRef `json:"topologyRef,omitempty"`
+	TopologyRef *topologyv1.TopoRef `json:"topologyRef,omitempty"`
 }
 
 // APIOverrideSpec to override the generated manifest of several child resources.

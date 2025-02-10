@@ -50,7 +50,6 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/labels"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/secret"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/topology"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
 )
 
@@ -296,10 +295,10 @@ func (r *HeatEngineReconciler) reconcileDelete(ctx context.Context, instance *he
 	r.Log.Info("Reconciling Engine Delete")
 
 	// Remove finalizer on the Topology CR
-	if ctrlResult, err := topology.EnsureDeletedTopologyRef(
+	if ctrlResult, err := topologyv1.EnsureDeletedTopologyRef(
 		ctx,
 		helper,
-		&topology.TopoRef{
+		&topologyv1.TopoRef{
 			Name:      instance.Status.LastAppliedTopology,
 			Namespace: instance.Namespace,
 		},
@@ -500,7 +499,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	//
 	// Handle Topology
 	//
-	lastTopologyRef := topology.TopoRef{
+	lastTopologyRef := topologyv1.TopoRef{
 		Name:      instance.Status.LastAppliedTopology,
 		Namespace: instance.Namespace,
 	}

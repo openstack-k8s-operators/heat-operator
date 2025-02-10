@@ -20,7 +20,6 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/helper"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/labels"
-	"github.com/openstack-k8s-operators/lib-common/modules/common/topology"
 )
 
 // ensureHeatTopology - when a Topology CR is referenced, remove the
@@ -29,8 +28,8 @@ import (
 func ensureHeatTopology(
 	ctx context.Context,
 	helper *helper.Helper,
-	tpRef *topology.TopoRef,
-	lastAppliedTopology *topology.TopoRef,
+	tpRef *topologyv1.TopoRef,
+	lastAppliedTopology *topologyv1.TopoRef,
 	finalizer string,
 	selector string,
 ) (*topologyv1.Topology, error) {
@@ -48,7 +47,7 @@ func ensureHeatTopology(
 	//    referenced topology (tpRef.Name != lastAppliedTopology.Name)
 	if (tpRef == nil && lastAppliedTopology.Name != "") ||
 		(tpRef != nil && tpRef.Name != lastAppliedTopology.Name) {
-		_, err = topology.EnsureDeletedTopologyRef(
+		_, err = topologyv1.EnsureDeletedTopologyRef(
 			ctx,
 			helper,
 			lastAppliedTopology,
@@ -70,7 +69,7 @@ func ensureHeatTopology(
 			selector,
 		)
 		// Retrieve the referenced Topology
-		podTopology, _, err = topology.EnsureTopologyRef(
+		podTopology, _, err = topologyv1.EnsureTopologyRef(
 			ctx,
 			helper,
 			tpRef,

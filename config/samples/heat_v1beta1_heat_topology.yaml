@@ -1,0 +1,16 @@
+apiVersion: heat.openstack.org/v1beta1
+kind: Heat
+metadata:
+  name: heat
+spec:
+  customServiceConfig: |
+    [DEFAULT]
+    debug = True
+  databaseInstance: openstack
+  topologyRef:
+    name: heat-topology
+  heatAPI: {}
+  heatCfnAPI: {}
+  heatEngine: {}
+  rabbitMqClusterName: rabbitmq
+  secret: osp-secret
