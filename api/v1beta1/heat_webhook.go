@@ -26,6 +26,7 @@ import (
 	"fmt"
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
+	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -102,6 +103,9 @@ func (r *Heat) ValidateCreate() (admission.Warnings, error) {
 
 	var allErrs field.ErrorList
 	basePath := field.NewPath("spec")
+
+	allErrs = r.Spec.ValidateHeatTopology(basePath, r.Namespace)
+
 	if err := r.Spec.ValidateCreate(basePath); err != nil {
 		allErrs = append(allErrs, err...)
 	}
@@ -160,8 +164,9 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 
 	var allErrs field.ErrorList
 	basePath := field.NewPath("spec")
-
 	annotations := r.GetAnnotations()
+
+	allErrs = r.Spec.ValidateHeatTopology(basePath, r.Namespace)
 	if err := r.Spec.ValidateUpdate(oldHeat.Spec, basePath, annotations); err != nil {
 		allErrs = append(allErrs, err...)
 	}
@@ -176,7 +181,7 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 }
 
 // ValidateUpdate - Exported function wrapping non-exported validate functions,
-// this function can be called externally to validate an barbican spec.
+// this function can be called externally to validate Heat spec.
 func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotations map[string]string) field.ErrorList {
 	var allErrs field.ErrorList
 
@@ -264,4 +269,44 @@ func (spec *HeatSpecCore) SetDefaultRouteAnnotations(annotations map[string]stri
 	timeout := fmt.Sprintf("%ds", spec.APITimeout)
 	annotations[heatAnno] = timeout
 	annotations[haProxyAnno] = timeout
+}
+
+// ValidateHeatTopology - Returns an ErrorList if the Topology is referenced
+// on a different namespace
+func (spec *HeatSpec) ValidateHeatTopology(basePath *field.Path, namespace string) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// When a TopologyRef CR is referenced, fail if a different Namespace is
+	// referenced because is not supported
+	if spec.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
+	// When a TopologyRef CR is referenced with an override to HeatAPI, fail
+	// if a different Namespace is referenced because not supported
+	if spec.HeatAPI.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.HeatAPI.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
+	// When a TopologyRef CR is referenced with an override to HeatCFNAPI,
+	// fail if a different Namespace is referenced because not supported
+	if spec.HeatCfnAPI.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.HeatCfnAPI.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
+	// When a TopologyRef CR is referenced with an override to an instance of
+	// HeatEngine, fail if a different Namespace is referenced because not
+	// supported
+	if spec.HeatEngine.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.HeatEngine.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+	return allErrs
 }

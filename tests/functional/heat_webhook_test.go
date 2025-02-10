@@ -31,11 +31,33 @@ import (
 
 var _ = Describe("Heat Webhook", func() {
 	var heatName types.NamespacedName
+	var heatTopologies []types.NamespacedName
 
 	BeforeEach(func() {
 		heatName = types.NamespacedName{
 			Name:      "heat",
 			Namespace: namespace,
+		}
+		// A set of topologies to Test how the reference is propagated to the
+		// resulting Deployments and if a potential override produces the
+		// expected values
+		heatTopologies = []types.NamespacedName{
+			{
+				Namespace: heatName.Namespace,
+				Name:      fmt.Sprintf("%s-global-topology", heatName.Name),
+			},
+			{
+				Namespace: heatName.Namespace,
+				Name:      fmt.Sprintf("%s-api-topology", heatName.Name),
+			},
+			{
+				Namespace: heatName.Namespace,
+				Name:      fmt.Sprintf("%s-cfnapi-topology", heatName.Name),
+			},
+			{
+				Namespace: heatName.Namespace,
+				Name:      fmt.Sprintf("%s-engine-topology", heatName.Name),
+			},
 		}
 
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -206,5 +228,32 @@ var _ = Describe("Heat Webhook", func() {
 				g.Expect(th.K8sClient.Update(th.Ctx, instance)).Should(Succeed())
 			}).Should(Succeed())
 		})
+	})
+
+	It("rejects a wrong TopologyRef on a different namespace", func() {
+		spec := GetDefaultHeatSpec()
+		// Reference a top-level topology
+		spec["topologyRef"] = map[string]interface{}{
+			"name":      heatTopologies[0].Name,
+			"namespace": "foo",
+		}
+		raw := map[string]interface{}{
+			"apiVersion": "heat.openstack.org/v1beta1",
+			"kind":       "Heat",
+			"metadata": map[string]interface{}{
+				"name":      heatName.Name,
+				"namespace": heatName.Namespace,
+			},
+			"spec": spec,
+		}
+
+		unstructuredObj := &unstructured.Unstructured{Object: raw}
+		_, err := controllerutil.CreateOrPatch(
+			th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(
+			ContainSubstring(
+				"Invalid value: \"namespace\": Customizing namespace field is not supported"),
+		)
 	})
 })
