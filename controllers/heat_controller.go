@@ -180,6 +180,7 @@ const (
 	tlsAPIInternalField      = ".spec.tls.api.internal.secretName"
 	tlsAPIPublicField        = ".spec.tls.api.public.secretName"
 	customServiceConfigField = ".spec.customServiceConfigSecrets"
+	topologyField            = ".spec.topologyRef.Name"
 )
 
 var (
@@ -194,6 +195,7 @@ var (
 		tlsAPIInternalField,
 		tlsAPIPublicField,
 		customServiceConfigField,
+		topologyField,
 	}
 	heatCfnWatchFields = []string{
 		passwordSecretField,
@@ -202,12 +204,14 @@ var (
 		tlsAPIInternalField,
 		tlsAPIPublicField,
 		customServiceConfigField,
+		topologyField,
 	}
 	heatEngineWatchFields = []string{
 		passwordSecretField,
 		transportURLSecretField,
 		caBundleSecretNameField,
 		customServiceConfigField,
+		topologyField,
 	}
 )
 
@@ -839,6 +843,12 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 		heatAPISpec.NodeSelector = instance.Spec.NodeSelector
 	}
 
+	// If topology is not present in the underlying HeatAPISpec,
+	// inherit from the top-level CR
+	if heatAPISpec.TopologyRef == nil {
+		heatAPISpec.TopologyRef = instance.Spec.TopologyRef
+	}
+
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		deployment.Spec = heatAPISpec
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
@@ -861,6 +871,12 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 
 	if heatCfnAPISpec.NodeSelector == nil {
 		heatCfnAPISpec.NodeSelector = instance.Spec.NodeSelector
+	}
+
+	// If topology is not present in the underlying HeatCfnAPISpec,
+	// inherit from the top-level CR
+	if heatCfnAPISpec.TopologyRef == nil {
+		heatCfnAPISpec.TopologyRef = instance.Spec.TopologyRef
 	}
 
 	deployment := &heatv1beta1.HeatCfnAPI{
@@ -893,6 +909,12 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 
 	if heatEngineSpec.NodeSelector == nil {
 		heatEngineSpec.NodeSelector = instance.Spec.NodeSelector
+	}
+
+	// If topology is not present in the underlying HeatEngineSpec
+	// inherit from the top-level CR
+	if heatEngineSpec.TopologyRef == nil {
+		heatEngineSpec.TopologyRef = instance.Spec.TopologyRef
 	}
 
 	deployment := &heatv1beta1.HeatEngine{

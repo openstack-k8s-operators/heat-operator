@@ -1,0 +1,41 @@
+#
+# Check for:
+#
+# - Heat CR
+# - lastAppliedTopology in HeatAPI CR .Status
+# - lastAppliedTopology in HeatCfnAPI CR .Status
+# - lastAppliedTopology in HeatEngine CR .Status
+#
+apiVersion: heat.openstack.org/v1beta1
+kind: Heat
+metadata:
+  name: heat
+status:
+  heatApiReadyCount: 1
+  heatCfnApiReadyCount: 1
+  heatEngineReadyCount: 1
+  transportURLSecret: rabbitmq-transport-url-heat-heat-transport
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatAPI
+metadata:
+  name: heat-api
+status:
+  readyCount: 1
+  lastAppliedTopology: heat-topology
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatCfnAPI
+metadata:
+  name: heat-cfnapi
+status:
+  readyCount: 1
+  lastAppliedTopology: heat-topology
+---
+apiVersion: heat.openstack.org/v1beta1
+kind: HeatEngine
+metadata:
+  name: heat-engine
+status:
+  readyCount: 1
+  lastAppliedTopology: heat-topology

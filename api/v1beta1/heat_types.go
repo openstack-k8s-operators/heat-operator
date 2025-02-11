@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
+	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -129,6 +130,11 @@ type HeatSpecBase struct {
 
 	// Common input parameters for all Heat services
 	HeatTemplate `json:",inline"`
+
+	// +kubebuilder:validation:Optional
+	// TopologyRef to apply the Topology defined by the associated CR referenced
+	// by name
+	TopologyRef *topologyv1.TopoRef `json:"topologyRef,omitempty"`
 }
 
 // HeatStatus defines the observed state of Heat
