@@ -104,9 +104,7 @@ func (r *Heat) ValidateCreate() (admission.Warnings, error) {
 	var allErrs field.ErrorList
 	basePath := field.NewPath("spec")
 
-	allErrs = r.Spec.ValidateHeatTopology(basePath, r.Namespace)
-
-	if err := r.Spec.ValidateCreate(basePath); err != nil {
+	if err := r.Spec.ValidateCreate(basePath, r.Namespace); err != nil {
 		allErrs = append(allErrs, err...)
 	}
 
@@ -121,7 +119,7 @@ func (r *Heat) ValidateCreate() (admission.Warnings, error) {
 
 // ValidateCreate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate an heat spec.
-func (r *HeatSpec) ValidateCreate(basePath *field.Path) field.ErrorList {
+func (r *HeatSpec) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
 	// validate the service override key is valid
@@ -133,11 +131,13 @@ func (r *HeatSpec) ValidateCreate(basePath *field.Path) field.ErrorList {
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
 		basePath.Child("heatCfnAPI").Child("override").Child("service"),
 		r.HeatCfnAPI.Override.Service)...)
+
+	allErrs = append(allErrs, r.ValidateHeatTopology(basePath, namespace)...)
 
 	return allErrs
 }
 
-func (r *HeatSpecCore) ValidateCreate(basePath *field.Path) field.ErrorList {
+func (r *HeatSpecCore) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
 	// validate the service override key is valid
@@ -149,6 +149,8 @@ func (r *HeatSpecCore) ValidateCreate(basePath *field.Path) field.ErrorList {
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
 		basePath.Child("heatCfnAPI").Child("override").Child("service"),
 		r.HeatCfnAPI.Override.Service)...)
+
+	allErrs = append(allErrs, r.ValidateHeatTopology(basePath, namespace)...)
 
 	return allErrs
 }
@@ -166,8 +168,7 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	basePath := field.NewPath("spec")
 	annotations := r.GetAnnotations()
 
-	allErrs = r.Spec.ValidateHeatTopology(basePath, r.Namespace)
-	if err := r.Spec.ValidateUpdate(oldHeat.Spec, basePath, annotations); err != nil {
+	if err := r.Spec.ValidateUpdate(oldHeat.Spec, basePath, annotations, r.Namespace); err != nil {
 		allErrs = append(allErrs, err...)
 	}
 
@@ -182,7 +183,7 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 
 // ValidateUpdate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate Heat spec.
-func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotations map[string]string) field.ErrorList {
+func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotations map[string]string, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
 	// Allow users to bypass this validation in cases where they have independently verified
@@ -208,10 +209,11 @@ func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotation
 		basePath.Child("heatCfnAPI").Child("override").Child("service"),
 		r.HeatCfnAPI.Override.Service)...)
 
+	allErrs = append(allErrs, r.ValidateHeatTopology(basePath, namespace)...)
 	return allErrs
 }
 
-func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path) field.ErrorList {
+func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
 	// We currently have no logic in place to perform database migrations. Changing databases
@@ -233,6 +235,7 @@ func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path) fi
 		basePath.Child("heatCfnAPI").Child("override").Child("service"),
 		r.HeatCfnAPI.Override.Service)...)
 
+	allErrs = append(allErrs, r.ValidateHeatTopology(basePath, namespace)...)
 	return allErrs
 }
 
@@ -271,6 +274,45 @@ func (spec *HeatSpecCore) SetDefaultRouteAnnotations(annotations map[string]stri
 	annotations[haProxyAnno] = timeout
 }
 
+// ValidateHeatTopology - Returns an ErrorList if the Topology is referenced
+// on a different namespace
+func (spec *HeatSpecCore) ValidateHeatTopology(basePath *field.Path, namespace string) field.ErrorList {
+	var allErrs field.ErrorList
+
+	// When a TopologyRef CR is referenced, fail if a different Namespace is
+	// referenced because is not supported
+	if spec.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
+	// When a TopologyRef CR is referenced with an override to HeatAPI, fail
+	// if a different Namespace is referenced because not supported
+	if spec.HeatAPI.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.HeatAPI.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
+	// When a TopologyRef CR is referenced with an override to HeatCFNAPI,
+	// fail if a different Namespace is referenced because not supported
+	if spec.HeatCfnAPI.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.HeatCfnAPI.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+
+	// When a TopologyRef CR is referenced with an override to an instance of
+	// HeatEngine, fail if a different Namespace is referenced because not
+	// supported
+	if spec.HeatEngine.TopologyRef != nil {
+		if err := topologyv1.ValidateTopologyNamespace(spec.HeatEngine.TopologyRef.Namespace, *basePath, namespace); err != nil {
+			allErrs = append(allErrs, err)
+		}
+	}
+	return allErrs
+}
 // ValidateHeatTopology - Returns an ErrorList if the Topology is referenced
 // on a different namespace
 func (spec *HeatSpec) ValidateHeatTopology(basePath *field.Path, namespace string) field.ErrorList {

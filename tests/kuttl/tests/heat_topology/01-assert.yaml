@@ -22,7 +22,8 @@ metadata:
   name: heat-api
 status:
   readyCount: 1
-  lastAppliedTopology: heat-topology
+  lastAppliedTopology:
+    name: heat-topology
 ---
 apiVersion: heat.openstack.org/v1beta1
 kind: HeatCfnAPI
@@ -30,7 +31,8 @@ metadata:
   name: heat-cfnapi
 status:
   readyCount: 1
-  lastAppliedTopology: heat-topology
+  lastAppliedTopology:
+    name: heat-topology
 ---
 apiVersion: heat.openstack.org/v1beta1
 kind: HeatEngine
@@ -38,4 +40,5 @@ metadata:
   name: heat-engine
 status:
   readyCount: 1
-  lastAppliedTopology: heat-topology
+  lastAppliedTopology:
+    name: heat-topology
