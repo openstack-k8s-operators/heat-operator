@@ -24,6 +24,10 @@ const (
 	CfnServiceName = "heat-cfn"
 	// CfnServiceType -
 	CfnServiceType = "cloudformation"
+
+	//HealthCheckPath - is the web server path we can use to check the application status
+	HealthCheckPath = "/healthcheck"
+
 	// HeatStackUserRole -
 	HeatStackUserRole = "heat_stack_user"
 	// StackDomainAdminUsername -

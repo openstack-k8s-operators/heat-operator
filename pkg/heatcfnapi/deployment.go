@@ -28,7 +28,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	intstr "k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/utils/ptr"
 )
 
@@ -45,30 +44,10 @@ func Deployment(
 	topology *topologyv1.Topology,
 ) (*appsv1.Deployment, error) {
 
-	livenessProbe := &corev1.Probe{
-		TimeoutSeconds:      10,
-		PeriodSeconds:       5,
-		InitialDelaySeconds: 5,
-	}
-	readinessProbe := &corev1.Probe{
-		TimeoutSeconds:      10,
-		PeriodSeconds:       5,
-		InitialDelaySeconds: 5,
-	}
+	livenessProbe := heat.FormatProbes(heat.HeatCfnInternalPort)
+	readinessProbe := heat.FormatProbes(heat.HeatCfnInternalPort)
 
 	args := []string{"-c", ServiceCommand}
-
-	//
-	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-	//
-	livenessProbe.HTTPGet = &corev1.HTTPGetAction{
-		Path: "/healthcheck",
-		Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatCfnInternalPort)},
-	}
-	readinessProbe.HTTPGet = &corev1.HTTPGetAction{
-		Path: "/healthcheck",
-		Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatCfnInternalPort)},
-	}
 
 	if instance.Spec.TLS.API.Enabled(service.EndpointPublic) {
 		livenessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
