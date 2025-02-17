@@ -61,34 +61,13 @@ func Deployment(
 	volumes = append(volumes, secretVolumes...)
 	volumeMounts = append(volumeMounts, secretMounts...)
 
-	// add CA cert if defined
-	if instance.Spec.TLS.CaBundleSecretName != "" {
-		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
-		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
-	}
-
-	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
-		if instance.Spec.TLS.API.Enabled(endpt) {
-			var tlsEndptCfg tls.GenericService
-			switch endpt {
-			case service.EndpointPublic:
-				tlsEndptCfg = instance.Spec.TLS.API.Public
-			case service.EndpointInternal:
-				tlsEndptCfg = instance.Spec.TLS.API.Internal
-			}
-
-			svc, err := tlsEndptCfg.ToService()
-			if err != nil {
-				return nil, err
-			}
-			volumes = append(volumes, svc.CreateVolume(endpt.String()))
-			volumeMounts = append(volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
-		}
-	}
-
 	envVars := map[string]env.Setter{}
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["CONFIG_HASH"] = env.SetValue(configHash)
+
+	if err := formatTLS(instance, &volumes, &volumeMounts); err != nil {
+		return nil, err
+	}
 
 	// Default oslo.service graceful_shutdown_timeout is 60, so align with that
 	terminationGracePeriod := int64(60)
@@ -158,4 +137,35 @@ func Deployment(
 		)
 	}
 	return deployment, nil
+}
+
+func formatTLS(instance *heatv1beta1.HeatAPI, volumes *[]corev1.Volume, volumeMounts *[]corev1.VolumeMount) error {
+
+	var err error
+
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		*volumes = append(*volumes, instance.Spec.TLS.CreateVolume())
+		*volumeMounts = append(*volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
+		if instance.Spec.TLS.API.Enabled(endpt) {
+			var tlsEndptCfg tls.GenericService
+			switch endpt {
+			case service.EndpointPublic:
+				tlsEndptCfg = instance.Spec.TLS.API.Public
+			case service.EndpointInternal:
+				tlsEndptCfg = instance.Spec.TLS.API.Internal
+			}
+
+			svc, err := tlsEndptCfg.ToService()
+			if err != nil {
+				return err
+			}
+			*volumes = append(*volumes, svc.CreateVolume(endpt.String()))
+			*volumeMounts = append(*volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
+		}
+	}
+
+	return err
 }

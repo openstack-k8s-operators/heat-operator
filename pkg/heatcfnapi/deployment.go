@@ -61,29 +61,8 @@ func Deployment(
 	volumes = append(volumes, secretVolumes...)
 	volumeMounts = append(volumeMounts, secretMounts...)
 
-	// add CA cert if defined
-	if instance.Spec.TLS.CaBundleSecretName != "" {
-		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
-		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
-	}
-
-	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
-		if instance.Spec.TLS.API.Enabled(endpt) {
-			var tlsEndptCfg tls.GenericService
-			switch endpt {
-			case service.EndpointPublic:
-				tlsEndptCfg = instance.Spec.TLS.API.Public
-			case service.EndpointInternal:
-				tlsEndptCfg = instance.Spec.TLS.API.Internal
-			}
-
-			svc, err := tlsEndptCfg.ToService()
-			if err != nil {
-				return nil, err
-			}
-			volumes = append(volumes, svc.CreateVolume(endpt.String()))
-			volumeMounts = append(volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
-		}
+	if err := formatTLS(instance, &volumes, &volumeMounts); err != nil {
+		return nil, err
 	}
 
 	envVars := map[string]env.Setter{}
@@ -160,4 +139,35 @@ func Deployment(
 	}
 
 	return deployment, nil
+}
+
+func formatTLS(instance *heatv1beta1.HeatCfnAPI, volumes *[]corev1.Volume, volumeMounts *[]corev1.VolumeMount) error {
+
+	var err error
+
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		*volumes = append(*volumes, instance.Spec.TLS.CreateVolume())
+		*volumeMounts = append(*volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
+		if instance.Spec.TLS.API.Enabled(endpt) {
+			var tlsEndptCfg tls.GenericService
+			switch endpt {
+			case service.EndpointPublic:
+				tlsEndptCfg = instance.Spec.TLS.API.Public
+			case service.EndpointInternal:
+				tlsEndptCfg = instance.Spec.TLS.API.Internal
+			}
+
+			svc, err := tlsEndptCfg.ToService()
+			if err != nil {
+				return err
+			}
+			*volumes = append(*volumes, svc.CreateVolume(endpt.String()))
+			*volumeMounts = append(*volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
+		}
+	}
+
+	return err
 }
