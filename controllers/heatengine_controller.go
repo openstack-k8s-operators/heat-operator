@@ -461,8 +461,13 @@ func (r *HeatEngineReconciler) reconcileNormal(
 		return ctrlResult, err
 	}
 
+	deplSpec, err := heatengine.Deployment(instance, inputHash, serviceLabels)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	depl := deployment.NewDeployment(
-		heatengine.Deployment(instance, inputHash, serviceLabels),
+		deplSpec,
 		time.Second*5,
 	)
 

@@ -36,12 +36,19 @@ const (
 )
 
 // Deployment func
-func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[string]string) *appsv1.Deployment {
+func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[string]string) (*appsv1.Deployment, error) {
+
+	var err error
 
 	livenessProbe := formatProbes()
 	readinessProbe := formatProbes()
 
 	args := []string{"-c", ServiceCommand}
+
+	volumes, volumeMounts, err := createVolumeAndMounts(instance)
+	if err != nil {
+		return nil, err
+	}
 
 	envVars := map[string]env.Setter{}
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
@@ -49,18 +56,6 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 
 	// Default oslo.service graceful_shutdown_timeout is 60, so align with that
 	terminationGracePeriod := int64(60)
-
-	volumeMounts := getVolumeMounts()
-	volumes := getVolumes(heat.ServiceName, instance.Name)
-	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
-	volumes = append(volumes, secretVolumes...)
-	volumeMounts = append(volumeMounts, secretMounts...)
-
-	// add CA cert if defined
-	if instance.Spec.TLS.CaBundleSecretName != "" {
-		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
-		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
-	}
 
 	deployment := &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
@@ -123,7 +118,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		deployment.Spec.Template.Spec.NodeSelector = *instance.Spec.NodeSelector
 	}
 
-	return deployment
+	return deployment, err
 }
 
 func formatProbes() *corev1.Probe {
@@ -140,4 +135,24 @@ func formatProbes() *corev1.Probe {
 			},
 		},
 	}
+}
+
+func createVolumeAndMounts(instance *heatv1beta1.HeatEngine) ([]corev1.Volume, []corev1.VolumeMount, error) {
+
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
+	var err error
+
+	volumes = getVolumes(heat.ServiceName, instance.Name)
+	volumeMounts = getVolumeMounts()
+	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
+	volumes = append(volumes, secretVolumes...)
+	volumeMounts = append(volumeMounts, secretMounts...)
+
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
+		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	return volumes, volumeMounts, err
 }
