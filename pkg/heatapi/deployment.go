@@ -45,35 +45,15 @@ func Deployment(
 	topology *topologyv1.Topology,
 ) (*appsv1.Deployment, error) {
 
-	livenessProbe := &corev1.Probe{
-		TimeoutSeconds:      10,
-		PeriodSeconds:       5,
-		InitialDelaySeconds: 5,
-	}
-	readinessProbe := &corev1.Probe{
-		TimeoutSeconds:      10,
-		PeriodSeconds:       5,
-		InitialDelaySeconds: 5,
-	}
-
-	args := []string{"-c", ServiceCommand}
-
-	//
-	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-	//
-	livenessProbe.HTTPGet = &corev1.HTTPGetAction{
-		Path: "/healthcheck",
-		Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatInternalPort)},
-	}
-	readinessProbe.HTTPGet = &corev1.HTTPGetAction{
-		Path: "/healthcheck",
-		Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatInternalPort)},
-	}
+	livenessProbe := formatProbes()
+	readinessProbe := formatProbes()
 
 	if instance.Spec.TLS.API.Enabled(service.EndpointPublic) {
 		livenessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
 		readinessProbe.HTTPGet.Scheme = corev1.URISchemeHTTPS
 	}
+
+	args := []string{"-c", ServiceCommand}
 
 	// create Volume and VolumeMounts
 	volumes := getVolumes(heat.ServiceName, instance.Name)
@@ -188,4 +168,19 @@ func Deployment(
 		)
 	}
 	return deployment, nil
+}
+
+func formatProbes() *corev1.Probe {
+
+	return &corev1.Probe{
+		TimeoutSeconds:      10,
+		PeriodSeconds:       5,
+		InitialDelaySeconds: 5,
+		ProbeHandler: corev1.ProbeHandler{
+			HTTPGet: &corev1.HTTPGetAction{
+				Path: heat.HealthCheckPath,
+				Port: intstr.IntOrString{Type: intstr.Int, IntVal: int32(heat.HeatInternalPort)},
+			},
+		},
+	}
 }
