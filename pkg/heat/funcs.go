@@ -19,21 +19,30 @@ func GetOwningHeatName(instance client.Object) string {
 	return ""
 }
 
-func GetHeatSecurityContext() *corev1.SecurityContext {
+func GetHeatDBSecurityContext(runAsNonRoot bool) *corev1.SecurityContext {
 	falseVal := false
-	trueVal := true
 	runAsUser := int64(HeatUID)
 	runAsGroup := int64(HeatGID)
 	return &corev1.SecurityContext{
 		RunAsUser:                &runAsUser,
 		RunAsGroup:               &runAsGroup,
-		RunAsNonRoot:             &trueVal,
+		RunAsNonRoot:             &runAsNonRoot,
 		AllowPrivilegeEscalation: &falseVal,
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{
 				"ALL",
 			},
 		},
+	}
+}
+
+func GetHeatSecurityContext() *corev1.SecurityContext {
+	var runAsUser int64 = HeatUID
+	var runAsGroup int64 = HeatGID
+
+	return &corev1.SecurityContext{
+		RunAsUser:  &runAsUser,
+		RunAsGroup: &runAsGroup,
 	}
 }
 
