@@ -44,30 +44,10 @@ func Deployment(
 	topology *topologyv1.Topology,
 ) *appsv1.Deployment {
 
-	livenessProbe := &corev1.Probe{
-		TimeoutSeconds: 5,
-		PeriodSeconds:  5,
-	}
-	readinessProbe := &corev1.Probe{
-		TimeoutSeconds: 5,
-		PeriodSeconds:  5,
-	}
+	livenessProbe := formatProbes()
+	readinessProbe := formatProbes()
 
 	args := []string{"-c", ServiceCommand}
-
-	//
-	// https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
-	//
-	livenessProbe.Exec = &corev1.ExecAction{
-		Command: []string{
-			"/usr/bin/pgrep", "-r", "DRST", "heat-engine",
-		},
-	}
-	readinessProbe.Exec = &corev1.ExecAction{
-		Command: []string{
-			"/usr/bin/pgrep", "-r", "DRST", "heat-engine",
-		},
-	}
 
 	envVars := map[string]env.Setter{}
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
@@ -155,4 +135,20 @@ func Deployment(
 	}
 
 	return deployment
+}
+
+func formatProbes() *corev1.Probe {
+
+	var heatProcessExecCheck = []string{"/usr/bin/pgrep", "-r", "DRST", "heat-engine"}
+
+	return &corev1.Probe{
+		TimeoutSeconds:      5,
+		PeriodSeconds:       10,
+		InitialDelaySeconds: 10,
+		ProbeHandler: corev1.ProbeHandler{
+			Exec: &corev1.ExecAction{
+				Command: heatProcessExecCheck,
+			},
+		},
+	}
 }
