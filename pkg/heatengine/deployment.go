@@ -56,8 +56,8 @@ func Deployment(
 	// Default oslo.service graceful_shutdown_timeout is 60, so align with that
 	terminationGracePeriod := int64(60)
 
-	volumeMounts := getVolumeMounts()
-	volumes := getVolumes(heat.ServiceName, instance.Name)
+	volumes := heat.GetVolumes(heat.ServiceName, instance.Name)
+	volumeMounts := heat.GetVolumeMounts(instance.Name)
 	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
 	volumes = append(volumes, secretVolumes...)
 	volumeMounts = append(volumeMounts, secretMounts...)
