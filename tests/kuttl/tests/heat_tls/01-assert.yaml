@@ -90,6 +90,13 @@ spec:
         - -c
         - /usr/local/bin/kolla_httpd_setup && /usr/local/bin/kolla_start
         volumeMounts:
+        - mountPath: /var/lib/kolla/config_files/config.json
+          name: config-data
+          readOnly: true
+          subPath: heat-engine-config.json
+        - mountPath: /etc/heat/heat.conf.d
+          name: config-data-custom
+          readOnly: true 
         - mountPath: /var/lib/config-data/default
           name: config-data
           readOnly: true
@@ -97,13 +104,6 @@ spec:
           name: config-data
           readOnly: true
           subPath: my.cnf
-        - mountPath: /var/lib/kolla/config_files/config.json
-          name: config-data
-          readOnly: true
-          subPath: heat-api-config.json
-        - mountPath: /etc/heat/heat.conf.d
-          name: config-data-custom
-          readOnly: true
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true

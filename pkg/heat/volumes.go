@@ -22,14 +22,25 @@ import (
 )
 
 // GetVolumes ...
-func GetVolumes(name string) []corev1.Volume {
+func GetVolumes(parentName string, name string) []corev1.Volume {
+
+	var config0644AccessMode int32 = 0644
 
 	return []corev1.Volume{
+		{
+			Name: "config-data-custom",
+			VolumeSource: corev1.VolumeSource{
+				Secret: &corev1.SecretVolumeSource{
+					DefaultMode: &config0644AccessMode,
+					SecretName:  name + "-config-data",
+				},
+			},
+		},
 		{
 			Name: "config-data",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: name + "-config-data",
+					SecretName: parentName + "-config-data",
 				},
 			},
 		},
@@ -37,8 +48,19 @@ func GetVolumes(name string) []corev1.Volume {
 }
 
 // GetVolumeMounts ...
-func GetVolumeMounts() []corev1.VolumeMount {
+func GetVolumeMounts(name string) []corev1.VolumeMount {
 	return []corev1.VolumeMount{
+		{
+			Name:      "config-data",
+			MountPath: "/var/lib/kolla/config_files/config.json",
+			SubPath:   name + "-config.json",
+			ReadOnly:  true,
+		},
+		{
+			Name:      "config-data-custom",
+			MountPath: "/etc/heat/heat.conf.d",
+			ReadOnly:  true,
+		},
 		{
 			Name:      "config-data",
 			MountPath: "/var/lib/config-data/default",
@@ -51,7 +73,6 @@ func GetVolumeMounts() []corev1.VolumeMount {
 			ReadOnly:  true,
 		},
 	}
-
 }
 
 // getDBSyncVolumeMounts ...
@@ -68,9 +89,15 @@ func getDBSyncVolumeMounts() []corev1.VolumeMount {
 			MountPath: "/etc/heat/heat.conf.d/" + CustomConfigFileName,
 			SubPath:   CustomConfigFileName,
 		},
+		{
+			Name:      "config-data",
+			MountPath: "/etc/my.cnf",
+			SubPath:   "my.cnf",
+			ReadOnly:  true,
+		},
 	}
 
-	return append(GetVolumeMounts(), volumeMounts...)
+	return volumeMounts
 }
 
 // GetConfigSecretVolumes - Returns a list of volumes associated with a list of Secret names
