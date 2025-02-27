@@ -776,10 +776,7 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 		instance,      // topologyHandler
 		instance.Name, // finalizer
 		&instance.Status.Conditions,
-		labels.GetSingleLabelSelector(
-			common.ComponentSelector,
-			heat.CfnAPIComponent,
-		),
+		labels.GetLabelSelector(serviceLabels),
 	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
