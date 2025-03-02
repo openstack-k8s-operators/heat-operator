@@ -36,6 +36,11 @@ const (
 	ServiceCommand = "/usr/local/bin/kolla_httpd_setup && /usr/local/bin/kolla_start"
 )
 
+type TLSRequiredOptions struct {
+	volumes      []corev1.Volume
+	volumeMounts []corev1.VolumeMount
+}
+
 // Deployment func
 func Deployment(
 	instance *heatv1beta1.HeatAPI,
@@ -54,36 +59,9 @@ func Deployment(
 
 	args := []string{"-c", ServiceCommand}
 
-	// create Volume and VolumeMounts
-	volumes := getVolumes(heat.ServiceName, instance.Name)
-	volumeMounts := getVolumeMounts()
-	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
-	volumes = append(volumes, secretVolumes...)
-	volumeMounts = append(volumeMounts, secretMounts...)
-
-	// add CA cert if defined
-	if instance.Spec.TLS.CaBundleSecretName != "" {
-		volumes = append(volumes, instance.Spec.TLS.CreateVolume())
-		volumeMounts = append(volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
-	}
-
-	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
-		if instance.Spec.TLS.API.Enabled(endpt) {
-			var tlsEndptCfg tls.GenericService
-			switch endpt {
-			case service.EndpointPublic:
-				tlsEndptCfg = instance.Spec.TLS.API.Public
-			case service.EndpointInternal:
-				tlsEndptCfg = instance.Spec.TLS.API.Internal
-			}
-
-			svc, err := tlsEndptCfg.ToService()
-			if err != nil {
-				return nil, err
-			}
-			volumes = append(volumes, svc.CreateVolume(endpt.String()))
-			volumeMounts = append(volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
-		}
+	volumes, volumeMounts, err := createVolumeAndMounts(instance)
+	if err != nil {
+		return nil, err
 	}
 
 	envVars := map[string]env.Setter{}
@@ -158,4 +136,59 @@ func Deployment(
 		)
 	}
 	return deployment, nil
+}
+
+func createVolumeAndMounts(instance *heatv1beta1.HeatAPI) ([]corev1.Volume, []corev1.VolumeMount, error) {
+
+	var volumes []corev1.Volume
+	var volumeMounts []corev1.VolumeMount
+	var err error
+
+	volumes = getVolumes(heat.ServiceName, instance.Name)
+	volumeMounts = getVolumeMounts()
+	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
+	volumes = append(volumes, secretVolumes...)
+	volumeMounts = append(volumeMounts, secretMounts...)
+
+	tlsRequiredOptions := TLSRequiredOptions{
+		volumes:      volumes,
+		volumeMounts: volumeMounts,
+	}
+
+	if err := tlsRequiredOptions.formatTLS(instance); err != nil {
+		return nil, nil, err
+	}
+
+	return tlsRequiredOptions.volumes, tlsRequiredOptions.volumeMounts, err
+}
+
+func (t *TLSRequiredOptions) formatTLS(instance *heatv1beta1.HeatAPI) error {
+
+	var err error
+
+	if instance.Spec.TLS.CaBundleSecretName != "" {
+		t.volumes = append(t.volumes, instance.Spec.TLS.CreateVolume())
+		t.volumeMounts = append(t.volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
+		if instance.Spec.TLS.API.Enabled(endpt) {
+			var tlsEndptCfg tls.GenericService
+			switch endpt {
+			case service.EndpointPublic:
+				tlsEndptCfg = instance.Spec.TLS.API.Public
+			case service.EndpointInternal:
+				tlsEndptCfg = instance.Spec.TLS.API.Internal
+			}
+
+			svc, err := tlsEndptCfg.ToService()
+			if err != nil {
+				return err
+			}
+			t.volumes = append(t.volumes, svc.CreateVolume(endpt.String()))
+			t.volumeMounts = append(t.volumeMounts, svc.CreateVolumeMounts(endpt.String())...)
+		}
+	}
+
+	return err
 }
