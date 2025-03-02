@@ -34,6 +34,7 @@ func DBSyncJob(
 	instance *heatv1beta1.Heat,
 	labels map[string]string,
 ) *batchv1.Job {
+
 	args := []string{"-c", DBSyncCommand}
 
 	envVars := map[string]env.Setter{}
@@ -71,7 +72,7 @@ func DBSyncJob(
 							},
 							Args:            args,
 							Image:           instance.Spec.HeatEngine.ContainerImage,
-							SecurityContext: GetHeatSecurityContext(),
+							SecurityContext: GetHeatDBSecurityContext(),
 							Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
 							VolumeMounts:    volumeMounts,
 						},
