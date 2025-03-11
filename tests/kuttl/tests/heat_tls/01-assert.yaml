@@ -90,13 +90,6 @@ spec:
         - -c
         - /usr/local/bin/kolla_httpd_setup && /usr/local/bin/kolla_start
         volumeMounts:
-        - mountPath: /var/lib/config-data/default
-          name: config-data
-          readOnly: true
-        - mountPath: /etc/my.cnf
-          name: config-data
-          readOnly: true
-          subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data
           readOnly: true
@@ -104,6 +97,13 @@ spec:
         - mountPath: /etc/heat/heat.conf.d
           name: config-data-custom
           readOnly: true
+        - mountPath: /var/lib/config-data/default
+          name: config-data
+          readOnly: true
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
@@ -125,14 +125,14 @@ spec:
           readOnly: true
           subPath: tls.key
       volumes:
-      - name: config-data
-        secret:
-          defaultMode: 420
-          secretName: heat-config-data
       - name: config-data-custom
         secret:
           defaultMode: 420
           secretName: heat-api-config-data
+      - name: config-data
+        secret:
+          defaultMode: 420
+          secretName: heat-config-data
       - name: combined-ca-bundle
         secret:
           defaultMode: 292
@@ -159,13 +159,6 @@ spec:
         - -c
         - /usr/local/bin/kolla_httpd_setup && /usr/local/bin/kolla_start
         volumeMounts:
-        - mountPath: /var/lib/config-data/default
-          name: config-data
-          readOnly: true
-        - mountPath: /etc/my.cnf
-          name: config-data
-          readOnly: true
-          subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data
           readOnly: true
@@ -173,6 +166,13 @@ spec:
         - mountPath: /etc/heat/heat.conf.d
           name: config-data-custom
           readOnly: true
+        - mountPath: /var/lib/config-data/default
+          name: config-data
+          readOnly: true
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
@@ -194,14 +194,14 @@ spec:
           readOnly: true
           subPath: tls.key
       volumes:
-      - name: config-data
-        secret:
-          defaultMode: 420
-          secretName: heat-config-data
       - name: config-data-custom
         secret:
           defaultMode: 420
           secretName: heat-cfnapi-config-data
+      - name: config-data
+        secret:
+          defaultMode: 420
+          secretName: heat-config-data
       - name: combined-ca-bundle
         secret:
           defaultMode: 292
@@ -228,13 +228,6 @@ spec:
         - -c
         - /usr/local/bin/kolla_start
         volumeMounts:
-        - mountPath: /var/lib/config-data/default
-          name: config-data
-          readOnly: true
-        - mountPath: /etc/my.cnf
-          name: config-data
-          readOnly: true
-          subPath: my.cnf
         - mountPath: /var/lib/kolla/config_files/config.json
           name: config-data
           readOnly: true
@@ -242,19 +235,26 @@ spec:
         - mountPath: /etc/heat/heat.conf.d
           name: config-data-custom
           readOnly: true
+        - mountPath: /var/lib/config-data/default
+          name: config-data
+          readOnly: true
+        - mountPath: /etc/my.cnf
+          name: config-data
+          readOnly: true
+          subPath: my.cnf
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
           subPath: tls-ca-bundle.pem
       volumes:
-      - name: config-data
-        secret:
-          defaultMode: 420
-          secretName: heat-config-data
       - name: config-data-custom
         secret:
           defaultMode: 420
           secretName: heat-engine-config-data
+      - name: config-data
+        secret:
+          defaultMode: 420
+          secretName: heat-config-data
       - name: combined-ca-bundle
         secret:
           defaultMode: 292
