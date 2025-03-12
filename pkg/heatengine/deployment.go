@@ -37,12 +37,9 @@ const (
 )
 
 // Deployment func
-func Deployment(
-	instance *heatv1beta1.HeatEngine,
-	configHash string,
-	labels map[string]string,
-	topology *topologyv1.Topology,
-) *appsv1.Deployment {
+func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[string]string, topology *topologyv1.Topology) (*appsv1.Deployment, error) {
+
+	var err error
 
 	livenessProbe := formatProbes()
 	readinessProbe := formatProbes()
@@ -134,7 +131,7 @@ func Deployment(
 		)
 	}
 
-	return deployment
+	return deployment, err
 }
 
 func formatProbes() *corev1.Probe {
