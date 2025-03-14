@@ -19,9 +19,9 @@ func GetOwningHeatName(instance client.Object) string {
 	return ""
 }
 
-func GetHeatSecurityContext() *corev1.SecurityContext {
-	falseVal := false
+func GetHeatDBSecurityContext() *corev1.SecurityContext {
 	trueVal := true
+	falseVal := false
 	runAsUser := int64(HeatUID)
 	runAsGroup := int64(HeatGID)
 	return &corev1.SecurityContext{
@@ -34,6 +34,16 @@ func GetHeatSecurityContext() *corev1.SecurityContext {
 				"ALL",
 			},
 		},
+	}
+}
+
+func GetHeatSecurityContext() *corev1.SecurityContext {
+	var runAsUser = HeatUID
+	var runAsGroup = HeatGID
+
+	return &corev1.SecurityContext{
+		RunAsUser:  &runAsUser,
+		RunAsGroup: &runAsGroup,
 	}
 }
 
