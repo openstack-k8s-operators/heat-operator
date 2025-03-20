@@ -31,35 +31,12 @@ import (
 
 var _ = Describe("Heat Webhook", func() {
 	var heatName types.NamespacedName
-	var heatTopologies []types.NamespacedName
 
 	BeforeEach(func() {
 		heatName = types.NamespacedName{
 			Name:      "heat",
 			Namespace: namespace,
 		}
-		// A set of topologies to Test how the reference is propagated to the
-		// resulting Deployments and if a potential override produces the
-		// expected values
-		heatTopologies = []types.NamespacedName{
-			{
-				Namespace: heatName.Namespace,
-				Name:      fmt.Sprintf("%s-global-topology", heatName.Name),
-			},
-			{
-				Namespace: heatName.Namespace,
-				Name:      fmt.Sprintf("%s-api-topology", heatName.Name),
-			},
-			{
-				Namespace: heatName.Namespace,
-				Name:      fmt.Sprintf("%s-cfnapi-topology", heatName.Name),
-			},
-			{
-				Namespace: heatName.Namespace,
-				Name:      fmt.Sprintf("%s-engine-topology", heatName.Name),
-			},
-		}
-
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
 		Expect(err).NotTo(HaveOccurred())
 	})
@@ -230,30 +207,59 @@ var _ = Describe("Heat Webhook", func() {
 		})
 	})
 
-	It("rejects a wrong TopologyRef on a different namespace", func() {
-		spec := GetDefaultHeatSpec()
-		// Reference a top-level topology
-		spec["topologyRef"] = map[string]interface{}{
-			"name":      heatTopologies[0].Name,
-			"namespace": "foo",
-		}
-		raw := map[string]interface{}{
-			"apiVersion": "heat.openstack.org/v1beta1",
-			"kind":       "Heat",
-			"metadata": map[string]interface{}{
-				"name":      heatName.Name,
-				"namespace": heatName.Namespace,
-			},
-			"spec": spec,
-		}
+	DescribeTable("rejects wrong topology for",
+		func(serviceNameFunc func() (string, string)) {
 
-		unstructuredObj := &unstructured.Unstructured{Object: raw}
-		_, err := controllerutil.CreateOrPatch(
-			th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
-		Expect(err).To(HaveOccurred())
-		Expect(err.Error()).To(
-			ContainSubstring(
-				"Invalid value: \"namespace\": Customizing namespace field is not supported"),
-		)
-	})
+			component, errorPath := serviceNameFunc()
+			expectedErrorMessage := fmt.Sprintf("spec.%s.namespace: Invalid value: \"namespace\": Customizing namespace field is not supported", errorPath)
+
+			spec := GetDefaultHeatSpec()
+			// API, CfnApi and Engine
+			if component != "top-level" {
+				spec[component] = map[string]interface{}{
+					"topologyRef": map[string]interface{}{
+						"name":      "bar",
+						"namespace": "foo",
+					},
+				}
+				// top-level
+			} else {
+				spec["topologyRef"] = map[string]interface{}{
+					"name":      "bar",
+					"namespace": "foo",
+				}
+			}
+			// Build Heat CR
+			raw := map[string]interface{}{
+				"apiVersion": "heat.openstack.org/v1beta1",
+				"kind":       "Heat",
+				"metadata": map[string]interface{}{
+					"name":      heatName.Name,
+					"namespace": heatName.Namespace,
+				},
+				"spec": spec,
+			}
+			unstructuredObj := &unstructured.Unstructured{Object: raw}
+			_, err := controllerutil.CreateOrPatch(
+				th.Ctx, th.K8sClient, unstructuredObj, func() error { return nil })
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(
+				ContainSubstring(expectedErrorMessage))
+		},
+		Entry("top-level topologyRef", func() (string, string) {
+			return "top-level", "topologyRef"
+		}),
+		Entry("heatAPI topologyRef", func() (string, string) {
+			component := "heatAPI"
+			return component, fmt.Sprintf("%s.topologyRef", component)
+		}),
+		Entry("heatCfnAPI topologyRef", func() (string, string) {
+			component := "heatCfnAPI"
+			return component, fmt.Sprintf("%s.topologyRef", component)
+		}),
+		Entry("heatEngine topologyRef", func() (string, string) {
+			component := "heatEngine"
+			return component, fmt.Sprintf("%s.topologyRef", component)
+		}),
+	)
 })
