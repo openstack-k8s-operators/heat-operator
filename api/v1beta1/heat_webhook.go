@@ -281,36 +281,28 @@ func (spec *HeatSpecCore) ValidateHeatTopology(basePath *field.Path, namespace s
 
 	// When a TopologyRef CR is referenced, fail if a different Namespace is
 	// referenced because is not supported
-	if spec.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	allErrs = append(allErrs, topologyv1.ValidateTopologyRef(
+		spec.TopologyRef, *basePath.Child("topologyRef"), namespace)...)
 
 	// When a TopologyRef CR is referenced with an override to HeatAPI, fail
 	// if a different Namespace is referenced because not supported
-	if spec.HeatAPI.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.HeatAPI.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	apiPath := basePath.Child("heatAPI")
+	allErrs = append(allErrs,
+		spec.HeatAPI.ValidateTopology(apiPath, namespace)...)
 
 	// When a TopologyRef CR is referenced with an override to HeatCFNAPI,
 	// fail if a different Namespace is referenced because not supported
-	if spec.HeatCfnAPI.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.HeatCfnAPI.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	cfnPath := basePath.Child("heatCfnAPI")
+	allErrs = append(allErrs,
+		spec.HeatCfnAPI.ValidateTopology(cfnPath, namespace)...)
 
 	// When a TopologyRef CR is referenced with an override to an instance of
 	// HeatEngine, fail if a different Namespace is referenced because not
 	// supported
-	if spec.HeatEngine.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.HeatEngine.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	engPath := basePath.Child("heatEngine")
+	allErrs = append(allErrs,
+		spec.HeatEngine.ValidateTopology(engPath, namespace)...)
+
 	return allErrs
 }
 // ValidateHeatTopology - Returns an ErrorList if the Topology is referenced
@@ -320,35 +312,27 @@ func (spec *HeatSpec) ValidateHeatTopology(basePath *field.Path, namespace strin
 
 	// When a TopologyRef CR is referenced, fail if a different Namespace is
 	// referenced because is not supported
-	if spec.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	allErrs = append(allErrs, topologyv1.ValidateTopologyRef(
+		spec.TopologyRef, *basePath.Child("topologyRef"), namespace)...)
 
 	// When a TopologyRef CR is referenced with an override to HeatAPI, fail
 	// if a different Namespace is referenced because not supported
-	if spec.HeatAPI.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.HeatAPI.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	apiPath := basePath.Child("heatAPI")
+	allErrs = append(allErrs,
+		spec.HeatAPI.ValidateTopology(apiPath, namespace)...)
 
 	// When a TopologyRef CR is referenced with an override to HeatCFNAPI,
 	// fail if a different Namespace is referenced because not supported
-	if spec.HeatCfnAPI.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.HeatCfnAPI.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	cfnPath := basePath.Child("heatCfnAPI")
+	allErrs = append(allErrs,
+		spec.HeatCfnAPI.ValidateTopology(cfnPath, namespace)...)
 
 	// When a TopologyRef CR is referenced with an override to an instance of
 	// HeatEngine, fail if a different Namespace is referenced because not
 	// supported
-	if spec.HeatEngine.TopologyRef != nil {
-		if err := topologyv1.ValidateTopologyNamespace(spec.HeatEngine.TopologyRef.Namespace, *basePath, namespace); err != nil {
-			allErrs = append(allErrs, err)
-		}
-	}
+	engPath := basePath.Child("heatEngine")
+	allErrs = append(allErrs,
+		spec.HeatEngine.ValidateTopology(engPath, namespace)...)
+
 	return allErrs
 }

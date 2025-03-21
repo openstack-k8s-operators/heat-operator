@@ -20,6 +20,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	corev1 "k8s.io/api/core/v1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
+	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
 // HeatTemplate -
@@ -108,4 +109,16 @@ type PasswordSelector struct {
 	// +kubebuilder:default="HeatStackDomainAdminPassword"
 	// StackDomainAdminPassword - Selector to get the heat stack domain admin password from the Secret
 	StackDomainAdminPassword string `json:"stackDomainAdminPassword"`
+}
+
+// ValidateTopology -
+func (instance *HeatServiceTemplate) ValidateTopology(
+	basePath *field.Path,
+	namespace string,
+) field.ErrorList {
+	var allErrs field.ErrorList
+	allErrs = append(allErrs, topologyv1.ValidateTopologyRef(
+		instance.TopologyRef,
+		*basePath.Child("topologyRef"), namespace)...)
+	return allErrs
 }
