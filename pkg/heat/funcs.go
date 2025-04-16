@@ -1,3 +1,4 @@
+// Package heat contains heat service functionality and configuration.
 package heat
 
 import (
@@ -19,6 +20,7 @@ func GetOwningHeatName(instance client.Object) string {
 	return ""
 }
 
+// GetHeatDBSecurityContext returns the security context for heat database operations
 func GetHeatDBSecurityContext() *corev1.SecurityContext {
 	trueVal := true
 	falseVal := false
@@ -37,6 +39,7 @@ func GetHeatDBSecurityContext() *corev1.SecurityContext {
 	}
 }
 
+// GetHeatSecurityContext returns the security context for heat services
 func GetHeatSecurityContext() *corev1.SecurityContext {
 	var runAsUser = HeatUID
 	var runAsGroup = HeatGID
@@ -47,6 +50,7 @@ func GetHeatSecurityContext() *corev1.SecurityContext {
 	}
 }
 
+// FormatProbes creates a probe configuration for the specified port
 func FormatProbes(port int32) *corev1.Probe {
 
 	return &corev1.Probe{

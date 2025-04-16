@@ -87,7 +87,7 @@ func (r *HeatEngineReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	instance := &heatv1beta1.HeatEngine{}
 
 	// Does Heat engine already exist?
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -228,7 +228,7 @@ func (r *HeatEngineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), engines, listOpts...); err != nil {
+		if err := r.List(context.Background(), engines, listOpts...); err != nil {
 			Log.Error(err, "Unable to get engine CRs %v")
 			return nil
 		}
@@ -430,7 +430,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 					condition.TLSInputReadyCondition,
 					condition.RequestedReason,
 					condition.SeverityInfo,
-					fmt.Sprintf(condition.TLSInputReadyWaitingMessage, instance.Spec.TLS.CaBundleSecretName)))
+					condition.TLSInputReadyWaitingMessage, instance.Spec.TLS.CaBundleSecretName))
 				return ctrl.Result{}, nil
 			}
 			instance.Status.Conditions.Set(condition.FalseCondition(
