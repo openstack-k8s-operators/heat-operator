@@ -257,7 +257,7 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	configMapFn := func(_ context.Context, o client.Object) []reconcile.Request {
+	secretFn := func(_ context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		apis := &heatv1beta1.HeatAPIList{}
@@ -278,7 +278,7 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 						Namespace: o.GetNamespace(),
 						Name:      cr.Name,
 					}
-					r.Log.Info(fmt.Sprintf("ConfigMap object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
+					r.Log.Info(fmt.Sprintf("secret object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
 					result = append(result, reconcile.Request{NamespacedName: name})
 				}
 			}
@@ -296,8 +296,8 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		// watch the config CMs we don't own
-		Watches(&corev1.ConfigMap{},
-			handler.EnqueueRequestsFromMapFunc(configMapFn)).
+		Watches(&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(secretFn)).
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
