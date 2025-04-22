@@ -210,7 +210,7 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return err
 	}
 
-	configMapFn := func(_ context.Context, o client.Object) []reconcile.Request {
+	secretFn := func(_ context.Context, o client.Object) []reconcile.Request {
 		result := []reconcile.Request{}
 
 		engines := &heatv1beta1.HeatEngineList{}
@@ -231,7 +231,7 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 						Namespace: o.GetNamespace(),
 						Name:      cr.Name,
 					}
-					r.Log.Info(fmt.Sprintf("ConfigMap object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
+					r.Log.Info(fmt.Sprintf("secret object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
 					result = append(result, reconcile.Request{NamespacedName: name})
 				}
 			}
@@ -244,8 +244,8 @@ func (r *HeatEngineReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.HeatEngine{}).
 		Owns(&appsv1.Deployment{}).
-		Watches(&corev1.ConfigMap{},
-			handler.EnqueueRequestsFromMapFunc(configMapFn)).
+		Watches(&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(secretFn)).
 		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
