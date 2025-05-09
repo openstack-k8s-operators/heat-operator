@@ -25,8 +25,8 @@ package v1beta1
 import (
 	"fmt"
 
-	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -161,7 +161,7 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 	oldHeat, ok := old.(*Heat)
 	if !ok {
 		return nil, apierrors.NewInternalError(
-			fmt.Errorf("Expected a Heatv1 object, but got %T", oldHeat))
+			fmt.Errorf("expected a Heatv1 object, but got %T", oldHeat))
 	}
 
 	var allErrs field.ErrorList
@@ -305,6 +305,7 @@ func (spec *HeatSpecCore) ValidateHeatTopology(basePath *field.Path, namespace s
 
 	return allErrs
 }
+
 // ValidateHeatTopology - Returns an ErrorList if the Topology is referenced
 // on a different namespace
 func (spec *HeatSpec) ValidateHeatTopology(basePath *field.Path, namespace string) field.ErrorList {
