@@ -16,9 +16,6 @@ limitations under the License.
 package heatcfnapi
 
 const (
-	// KollaConfig -
-	KollaConfig = "/var/lib/config-data/merged/heatcfnapi-config.json"
-
 	// ServiceName -
 	ServiceName = "heat-cfnapi"
 )
