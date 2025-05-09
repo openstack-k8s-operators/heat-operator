@@ -55,7 +55,7 @@ func Deployment(
 	args := []string{"-c", ServiceCommand}
 
 	// create Volume and VolumeMounts
-	volumes := heat.GetVolumes(heat.ServiceName, instance.Name)
+	volumes := heat.GetVolumes(heat.ServiceName, heat.ServiceName)
 	volumeMounts := heat.GetVolumeMounts(instance.Name)
 	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
 	volumes = append(volumes, secretVolumes...)
