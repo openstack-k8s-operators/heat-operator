@@ -18,15 +18,19 @@ package heat
 import (
 	"strconv"
 
+	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/lib-common/modules/storage"
 	corev1 "k8s.io/api/core/v1"
 )
 
 // GetVolumes ...
-func GetVolumes(parentName string, name string) []corev1.Volume {
+func GetVolumes(parentName string, name string,
+	extraVol []heatv1.HeatExtraVolMounts,
+	svc []storage.PropagationType) []corev1.Volume {
 
 	var config0644AccessMode int32 = 0644
 
-	return []corev1.Volume{
+	volumes := []corev1.Volume{
 		{
 			Name: "config-data-custom",
 			VolumeSource: corev1.VolumeSource{
@@ -45,11 +49,27 @@ func GetVolumes(parentName string, name string) []corev1.Volume {
 			},
 		},
 	}
+	// ExtraMounts
+	for _, exv := range extraVol {
+		for _, vol := range exv.Propagate(svc) {
+			for _, v := range vol.Volumes {
+				volumeSource, _ := v.ToCoreVolumeSource()
+				convertedVolume := corev1.Volume{
+					Name:         v.Name,
+					VolumeSource: *volumeSource,
+				}
+				volumes = append(volumes, convertedVolume)
+			}
+		}
+	}
+	return volumes
 }
 
 // GetVolumeMounts ...
-func GetVolumeMounts(name string) []corev1.VolumeMount {
-	return []corev1.VolumeMount{
+func GetVolumeMounts(name string,
+	extraVol []heatv1.HeatExtraVolMounts,
+	svc []storage.PropagationType) []corev1.VolumeMount {
+	vm := []corev1.VolumeMount{
 		{
 			Name:      "config-data",
 			MountPath: "/var/lib/kolla/config_files/config.json",
@@ -73,17 +93,25 @@ func GetVolumeMounts(name string) []corev1.VolumeMount {
 			ReadOnly:  true,
 		},
 	}
+	for _, exv := range extraVol {
+		for _, vol := range exv.Propagate(svc) {
+			vm = append(vm, vol.Mounts...)
+		}
+	}
+	return vm
+
 }
 
 // getDBSyncVolumeMounts ...
-func getDBSyncVolumeMounts() []corev1.VolumeMount {
-	volumeMounts := []corev1.VolumeMount{
-		{
-			Name:      "config-data",
-			MountPath: "/etc/heat/heat.conf.d/" + DefaultsConfigFileName,
-			SubPath:   DefaultsConfigFileName,
-			ReadOnly:  true,
-		},
+func getDBSyncVolumeMounts(
+	extraVol []heatv1.HeatExtraVolMounts,
+	svc []storage.PropagationType) []corev1.VolumeMount {
+	volumeMounts := []corev1.VolumeMount{{
+		Name:      "config-data",
+		MountPath: "/etc/heat/heat.conf.d/" + DefaultsConfigFileName,
+		SubPath:   DefaultsConfigFileName,
+		ReadOnly:  true,
+	},
 		{
 			Name:      "config-data",
 			MountPath: "/etc/heat/heat.conf.d/" + CustomConfigFileName,
@@ -96,7 +124,11 @@ func getDBSyncVolumeMounts() []corev1.VolumeMount {
 			ReadOnly:  true,
 		},
 	}
-
+	for _, exv := range extraVol {
+		for _, vol := range exv.Propagate(svc) {
+			volumeMounts = append(volumeMounts, vol.Mounts...)
+		}
+	}
 	return volumeMounts
 }
 
