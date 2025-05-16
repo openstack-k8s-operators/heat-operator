@@ -41,8 +41,9 @@ func DBSyncJob(
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["KOLLA_BOOTSTRAP"] = env.SetValue("true")
 
-	volumes := GetVolumes(ServiceName, instance.Name)
-	volumeMounts := getDBSyncVolumeMounts()
+	volumes := GetVolumes(ServiceName, instance.Name,
+		instance.Spec.ExtraMounts, DbsyncPropagation)
+	volumeMounts := getDBSyncVolumeMounts(instance.Spec.ExtraMounts, DbsyncPropagation)
 	secretVolumes, secretMounts := GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
 	volumes = append(volumes, secretVolumes...)
 	volumeMounts = append(volumeMounts, secretMounts...)

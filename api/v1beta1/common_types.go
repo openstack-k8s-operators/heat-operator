@@ -17,9 +17,10 @@ limitations under the License.
 package v1beta1
 
 import (
-	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
-	corev1 "k8s.io/api/core/v1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
+	"github.com/openstack-k8s-operators/lib-common/modules/storage"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
@@ -44,6 +45,10 @@ type HeatTemplate struct {
 	// +kubebuilder:default={service: HeatPassword, authEncryptionKey: HeatAuthEncryptionKey}
 	// PasswordSelectors - Selectors to identify the DB and ServiceUser password from the Secret
 	PasswordSelectors PasswordSelector `json:"passwordSelectors"`
+
+	// +kubebuilder:validation:Optional
+	// ExtraMounts containing files and plugins
+	ExtraMounts []HeatExtraVolMounts `json:"extraMounts,omitempty"`
 }
 
 // HeatServiceTemplate -
@@ -111,6 +116,17 @@ type PasswordSelector struct {
 	StackDomainAdminPassword string `json:"stackDomainAdminPassword"`
 }
 
+// HeatExtraVolMounts exposes additional parameters processed by the heat-operator
+// and defines the common VolMounts structure provided by the main storage module
+type HeatExtraVolMounts struct {
+	// +kubebuilder:validation:Optional
+	Name string `json:"name,omitempty"`
+	// +kubebuilder:validation:Optional
+	Region string `json:"region,omitempty"`
+	// +kubebuilder:validation:Required
+	VolMounts []storage.VolMounts `json:"extraVol"`
+}
+
 // ValidateTopology -
 func (instance *HeatServiceTemplate) ValidateTopology(
 	basePath *field.Path,
@@ -121,4 +137,14 @@ func (instance *HeatServiceTemplate) ValidateTopology(
 		instance.TopologyRef,
 		*basePath.Child("topologyRef"), namespace)...)
 	return allErrs
+}
+
+// Propagate is a function used to filter VolMounts according to the specified
+// PropagationType array
+func (g *HeatExtraVolMounts) Propagate(svc []storage.PropagationType) []storage.VolMounts {
+	var vl []storage.VolMounts
+	for _, gv := range g.VolMounts {
+		vl = append(vl, gv.Propagate(svc)...)
+	}
+	return vl
 }
