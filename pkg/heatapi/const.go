@@ -16,9 +16,6 @@ limitations under the License.
 package heatapi
 
 const (
-	// KollaConfig -
-	KollaConfig = "/var/lib/config-data/merged/heatapi-config.json"
-
 	// ServiceName -
 	ServiceName = "heat-api"
 )
