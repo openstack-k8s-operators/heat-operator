@@ -523,7 +523,7 @@ var _ = Describe("Heat controller", func() {
 			memcacheInstance := infra.GetMemcached(memcachedName)
 			heatCfg := string(cm.Data["00-default.conf"])
 			Expect(heatCfg).Should(
-				ContainSubstring("backend = dogpile.cache.pymemcache"))
+				ContainSubstring("backend = oslo_cache.memcache_pool"))
 			Expect(heatCfg).Should(
 				ContainSubstring(fmt.Sprintf("memcache_servers = %s", memcacheInstance.GetMemcachedServerListString())))
 			Expect(heatCfg).Should(
