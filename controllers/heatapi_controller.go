@@ -42,6 +42,7 @@ import (
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	heat "github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	heatapi "github.com/openstack-k8s-operators/heat-operator/pkg/heatapi"
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
@@ -795,8 +796,13 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	// normal reconcile tasks
 	//
 
+	memcached, err := memcachedv1.GetMemcachedByName(ctx, helper, *instance.Spec.MemcachedInstance, instance.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Define a new Deployment object
-	deplSpec, err := heatapi.Deployment(instance, inputHash, serviceLabels, topology)
+	deplSpec, err := heatapi.Deployment(instance, inputHash, serviceLabels, topology, memcached)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.DeploymentReadyCondition,

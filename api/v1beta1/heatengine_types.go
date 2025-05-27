@@ -17,10 +17,10 @@ limitations under the License.
 package v1beta1
 
 import (
+	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 )
 
 // HeatEngineTemplate defines the input parameters for the Heat Engine service
@@ -62,6 +62,11 @@ type HeatEngineSpec struct {
 
 	// Input parameters for the Heat Engine service
 	HeatEngineTemplate `json:",inline"`
+
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=memcached
+	// Memcached instance name.
+	MemcachedInstance *string `json:"memcachedInstance"`
 }
 
 // HeatEngineStatus defines the observed state of HeatEngine
