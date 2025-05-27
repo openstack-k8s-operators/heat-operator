@@ -339,7 +339,7 @@ var _ = Describe("Heat controller", func() {
 			Expect(heatCfg).Should(
 				ContainSubstring(fmt.Sprintf("memcache_servers = %s", memcacheInstance.GetMemcachedServerListWithInetString())))
 			Expect(heatCfg).Should(
-				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListWithInetString())))
+				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListString())))
 			Expect(heatCfg).Should(
 				ContainSubstring("tls_enabled=false"))
 			Expect(heatCfg).Should(
@@ -527,7 +527,7 @@ var _ = Describe("Heat controller", func() {
 			Expect(heatCfg).Should(
 				ContainSubstring(fmt.Sprintf("memcache_servers = %s", memcacheInstance.GetMemcachedServerListString())))
 			Expect(heatCfg).Should(
-				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListWithInetString())))
+				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListString())))
 			Expect(heatCfg).Should(
 				ContainSubstring("tls_enabled=true"))
 			Expect(string(cm.Data["my.cnf"])).To(

@@ -667,7 +667,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	instance.Status.Conditions.MarkTrue(heatv1beta1.HeatStackDomainReadyCondition, heatv1beta1.HeatStackDomainReadyMessage)
 
 	// deploy heat-engine
-	heatEngine, op, err := r.engineDeploymentCreateOrUpdate(ctx, instance)
+	heatEngine, op, err := r.engineDeploymentCreateOrUpdate(ctx, instance, memcached)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatEngineReadyCondition,
@@ -711,7 +711,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// deploy heat-api
-	heatAPI, op, err := r.apiDeploymentCreateOrUpdate(ctx, instance)
+	heatAPI, op, err := r.apiDeploymentCreateOrUpdate(ctx, instance, memcached)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatAPIReadyCondition,
@@ -758,7 +758,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 
 	// deploy heat-api-cfn
-	heatCfnAPI, op, err := r.cfnapiDeploymentCreateOrUpdate(ctx, instance)
+	heatCfnAPI, op, err := r.cfnapiDeploymentCreateOrUpdate(ctx, instance, memcached)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatCfnAPIReadyCondition,
@@ -880,6 +880,7 @@ func (r *HeatReconciler) reconcileUpdate() (ctrl.Result, error) {
 func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
+	memcached *memcachedv1.Memcached,
 ) (*heatv1beta1.HeatAPI, controllerutil.OperationResult, error) {
 	heatAPISpec := heatv1beta1.HeatAPISpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
@@ -906,6 +907,12 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 		heatAPISpec.TopologyRef = instance.Spec.TopologyRef
 	}
 
+	// If memcached is not present in the underlying HeatAPI Spec,
+	// inherit from the top-level CR (only when MTLS is in use)
+	if memcached.GetMemcachedMTLSSecret() != "" {
+		heatAPISpec.MemcachedInstance = &instance.Spec.MemcachedInstance
+	}
+
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
 		deployment.Spec = heatAPISpec
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
@@ -917,6 +924,7 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
+	memcached *memcachedv1.Memcached,
 ) (*heatv1beta1.HeatCfnAPI, controllerutil.OperationResult, error) {
 	heatCfnAPISpec := heatv1beta1.HeatCfnAPISpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
@@ -934,6 +942,12 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 	// inherit from the top-level CR
 	if heatCfnAPISpec.TopologyRef == nil {
 		heatCfnAPISpec.TopologyRef = instance.Spec.TopologyRef
+	}
+
+	// If memcached is not present in the underlying HeatCnfAPI Spec,
+	// inherit from the top-level CR (only when MTLS is in use)
+	if memcached.GetMemcachedMTLSSecret() != "" {
+		heatCfnAPISpec.MemcachedInstance = &instance.Spec.MemcachedInstance
 	}
 
 	deployment := &heatv1beta1.HeatCfnAPI{
@@ -954,6 +968,7 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
+	memcached *memcachedv1.Memcached,
 ) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
 	heatEngineSpec := heatv1beta1.HeatEngineSpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
@@ -972,6 +987,12 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 	// inherit from the top-level CR
 	if heatEngineSpec.TopologyRef == nil {
 		heatEngineSpec.TopologyRef = instance.Spec.TopologyRef
+	}
+
+	// If memcached is not present in the underlying HeatEngineSpec,
+	// inherit from the top-level CR (only when MTLS is in use)
+	if memcached.GetMemcachedMTLSSecret() != "" {
+		heatEngineSpec.MemcachedInstance = &instance.Spec.MemcachedInstance
 	}
 
 	deployment := &heatv1beta1.HeatEngine{
@@ -1085,6 +1106,13 @@ func (r *HeatReconciler) generateServiceSecrets(
 	// create HeatAPI httpd vhost template parameters
 	templateParameters["APIvHosts"] = httpdAPIVhostConfig
 	templateParameters["CfnAPIvHosts"] = httpdCfnAPIVhostConfig
+
+	// MTLS
+	if mc.GetMemcachedMTLSSecret() != "" {
+		templateParameters["MemcachedAuthCert"] = fmt.Sprint(memcachedv1.CertMountPath())
+		templateParameters["MemcachedAuthKey"] = fmt.Sprint(memcachedv1.KeyMountPath())
+		templateParameters["MemcachedAuthCa"] = fmt.Sprint(memcachedv1.CaMountPath())
+	}
 
 	secrets := createSecretTemplates(instance, customData, templateParameters, secretLabels)
 	return oko_secret.EnsureSecrets(ctx, h, instance, secrets, envVars)
