@@ -673,7 +673,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			heatv1beta1.HeatEngineReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			err.Error()))
+			"%s", err.Error()))
 		return ctrl.Result{}, err
 	}
 
@@ -685,7 +685,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			heatv1beta1.HeatEngineReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			err.Error()))
+			"%s", err.Error()))
 		return ctrl.Result{}, err
 	}
 	// Only mirror the underlying condition if the observedGeneration is
