@@ -24,6 +24,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -42,6 +43,7 @@ func Deployment(
 	configHash string,
 	labels map[string]string,
 	topology *topologyv1.Topology,
+	memcached *memcachedv1.Memcached,
 ) (*appsv1.Deployment, error) {
 
 	livenessProbe := heat.FormatProbes(heat.HeatInternalPort)
@@ -67,7 +69,7 @@ func Deployment(
 	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["CONFIG_HASH"] = env.SetValue(configHash)
 
-	if err := formatTLS(instance, &volumes, &volumeMounts); err != nil {
+	if err := formatTLS(instance, &volumes, &volumeMounts, memcached); err != nil {
 		return nil, err
 	}
 
@@ -139,13 +141,19 @@ func Deployment(
 	return deployment, nil
 }
 
-func formatTLS(instance *heatv1beta1.HeatAPI, volumes *[]corev1.Volume, volumeMounts *[]corev1.VolumeMount) error {
+func formatTLS(instance *heatv1beta1.HeatAPI, volumes *[]corev1.Volume, volumeMounts *[]corev1.VolumeMount, memcached *memcachedv1.Memcached) error {
 
 	var err error
 
 	if instance.Spec.TLS.CaBundleSecretName != "" {
 		*volumes = append(*volumes, instance.Spec.TLS.CreateVolume())
 		*volumeMounts = append(*volumeMounts, instance.Spec.TLS.CreateVolumeMounts(nil)...)
+	}
+
+	// add MTLS cert if defined
+	if memcached.GetMemcachedMTLSSecret() != "" {
+		*volumes = append(*volumes, memcached.CreateMTLSVolume())
+		*volumeMounts = append(*volumeMounts, memcached.CreateMTLSVolumeMounts(nil, nil)...)
 	}
 
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
