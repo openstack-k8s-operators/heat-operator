@@ -2,7 +2,6 @@
 
 aliases:
   heat-approvers:
-  - bshephar
   - rabi
   - slagle
   ci-approvers:
