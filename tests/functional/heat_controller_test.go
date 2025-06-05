@@ -274,6 +274,7 @@ var _ = Describe("Heat controller", func() {
 	})
 
 	When("keystoneAPI instance is available", func() {
+		var keystoneAPIName types.NamespacedName
 		BeforeEach(func() {
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
 			DeferCleanup(
@@ -283,7 +284,7 @@ var _ = Describe("Heat controller", func() {
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
 			infra.SimulateTransportURLReady(heatTransportURLName)
-			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPIName = keystone.CreateKeystoneAPI(namespace)
 			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
 			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
 			DeferCleanup(
@@ -350,6 +351,22 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring(fmt.Sprintf("heat-api-public.%s.svc", heatName.Namespace)))
 			Expect(string(cm.Data["heat-cfnapi-httpd.conf"])).To(
 				ContainSubstring(fmt.Sprintf("heat-cfnapi-public.%s.svc", heatName.Namespace)))
+		})
+
+		It("updates the KeystoneAuthURL if keystone internal endpoint changes", func() {
+			newInternalEndpoint := "https://keystone-internal"
+
+			keystone.UpdateKeystoneAPIEndpoint(keystoneAPIName, "internal", newInternalEndpoint)
+			logger.Info("Reconfigured")
+
+			Eventually(func(g Gomega) {
+				confSecret := th.GetSecret(heatConfigSecretName)
+				g.Expect(confSecret).ShouldNot(BeNil())
+
+				conf := string(confSecret.Data["00-default.conf"])
+				g.Expect(string(conf)).Should(
+					ContainSubstring("auth_url=%s", newInternalEndpoint))
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 
