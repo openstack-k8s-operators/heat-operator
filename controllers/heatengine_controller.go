@@ -41,6 +41,7 @@ import (
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/heat-operator/pkg/heat"
 	heatengine "github.com/openstack-k8s-operators/heat-operator/pkg/heatengine"
+	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
@@ -519,7 +520,12 @@ func (r *HeatEngineReconciler) reconcileNormal(
 		return ctrl.Result{}, fmt.Errorf("waiting for Topology requirements: %w", err)
 	}
 
-	deplSpec, err := heatengine.Deployment(instance, inputHash, serviceLabels, topology)
+	memcached, err := memcachedv1.GetMemcachedByName(ctx, helper, *instance.Spec.MemcachedInstance, instance.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	deplSpec, err := heatengine.Deployment(instance, inputHash, serviceLabels, topology, memcached)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
