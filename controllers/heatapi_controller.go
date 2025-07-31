@@ -62,8 +62,12 @@ import (
 type HeatAPIReconciler struct {
 	client.Client
 	Scheme  *runtime.Scheme
-	Log     logr.Logger
 	Kclient kubernetes.Interface
+}
+
+// GetLogger returns a logger object with a prefix of "controller.name" and additional controller context fields
+func (r *HeatAPIReconciler) GetLogger(ctx context.Context) logr.Logger {
+	return log.FromContext(ctx).WithName("Controllers").WithName("HeatAPI")
 }
 
 var keystoneServices = []map[string]string{
@@ -92,7 +96,7 @@ var keystoneServices = []map[string]string{
 // For more details, check Reconcile and its Result here:
 // - https://pkg.go.dev/sigs.k8s.io/controller-runtime@v0.12.2/pkg/reconcile
 func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (result ctrl.Result, _err error) {
-	_ = log.FromContext(ctx)
+	Log := r.GetLogger(ctx)
 
 	// TODO(bshephar): your logic here
 	// We should have a Database and a `heat.conf` file by this time. Handled by the heat_controller.
@@ -113,7 +117,7 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 		r.Client,
 		r.Kclient,
 		r.Scheme,
-		r.Log,
+		Log,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -128,7 +132,7 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 	defer func() {
 		// Don't update the status, if reconciler Panics
 		if rc := recover(); rc != nil {
-			r.Log.Info(fmt.Sprintf("panic during reconcile %v\n", rc))
+			Log.Info(fmt.Sprintf("panic during reconcile %v\n", rc))
 			panic(rc)
 		}
 		condition.RestoreLastTransitionTimes(
@@ -178,7 +182,8 @@ func (r *HeatAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) (re
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *HeatAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	Log := r.GetLogger(ctx)
 	// index passwordSecretField
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.HeatAPI{}, passwordSecretField, func(rawObj client.Object) []string {
 		// Extract the secret name from the spec, if one is provided
@@ -271,7 +276,7 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			client.InNamespace(o.GetNamespace()),
 		}
 		if err := r.Client.List(context.Background(), apis, listOpts...); err != nil {
-			r.Log.Error(err, "Unable to get API CRs %v")
+			Log.Error(err, "Unable to get API CRs %v")
 			return nil
 		}
 
@@ -284,7 +289,7 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 						Namespace: o.GetNamespace(),
 						Name:      cr.Name,
 					}
-					r.Log.Info(fmt.Sprintf("secret object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
+					Log.Info(fmt.Sprintf("secret object %s and CR %s marked with label: %s", o.GetName(), cr.Name, l))
 					result = append(result, reconcile.Request{NamespacedName: name})
 				}
 			}
@@ -318,7 +323,7 @@ func (r *HeatAPIReconciler) SetupWithManager(mgr ctrl.Manager) error {
 func (r *HeatAPIReconciler) findObjectsForSrc(ctx context.Context, src client.Object) []reconcile.Request {
 	requests := []reconcile.Request{}
 
-	l := log.FromContext(ctx).WithName("Controllers").WithName("HeatAPI")
+	Log := r.GetLogger(ctx)
 
 	for _, field := range heatAPIWatchFields {
 		crList := &heatv1beta1.HeatAPIList{}
@@ -328,12 +333,12 @@ func (r *HeatAPIReconciler) findObjectsForSrc(ctx context.Context, src client.Ob
 		}
 		err := r.List(ctx, crList, listOps)
 		if err != nil {
-			l.Error(err, fmt.Sprintf("listing %s for field: %s - %s", crList.GroupVersionKind().Kind, field, src.GetNamespace()))
+			Log.Error(err, fmt.Sprintf("listing %s for field: %s - %s", crList.GroupVersionKind().Kind, field, src.GetNamespace()))
 			return requests
 		}
 
 		for _, item := range crList.Items {
-			l.Info(fmt.Sprintf("input source %s changed, reconcile: %s - %s", src.GetName(), item.GetName(), item.GetNamespace()))
+			Log.Info(fmt.Sprintf("input source %s changed, reconcile: %s - %s", src.GetName(), item.GetName(), item.GetNamespace()))
 
 			requests = append(requests,
 				reconcile.Request{
@@ -350,7 +355,8 @@ func (r *HeatAPIReconciler) findObjectsForSrc(ctx context.Context, src client.Ob
 }
 
 func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API Delete")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling API Delete")
 
 	for _, ksSvc := range keystoneServices {
 		keystoneEndpoint, err := keystonev1.GetKeystoneEndpointWithName(ctx, helper, ksSvc["name"], instance.Namespace)
@@ -394,7 +400,7 @@ func (r *HeatAPIReconciler) reconcileDelete(ctx context.Context, instance *heatv
 
 	// Service is deleted so remove the finalizer.
 	controllerutil.RemoveFinalizer(instance, helper.GetFinalizer())
-	r.Log.Info("Reconciled API delete successfully")
+	Log.Info("Reconciled API delete successfully")
 
 	return ctrl.Result{}, nil
 }
@@ -405,7 +411,8 @@ func (r *HeatAPIReconciler) reconcileInit(
 	helper *helper.Helper,
 	serviceLabels map[string]string,
 ) (ctrl.Result, error) {
-	r.Log.Info("Reconciling API init")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling API init")
 
 	//
 	// expose the service (create service and return the created endpoint URLs)
@@ -576,12 +583,13 @@ func (r *HeatAPIReconciler) reconcileInit(
 		}
 	}
 
-	r.Log.Info("Reconciled API init successfully")
+	Log.Info("Reconciled API init successfully")
 	return ctrl.Result{}, nil
 }
 
 func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv1beta1.HeatAPI, helper *helper.Helper) (ctrl.Result, error) {
-	r.Log.Info("Reconciling Service")
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling Service")
 
 	// Secret
 	secretVars := make(map[string]env.Setter)
@@ -592,7 +600,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	ospSecret, hash, err := secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			r.Log.Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
+			Log.Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.InputReadyCondition,
 				condition.RequestedReason,
@@ -617,7 +625,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	_, hash, err = secret.GetSecret(ctx, helper, instance.Spec.TransportURLSecret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			r.Log.Info(fmt.Sprintf("Transport secret %s not found", instance.Spec.TransportURLSecret))
+			Log.Info(fmt.Sprintf("Transport secret %s not found", instance.Spec.TransportURLSecret))
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.InputReadyCondition,
 				condition.RequestedReason,
@@ -733,7 +741,7 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	// create hash over all the different input resources to identify if any those changed
 	// and a restart/recreate is required.
 	//
-	inputHash, err := r.createHashOfInputHashes(instance, secretVars)
+	inputHash, err := r.createHashOfInputHashes(ctx, instance, secretVars)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -760,13 +768,13 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 	}
 
 	// Handle service update
-	ctrlResult, err = r.reconcileUpdate()
+	ctrlResult, err = r.reconcileUpdate(ctx)
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
 
 	// Handle service upgrade
-	ctrlResult, err = r.reconcileUpgrade()
+	ctrlResult, err = r.reconcileUpgrade(ctx)
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -866,27 +874,29 @@ func (r *HeatAPIReconciler) reconcileNormal(ctx context.Context, instance *heatv
 		instance.Status.Conditions.MarkTrue(
 			condition.ReadyCondition, condition.ReadyMessage)
 	}
-	r.Log.Info("Reconciled API successfully")
+	Log.Info("Reconciled API successfully")
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatAPIReconciler) reconcileUpdate() (ctrl.Result, error) {
-	r.Log.Info("Reconciling API update")
+func (r *HeatAPIReconciler) reconcileUpdate(ctx context.Context) (ctrl.Result, error) {
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling API update")
 
 	// TODO: should have minor update tasks if required
 	// - delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled API update successfully")
+	Log.Info("Reconciled API update successfully")
 	return ctrl.Result{}, nil
 }
 
-func (r *HeatAPIReconciler) reconcileUpgrade() (ctrl.Result, error) {
-	r.Log.Info("Reconciling API upgrade")
+func (r *HeatAPIReconciler) reconcileUpgrade(ctx context.Context) (ctrl.Result, error) {
+	Log := r.GetLogger(ctx)
+	Log.Info("Reconciling API upgrade")
 
 	// TODO: should have major version upgrade tasks
 	// -delete dbsync hash from status to rerun it?
 
-	r.Log.Info("Reconciled API upgrade successfully")
+	Log.Info("Reconciled API upgrade successfully")
 	return ctrl.Result{}, nil
 }
 
@@ -898,10 +908,11 @@ func (r *HeatAPIReconciler) getSecret(
 	secretName string,
 	envVars *map[string]env.Setter,
 ) (ctrl.Result, error) {
+	Log := r.GetLogger(ctx)
 	secret, hash, err := secret.GetSecret(ctx, h, secretName, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
-			r.Log.Info(fmt.Sprintf("Secret %s not found", secretName))
+			Log.Info(fmt.Sprintf("Secret %s not found", secretName))
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.InputReadyCondition,
 				condition.RequestedReason,
@@ -995,9 +1006,11 @@ func (r *HeatAPIReconciler) generateServiceSecrets(
 // createHashOfInputHashes - creates a hash of hashes which gets added to the resources which requires a restart
 // if any of the input resources change, like configs, passwords, ...
 func (r *HeatAPIReconciler) createHashOfInputHashes(
+	ctx context.Context,
 	instance *heatv1beta1.HeatAPI,
 	envVars map[string]env.Setter,
 ) (string, error) {
+	Log := r.GetLogger(ctx)
 	mergedMapVars := env.MergeEnvs([]corev1.EnvVar{}, envVars)
 	hash, err := util.ObjectHash(mergedMapVars)
 	if err != nil {
@@ -1005,7 +1018,7 @@ func (r *HeatAPIReconciler) createHashOfInputHashes(
 	}
 	if hashMap, changed := util.SetHash(instance.Status.Hash, common.InputHashName, hash); changed {
 		instance.Status.Hash = hashMap
-		r.Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
+		Log.Info(fmt.Sprintf("Input maps hash %s - %s", common.InputHashName, hash))
 	}
 	return hash, nil
 }
