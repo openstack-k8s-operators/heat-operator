@@ -19,6 +19,7 @@ package functional_test
 import (
 	"fmt"
 	"os"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
@@ -798,6 +799,157 @@ var _ = Describe("Heat controller", func() {
 			conditions := HeatConditionGetter(heatName)
 			message := &conditions.Get(condition.ServiceConfigReadyCondition).Message
 			Expect(*message).Should(ContainSubstring("AuthEncryptionKey must be at least 32 characters"))
+		})
+	})
+
+	When("Quorum queues are enabled", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+			DeferCleanup(
+				k8sClient.Delete, ctx, infra.CreateTransportURLSecret(namespace, HeatMessageBusSecretName, true))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+		})
+
+		It("should generate config with quorum queue settings", func() {
+			Eventually(func(g Gomega) {
+				cm := th.GetSecret(heatConfigSecretName)
+				g.Expect(cm).ShouldNot(BeNil())
+
+				heatCfg := string(cm.Data["00-default.conf"])
+				g.Expect(heatCfg).Should(ContainSubstring("[oslo_messaging_rabbit]"))
+				g.Expect(heatCfg).Should(ContainSubstring("rabbit_quorum_queue=true"))
+				g.Expect(heatCfg).Should(ContainSubstring("rabbit_transient_quorum_queue=true"))
+				g.Expect(heatCfg).Should(ContainSubstring("amqp_durable_queues=true"))
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("Quorum queues are toggled from disabled to enabled", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+			DeferCleanup(
+				k8sClient.Delete, ctx, infra.CreateTransportURLSecret(namespace, HeatMessageBusSecretName, false))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+		})
+
+		It("should first generate config without quorum queue settings, then with quorum queue settings after enabling", func() {
+			// Step 1: Verify quorum queues are initially disabled
+			Eventually(func(g Gomega) {
+				cm := th.GetSecret(heatConfigSecretName)
+				g.Expect(cm).ShouldNot(BeNil())
+
+				heatCfg := string(cm.Data["00-default.conf"])
+				g.Expect(heatCfg).ShouldNot(ContainSubstring("rabbit_quorum_queue=true"))
+				g.Expect(heatCfg).ShouldNot(ContainSubstring("rabbit_transient_quorum_queue=true"))
+				g.Expect(heatCfg).ShouldNot(ContainSubstring("amqp_durable_queues=true"))
+			}, timeout, interval).Should(Succeed())
+
+			// Step 2: Enable quorum queues by updating the transport URL secret
+			Eventually(func(g Gomega) {
+				// Get the Heat instance to find the actual transport URL secret name
+				heat := GetHeat(heatName)
+				g.Expect(heat.Status.TransportURLSecret).ShouldNot(BeEmpty())
+
+				transportSecret := &corev1.Secret{}
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      heat.Status.TransportURLSecret,
+				}, transportSecret)).Should(Succeed())
+
+				transportSecret.Data["quorumqueues"] = []byte("true")
+				g.Expect(k8sClient.Update(ctx, transportSecret)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			// Step 3: Verify quorum queues are now enabled in the configuration
+			// The controller should detect the secret change and regenerate the config
+			Eventually(func(g Gomega) {
+				cm := th.GetSecret(heatConfigSecretName)
+				g.Expect(cm).ShouldNot(BeNil())
+
+				heatCfg := string(cm.Data["00-default.conf"])
+				g.Expect(heatCfg).Should(ContainSubstring("[oslo_messaging_rabbit]"))
+				g.Expect(heatCfg).Should(ContainSubstring("rabbit_quorum_queue=true"))
+				g.Expect(heatCfg).Should(ContainSubstring("rabbit_transient_quorum_queue=true"))
+				g.Expect(heatCfg).Should(ContainSubstring("amqp_durable_queues=true"))
+			}, time.Second*30, interval).Should(Succeed())
+		})
+	})
+
+	When("Quorum queues field is missing", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+		})
+
+		It("should generate config without quorum queue settings", func() {
+			Eventually(func(g Gomega) {
+				cm := th.GetSecret(heatConfigSecretName)
+				g.Expect(cm).ShouldNot(BeNil())
+
+				heatCfg := string(cm.Data["00-default.conf"])
+				g.Expect(heatCfg).ShouldNot(ContainSubstring("rabbit_quorum_queue=true"))
+				g.Expect(heatCfg).ShouldNot(ContainSubstring("rabbit_transient_quorum_queue=true"))
+				g.Expect(heatCfg).ShouldNot(ContainSubstring("amqp_durable_queues=true"))
+			}, timeout, interval).Should(Succeed())
 		})
 	})
 })
