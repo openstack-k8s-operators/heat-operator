@@ -5,7 +5,6 @@ aliases:
   - rabi
   - slagle
   ci-approvers:
-  - lewisdenny
   - frenzyfriday
   - viroel
   openstack-approvers:
