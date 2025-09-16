@@ -1128,11 +1128,12 @@ func (r *HeatReconciler) generateServiceSecrets(
 		return err
 	}
 	transportURL := strings.TrimSuffix(string(transportURLSecret.Data["transport_url"]), "\n")
+	quorumQueues := strings.TrimSuffix(string(transportURLSecret.Data["quorumqueues"]), "\n") == "true"
 
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
-	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret)
+	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret, quorumQueues)
 
 	// Render vhost configuration for API and CFN
 	httpdAPIVhostConfig := map[string]interface{}{}
@@ -1494,6 +1495,7 @@ func initTemplateParameters(
 	mc *memcachedv1.Memcached,
 	databaseAccount *mariadbv1.MariaDBAccount,
 	dbSecret *corev1.Secret,
+	quorumQueues bool,
 ) map[string]interface{} {
 	mysqlConnectionString := fmt.Sprintf(
 		"mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
@@ -1517,6 +1519,7 @@ func initTemplateParameters(
 		"MemcachedTLS":             mc.GetMemcachedTLSSupport(),
 		"DatabaseConnection":       mysqlConnectionString,
 		"Timeout":                  instance.Spec.APITimeout,
+		"QuorumQueues":             quorumQueues,
 	}
 }
 
