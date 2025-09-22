@@ -7,7 +7,10 @@ rules:
 - apiGroups:
   - ""
   resources:
+  - configmaps
   - pods
+  - secrets
+  - services
   verbs:
   - create
   - delete
@@ -52,125 +55,11 @@ rules:
   - update
   - watch
 - apiGroups:
-  - ""
-  resources:
-  - configmaps
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - secrets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - ""
-  resources:
-  - services
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
   - heat.openstack.org
   resources:
   - heatapis
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - heat.openstack.org
-  resources:
-  - heatapis/finalizers
-  verbs:
-  - patch
-  - update
-- apiGroups:
-  - heat.openstack.org
-  resources:
-  - heatapis/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - heat.openstack.org
-  resources:
   - heatcfnapis
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - heat.openstack.org
-  resources:
-  - heatcfnapis/finalizers
-  verbs:
-  - patch
-  - update
-- apiGroups:
-  - heat.openstack.org
-  resources:
-  - heatcfnapis/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - heat.openstack.org
-  resources:
   - heatengines
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - heat.openstack.org
-  resources:
-  - heatengines/finalizers
-  verbs:
-  - patch
-  - update
-- apiGroups:
-  - heat.openstack.org
-  resources:
-  - heatengines/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - heat.openstack.org
-  resources:
   - heats
   verbs:
   - create
@@ -183,6 +72,9 @@ rules:
 - apiGroups:
   - heat.openstack.org
   resources:
+  - heatapis/finalizers
+  - heatcfnapis/finalizers
+  - heatengines/finalizers
   - heats/finalizers
   verbs:
   - patch
@@ -190,6 +82,9 @@ rules:
 - apiGroups:
   - heat.openstack.org
   resources:
+  - heatapis/status
+  - heatcfnapis/status
+  - heatengines/status
   - heats/status
   verbs:
   - get
@@ -207,17 +102,6 @@ rules:
   - keystone.openstack.org
   resources:
   - keystoneendpoints
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - keystone.openstack.org
-  resources:
   - keystoneservices
   verbs:
   - create
@@ -231,6 +115,7 @@ rules:
   - mariadb.openstack.org
   resources:
   - mariadbaccounts
+  - mariadbdatabases
   verbs:
   - create
   - delete
@@ -246,18 +131,6 @@ rules:
   verbs:
   - patch
   - update
-- apiGroups:
-  - mariadb.openstack.org
-  resources:
-  - mariadbdatabases
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
 - apiGroups:
   - memcached.openstack.org
   resources:
@@ -282,16 +155,6 @@ rules:
   - rbac.authorization.k8s.io
   resources:
   - rolebindings
-  verbs:
-  - create
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - rbac.authorization.k8s.io
-  resources:
   - roles
   verbs:
   - create

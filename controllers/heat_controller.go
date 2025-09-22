@@ -8,10 +8,12 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// Package controllers implements the heat-operator Kubernetes controllers.
 package controllers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -61,6 +63,12 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+)
+
+// Static errors for heat controller
+var (
+	ErrPasswordSelectorNotFound  = errors.New("password selector not found in secret")
+	ErrAuthEncryptionKeyTooShort = errors.New("AuthEncryptionKey must be at least 32 characters")
 )
 
 // HeatReconciler reconciles a Heat object
@@ -166,7 +174,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 	Log := r.GetLogger(ctx)
 
 	instance := &heatv1beta1.Heat{}
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -237,7 +245,7 @@ func (r *HeatReconciler) Reconcile(ctx context.Context, req ctrl.Request) (resul
 const (
 	passwordSecretField      = ".spec.secret"
 	transportURLSecretField  = ".spec.transportURLSecret"
-	caBundleSecretNameField  = ".spec.tls.caBundleSecretName"
+	caBundleSecretNameField  = ".spec.tls.caBundleSecretName" // #nosec G101
 	tlsAPIInternalField      = ".spec.tls.api.internal.secretName"
 	tlsAPIPublicField        = ".spec.tls.api.public.secretName"
 	customServiceConfigField = ".spec.customServiceConfigSecrets"
@@ -311,7 +319,7 @@ func (r *HeatReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), heats, listOpts...); err != nil {
+		if err := r.List(context.Background(), heats, listOpts...); err != nil {
 			Log.Error(err, "Unable to retrieve Heat CRs %w")
 			return nil
 		}
@@ -400,7 +408,7 @@ func (r *HeatReconciler) findObjectForSrc(ctx context.Context, src client.Object
 	listOps := &client.ListOptions{
 		Namespace: src.GetNamespace(),
 	}
-	err := r.Client.List(ctx, crList, listOps)
+	err := r.List(ctx, crList, listOps)
 	if err != nil {
 		Log.Error(err, fmt.Sprintf("listing %s for namespace: %s", crList.GroupVersionKind().Kind, src.GetNamespace()))
 		return requests
@@ -714,7 +722,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			heatv1beta1.HeatEngineReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			err.Error()))
+			"%s", err.Error()))
 		return ctrl.Result{}, err
 	}
 
@@ -726,7 +734,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			heatv1beta1.HeatEngineReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
-			err.Error()))
+			"%s", err.Error()))
 		return ctrl.Result{}, err
 	}
 	// Only mirror the underlying condition if the observedGeneration is
@@ -1071,7 +1079,7 @@ func (r *HeatReconciler) generateServiceSecrets(
 	secretLabels := labels.GetLabels(instance, labels.GetGroupLabel(heat.ServiceName), map[string]string{})
 
 	var tlsCfg *tls.Service
-	if instance.Spec.HeatAPI.TLS.Ca.CaBundleSecretName != "" {
+	if instance.Spec.HeatAPI.TLS.CaBundleSecretName != "" {
 		tlsCfg = &tls.Service{}
 	}
 
@@ -1221,7 +1229,7 @@ func (r *HeatReconciler) ensureStackDomain(
 	Log := r.GetLogger(ctx)
 	val, ok := secret.Data[instance.Spec.PasswordSelectors.Service]
 	if !ok {
-		return ctrl.Result{}, fmt.Errorf("%s not found in secret %s", instance.Spec.PasswordSelectors.Service, instance.Spec.Secret)
+		return ctrl.Result{}, fmt.Errorf("%w: %s not found in secret %s", ErrPasswordSelectorNotFound, instance.Spec.PasswordSelectors.Service, instance.Spec.Secret)
 	}
 	password := strings.TrimSuffix(string(val), "\n")
 
@@ -1376,7 +1384,7 @@ func (r *HeatReconciler) checkHeatAPIGeneration(
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 	}
-	if err := r.Client.List(context.Background(), api, listOpts...); err != nil {
+	if err := r.List(context.Background(), api, listOpts...); err != nil {
 		Log.Error(err, "Unable to retrieve HeatAPI CR %w")
 		return false, err
 	}
@@ -1398,7 +1406,7 @@ func (r *HeatReconciler) checkHeatEngineGeneration(
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 	}
-	if err := r.Client.List(context.Background(), ng, listOpts...); err != nil {
+	if err := r.List(context.Background(), ng, listOpts...); err != nil {
 		Log.Error(err, "Unable to retrieve HeatEngine CR %w")
 		return false, err
 	}
@@ -1420,7 +1428,7 @@ func (r *HeatReconciler) checkHeatCfnGeneration(
 	listOpts := []client.ListOption{
 		client.InNamespace(instance.Namespace),
 	}
-	if err := r.Client.List(context.Background(), cf, listOpts...); err != nil {
+	if err := r.List(context.Background(), cf, listOpts...); err != nil {
 		Log.Error(err, "Unable to retrieve HeatCfnApi CR %w")
 		return false, err
 	}
@@ -1548,7 +1556,7 @@ func validateAuthEncryptionKey(instance *heatv1beta1.Heat, ospSecret *corev1.Sec
 	heatAuthEncKey := strings.TrimSuffix(string(ospSecret.Data[instance.Spec.PasswordSelectors.AuthEncryptionKey]), "\n")
 
 	if len(heatAuthEncKey) < HeatAuthEncKeyLen {
-		return "", fmt.Errorf("AuthEncryptionKey must be at least %d characters", HeatAuthEncKeyLen)
+		return "", fmt.Errorf("%w: must be at least %d characters", ErrAuthEncryptionKeyTooShort, HeatAuthEncKeyLen)
 	}
 
 	return heatAuthEncKey, nil

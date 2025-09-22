@@ -108,7 +108,7 @@ func (r *HeatCfnAPIReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	// Updates and Upgrades can be handled by the heat_controller.
 
 	instance := &heatv1beta1.HeatCfnAPI{}
-	err := r.Client.Get(ctx, req.NamespacedName, instance)
+	err := r.Get(ctx, req.NamespacedName, instance)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
 			return ctrl.Result{}, nil
@@ -277,7 +277,7 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		listOpts := []client.ListOption{
 			client.InNamespace(o.GetNamespace()),
 		}
-		if err := r.Client.List(context.Background(), apis, listOpts...); err != nil {
+		if err := r.List(context.Background(), apis, listOpts...); err != nil {
 			Log.Error(err, "Unable to get CfnAPI CRs %v")
 			return nil
 		}
@@ -679,7 +679,7 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 					condition.TLSInputReadyCondition,
 					condition.RequestedReason,
 					condition.SeverityInfo,
-					fmt.Sprintf(condition.TLSInputReadyWaitingMessage, instance.Spec.TLS.CaBundleSecretName)))
+					condition.TLSInputReadyWaitingMessage, instance.Spec.TLS.CaBundleSecretName))
 				return ctrl.Result{}, nil
 			}
 			instance.Status.Conditions.Set(condition.FalseCondition(
@@ -704,7 +704,7 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 				condition.TLSInputReadyCondition,
 				condition.RequestedReason,
 				condition.SeverityInfo,
-				fmt.Sprintf(condition.TLSInputReadyWaitingMessage, err.Error())))
+				condition.TLSInputReadyWaitingMessage, err.Error()))
 			return ctrl.Result{}, nil
 		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
