@@ -27,14 +27,14 @@ import (
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
-func GetDefaultHeatSpec() map[string]interface{} {
-	return map[string]interface{}{
+func GetDefaultHeatSpec() map[string]any {
+	return map[string]any{
 		"databaseInstance": "openstack",
 		"secret":           SecretName,
 		"heatEngine":       GetDefaultHeatEngineSpec(),
 		"heatAPI":          GetDefaultHeatAPISpec(),
 		"heatCfnAPI":       GetDefaultHeatCFNAPISpec(),
-		"passwordSelectors": map[string]interface{}{
+		"passwordSelectors": map[string]any{
 			"AuthEncryptionKey":        "HeatAuthEncryptionKey",
 			"StackDomainAdminPassword": "HeatStackDomainAdminPassword",
 			"Service":                  "HeatPassword",
@@ -42,24 +42,24 @@ func GetDefaultHeatSpec() map[string]interface{} {
 	}
 }
 
-func GetDefaultHeatAPISpec() map[string]interface{} {
-	return map[string]interface{}{}
+func GetDefaultHeatAPISpec() map[string]any {
+	return map[string]any{}
 }
 
-func GetDefaultHeatEngineSpec() map[string]interface{} {
-	return map[string]interface{}{}
+func GetDefaultHeatEngineSpec() map[string]any {
+	return map[string]any{}
 }
 
-func GetDefaultHeatCFNAPISpec() map[string]interface{} {
-	return map[string]interface{}{}
+func GetDefaultHeatCFNAPISpec() map[string]any {
+	return map[string]any{}
 }
 
-func CreateHeat(name types.NamespacedName, spec map[string]interface{}) client.Object {
+func CreateHeat(name types.NamespacedName, spec map[string]any) client.Object {
 
-	raw := map[string]interface{}{
+	raw := map[string]any{
 		"apiVersion": "heat.openstack.org/v1beta1",
 		"kind":       "Heat",
-		"metadata": map[string]interface{}{
+		"metadata": map[string]any{
 			"name":      name.Name,
 			"namespace": name.Namespace,
 		},

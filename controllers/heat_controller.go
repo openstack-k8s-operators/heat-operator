@@ -15,6 +15,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 	"strings"
 	"time"
 
@@ -85,7 +86,7 @@ func (r *HeatReconciler) GetLogger(ctx context.Context) logr.Logger {
 
 type conditionUpdater interface {
 	Set(c *condition.Condition)
-	MarkTrue(t condition.Type, messageFormat string, messageArgs ...interface{})
+	MarkTrue(t condition.Type, messageFormat string, messageArgs ...any)
 }
 
 type topologyHandler interface {
@@ -1144,8 +1145,8 @@ func (r *HeatReconciler) generateServiceSecrets(
 	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret, quorumQueues)
 
 	// Render vhost configuration for API and CFN
-	httpdAPIVhostConfig := map[string]interface{}{}
-	httpdCfnAPIVhostConfig := map[string]interface{}{}
+	httpdAPIVhostConfig := map[string]any{}
+	httpdCfnAPIVhostConfig := map[string]any{}
 	for _, endpt := range []service.Endpoint{service.EndpointInternal, service.EndpointPublic} {
 		var (
 			apiTLSEnabled    = instance.Spec.HeatAPI.TLS.API.Enabled(endpt)
@@ -1464,15 +1465,13 @@ func generateCustomData(instance *heatv1beta1.Heat, tlsCfg *tls.Service, db *mar
 		myCnf:                     db.GetDatabaseClientConfig(tlsCfg), //(mschuppert) for now just get the default my.cnf
 	}
 
-	for key, data := range instance.Spec.DefaultConfigOverwrite {
-		customData[key] = data
-	}
+	maps.Copy(customData, instance.Spec.DefaultConfigOverwrite)
 
 	return customData
 }
 
 // createSecretsTemplates - Takes inputs and renders the templates that will be used for our Secrets
-func createSecretTemplates(instance *heatv1beta1.Heat, customData map[string]string, templateParameters map[string]interface{}, secretLabels map[string]string) []util.Template {
+func createSecretTemplates(instance *heatv1beta1.Heat, customData map[string]string, templateParameters map[string]any, secretLabels map[string]string) []util.Template {
 	var (
 		secretName = fmt.Sprintf("%s-config-data", instance.Name)
 	)
@@ -1504,7 +1503,7 @@ func initTemplateParameters(
 	databaseAccount *mariadbv1.MariaDBAccount,
 	dbSecret *corev1.Secret,
 	quorumQueues bool,
-) map[string]interface{} {
+) map[string]any {
 	mysqlConnectionString := fmt.Sprintf(
 		"mysql+pymysql://%s:%s@%s/%s?read_default_file=/etc/my.cnf",
 		databaseAccount.Spec.UserName,
@@ -1513,7 +1512,7 @@ func initTemplateParameters(
 		heat.DatabaseName,
 	)
 
-	return map[string]interface{}{
+	return map[string]any{
 		"KeystoneInternalURL":      authURL,
 		"ServiceUser":              instance.Spec.ServiceUser,
 		"ServicePassword":          password,
@@ -1531,14 +1530,14 @@ func initTemplateParameters(
 	}
 }
 
-func renderVhost(httpdVhostConfig map[string]interface{}, instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool) {
+func renderVhost(httpdVhostConfig map[string]any, instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool) {
 	var (
 		ServerNameString = fmt.Sprintf("%s-%s.%s.svc", serviceName, endpt.String(), instance.Namespace)
 		SSLCertFilePath  = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
 		SSLKeyFilePath   = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
 	)
 
-	endptConfig := map[string]interface{}{}
+	endptConfig := map[string]any{}
 	endptConfig["ServerName"] = ServerNameString
 	endptConfig["TLS"] = tlsEnabled // default TLS to false, and set it bellow to true if enabled
 	if tlsEnabled {
