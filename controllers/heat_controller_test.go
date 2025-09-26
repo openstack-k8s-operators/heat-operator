@@ -36,19 +36,19 @@ func TestRenderVhost(t *testing.T) {
 		},
 	}
 
-	expected := map[string]interface{}{
-		"internal": map[string]interface{}{
+	expected := map[string]any{
+		"internal": map[string]any{
 			"ServerName": "my-service-internal.test1HeatNamespace.svc",
 			"TLS":        false,
 		},
-		"public": map[string]interface{}{
+		"public": map[string]any{
 			"ServerName":            "my-service-public.test1HeatNamespace.svc",
 			"TLS":                   true,
 			"SSLCertificateFile":    "/etc/pki/tls/certs/public.crt",
 			"SSLCertificateKeyFile": "/etc/pki/tls/private/public.key",
 		},
 	}
-	result := map[string]interface{}{}
+	result := map[string]any{}
 	for _, tt := range tests {
 		renderVhost(result, tt.instance, tt.endpt, tt.serviceName, tt.tlsEnabled)
 	}

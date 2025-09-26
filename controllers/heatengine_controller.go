@@ -19,6 +19,7 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"maps"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
@@ -673,9 +674,7 @@ func (r *HeatEngineReconciler) generateServiceSecrets(
 		heat.CustomServiceConfigFileName: instance.Spec.CustomServiceConfig,
 	}
 
-	for key, data := range instance.Spec.DefaultConfigOverwrite {
-		customData[key] = data
-	}
+	maps.Copy(customData, instance.Spec.DefaultConfigOverwrite)
 
 	customData[heat.CustomServiceConfigFileName] = instance.Spec.CustomServiceConfig
 

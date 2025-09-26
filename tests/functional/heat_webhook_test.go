@@ -63,13 +63,13 @@ var _ = Describe("Heat Webhook", func() {
 	When("A Heat instance is created with container images", func() {
 		BeforeEach(func() {
 			heatSpec := GetDefaultHeatSpec()
-			heatSpec["heatAPI"] = map[string]interface{}{
+			heatSpec["heatAPI"] = map[string]any{
 				"containerImage": "api-container-image",
 			}
-			heatSpec["heatCfnAPI"] = map[string]interface{}{
+			heatSpec["heatCfnAPI"] = map[string]any{
 				"containerImage": "cfnapi-container-image",
 			}
-			heatSpec["heatEngine"] = map[string]interface{}{
+			heatSpec["heatEngine"] = map[string]any{
 				"containerImage": "engine-container-image",
 			}
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, heatSpec))
@@ -107,18 +107,18 @@ var _ = Describe("Heat Webhook", func() {
 	It("rejects with wrong HeatAPI service override endpoint type", func() {
 		spec := GetDefaultHeatSpec()
 		apiSpec := GetDefaultHeatAPISpec()
-		apiSpec["override"] = map[string]interface{}{
-			"service": map[string]interface{}{
-				"internal": map[string]interface{}{},
-				"wrooong":  map[string]interface{}{},
+		apiSpec["override"] = map[string]any{
+			"service": map[string]any{
+				"internal": map[string]any{},
+				"wrooong":  map[string]any{},
 			},
 		}
 		spec["heatAPI"] = apiSpec
 
-		raw := map[string]interface{}{
+		raw := map[string]any{
 			"apiVersion": "heat.openstack.org/v1beta1",
 			"kind":       "Heat",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      heatName.Name,
 				"namespace": heatName.Namespace,
 			},
@@ -139,18 +139,18 @@ var _ = Describe("Heat Webhook", func() {
 	It("rejects with wrong HeatCfnAPI service override endpoint type", func() {
 		spec := GetDefaultHeatSpec()
 		apiSpec := GetDefaultHeatAPISpec()
-		apiSpec["override"] = map[string]interface{}{
-			"service": map[string]interface{}{
-				"internal": map[string]interface{}{},
-				"wrooong":  map[string]interface{}{},
+		apiSpec["override"] = map[string]any{
+			"service": map[string]any{
+				"internal": map[string]any{},
+				"wrooong":  map[string]any{},
 			},
 		}
 		spec["heatCfnAPI"] = apiSpec
 
-		raw := map[string]interface{}{
+		raw := map[string]any{
 			"apiVersion": "heat.openstack.org/v1beta1",
 			"kind":       "Heat",
-			"metadata": map[string]interface{}{
+			"metadata": map[string]any{
 				"name":      heatName.Name,
 				"namespace": heatName.Namespace,
 			},
@@ -188,7 +188,7 @@ var _ = Describe("Heat Webhook", func() {
 	When("The DatabaseInstance is changed for existing deployments from null to something valid", func() {
 		BeforeEach(func() {
 
-			heatSpecNullDBInstance := map[string]interface{}{
+			heatSpecNullDBInstance := map[string]any{
 				"databaseInstance": "",
 				"secret":           SecretName,
 				"heatEngine":       GetDefaultHeatEngineSpec(),
@@ -216,24 +216,24 @@ var _ = Describe("Heat Webhook", func() {
 			spec := GetDefaultHeatSpec()
 			// API, CfnApi and Engine
 			if component != "top-level" {
-				spec[component] = map[string]interface{}{
-					"topologyRef": map[string]interface{}{
+				spec[component] = map[string]any{
+					"topologyRef": map[string]any{
 						"name":      "bar",
 						"namespace": "foo",
 					},
 				}
 				// top-level
 			} else {
-				spec["topologyRef"] = map[string]interface{}{
+				spec["topologyRef"] = map[string]any{
 					"name":      "bar",
 					"namespace": "foo",
 				}
 			}
 			// Build Heat CR
-			raw := map[string]interface{}{
+			raw := map[string]any{
 				"apiVersion": "heat.openstack.org/v1beta1",
 				"kind":       "Heat",
-				"metadata": map[string]interface{}{
+				"metadata": map[string]any{
 					"name":      heatName.Name,
 					"namespace": heatName.Namespace,
 				},

@@ -482,7 +482,7 @@ var _ = Describe("Heat controller", func() {
 		BeforeEach(func() {
 			spec := GetDefaultHeatSpec()
 			heatAPI := GetDefaultHeatAPISpec()
-			heatAPI["tls"] = map[string]interface{}{
+			heatAPI["tls"] = map[string]any{
 				"caBundleSecretName": "combined-ca-bundle",
 			}
 			spec["heatAPI"] = heatAPI
@@ -556,7 +556,7 @@ var _ = Describe("Heat controller", func() {
 	When("heatAPI is created with nodeSelector", func() {
 		BeforeEach(func() {
 			spec := GetDefaultHeatSpec()
-			spec["nodeSelector"] = map[string]interface{}{
+			spec["nodeSelector"] = map[string]any{
 				"foo": "bar",
 			}
 			heatAPI := GetDefaultHeatAPISpec()
