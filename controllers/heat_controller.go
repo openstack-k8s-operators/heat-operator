@@ -486,11 +486,13 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
+			// Since the OpenStack secret should have been manually created by the user and referenced in the spec,
+			// we treat this as a warning because it means that the service will not be able to start.
 			Log.Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.InputReadyCondition,
-				condition.RequestedReason,
-				condition.SeverityInfo,
+				condition.ErrorReason,
+				condition.SeverityWarning,
 				condition.InputReadyWaitingMessage))
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
 		}
@@ -514,11 +516,16 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	memcached, err := memcachedv1.GetMemcachedByName(ctx, helper, instance.Spec.MemcachedInstance, instance.Namespace)
 	if err != nil {
 		if k8s_errors.IsNotFound(err) {
+			// Memcached should be automatically created by the encompassing OpenStackControlPlane,
+			// but we don't propagate its name into the "memcachedInstance" field of other sub-resources,
+			// so if it is missing at this point, it *could* be because there's a mismatch between the
+			// name of the Memcached CR and the name of the Memcached instance referenced by this CR.
+			// Since that situation would block further reconciliation, we treat it as a warning.
 			Log.Info(fmt.Sprintf("memcached %s not found", instance.Spec.MemcachedInstance))
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.MemcachedReadyCondition,
-				condition.RequestedReason,
-				condition.SeverityInfo,
+				condition.ErrorReason,
+				condition.SeverityWarning,
 				condition.MemcachedReadyWaitingMessage))
 			return ctrl.Result{RequeueAfter: time.Duration(10) * time.Second}, nil
 		}
