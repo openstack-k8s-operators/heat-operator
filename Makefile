@@ -57,6 +57,8 @@ IMG ?= $(DEFAULT_IMG)
 # ENVTEST_K8S_VERSION refers to the version of kubebuilder assets to be downloaded by envtest binary.
 ENVTEST_K8S_VERSION = 1.31
 
+SETUP_ENVTEST_VERSION ?= release-0.22
+
 # Set minimum Go version
 GOTOOLCHAIN_VERSION ?= go1.24.0
 
@@ -235,7 +237,7 @@ $(CONTROLLER_GEN): $(LOCALBIN)
 envtest: $(ENVTEST) ## Download envtest-setup locally if necessary.
 $(ENVTEST): $(LOCALBIN)
 	# TODO: revisit pinned version once https://github.com/kubernetes-sigs/controller-runtime/issues/2720 is fixed
-	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@latest
+	test -s $(LOCALBIN)/setup-envtest || GOBIN=$(LOCALBIN) go install sigs.k8s.io/controller-runtime/tools/setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 .PHONY: ginkgo
 ginkgo: $(GINKGO) ## Download ginkgo locally if necessary.
