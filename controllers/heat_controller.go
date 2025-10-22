@@ -1263,20 +1263,21 @@ func (r *HeatReconciler) ensureStackDomain(
 		Name:        heat.StackDomainName,
 		Description: "Domain for Heat stacks",
 	}
-	domainID, err := os.CreateDomain(Log, domain)
+	domainID, err := os.CreateDomain(ctx, Log, domain)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Create heat_stack_user role as per:
 	// https://docs.openstack.org/heat/2023.2/admin/stack-domain-users.html#usage-workflow
-	_, err = os.CreateRole(Log, heat.HeatStackUserRole)
+	_, err = os.CreateRole(ctx, Log, heat.HeatStackUserRole)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
 	// Create Heat user
 	userID, err := os.CreateUser(
+		ctx,
 		Log,
 		openstack.User{
 			Name:     heat.StackDomainAdminUsername,
@@ -1289,6 +1290,7 @@ func (r *HeatReconciler) ensureStackDomain(
 
 	// Add the user to the domain
 	err = os.AssignUserDomainRole(
+		ctx,
 		Log,
 		"admin",
 		userID,
