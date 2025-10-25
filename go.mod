@@ -7,7 +7,7 @@ replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
-	github.com/onsi/ginkgo/v2 v2.26.0
+	github.com/onsi/ginkgo/v2 v2.27.1
 	github.com/onsi/gomega v1.38.2
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
 	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20251007170607-63860ee1375c
