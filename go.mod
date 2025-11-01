@@ -7,7 +7,7 @@ replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
-	github.com/onsi/ginkgo/v2 v2.27.1
+	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
 	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20251030184102-82d2cbaafd35
@@ -63,7 +63,6 @@ require (
 	github.com/rabbitmq/cluster-operator/v2 v2.16.0 // indirect
 	github.com/spf13/pflag v1.0.7 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
