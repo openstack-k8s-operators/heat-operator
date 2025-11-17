@@ -27,7 +27,7 @@ ARG TARGETARCH
 RUN if [ ! -f $CACHITO_ENV_FILE ]; then go mod download ; fi
 
 # Build manager
-RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; env ${GO_BUILD_EXTRA_ENV_ARGS} go build ${GO_BUILD_EXTRA_ARGS} -a -o ${DEST_ROOT}/manager main.go
+RUN if [ -f $CACHITO_ENV_FILE ] ; then source $CACHITO_ENV_FILE ; fi ; env ${GO_BUILD_EXTRA_ENV_ARGS} go build ${GO_BUILD_EXTRA_ARGS} -a -o ${DEST_ROOT}/manager cmd/main.go
 
 RUN cp -r templates ${DEST_ROOT}/templates
 

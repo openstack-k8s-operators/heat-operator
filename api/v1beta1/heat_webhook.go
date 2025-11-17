@@ -31,7 +31,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/validation/field"
-	ctrl "sigs.k8s.io/controller-runtime"
 	logf "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
@@ -54,15 +53,6 @@ func SetupHeatDefaults(defaults HeatDefaults) {
 	heatDefaults = defaults
 	heatlog.Info("Heat defaults initialized", "defaults", defaults)
 }
-
-// SetupWebhookWithManager sets up the webhook with the Manager
-func (r *Heat) SetupWebhookWithManager(mgr ctrl.Manager) error {
-	return ctrl.NewWebhookManagedBy(mgr).
-		For(r).
-		Complete()
-}
-
-//+kubebuilder:webhook:path=/mutate-heat-openstack-org-v1beta1-heat,mutating=true,failurePolicy=fail,sideEffects=None,groups=heat.openstack.org,resources=heats,verbs=create;update,versions=v1beta1,name=mheat.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Defaulter = &Heat{}
 
@@ -91,9 +81,6 @@ func (spec *HeatSpec) Default() {
 func (spec *HeatSpecCore) Default() {
 	// nothing here yet
 }
-
-// TODO(user): change verbs to "verbs=create;update;delete" if you want to enable deletion validation.
-//+kubebuilder:webhook:path=/validate-heat-openstack-org-v1beta1-heat,mutating=false,failurePolicy=fail,sideEffects=None,groups=heat.openstack.org,resources=heats,verbs=create;update,versions=v1beta1,name=vheat.kb.io,admissionReviewVersions=v1
 
 var _ webhook.Validator = &Heat{}
 
