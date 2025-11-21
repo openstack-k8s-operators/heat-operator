@@ -952,4 +952,56 @@ var _ = Describe("Heat controller", func() {
 			}, timeout, interval).Should(Succeed())
 		})
 	})
+
+	When("an ApplicationCredential is created for Heat", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+			DeferCleanup(
+				k8sClient.Delete, ctx, th.CreateSecret(
+					types.NamespacedName{Namespace: namespace, Name: "ac-heat-secret"},
+					map[string][]byte{
+						"AC_ID":     []byte("test-ac-id"),
+						"AC_SECRET": []byte("test-ac-secret"),
+					},
+				))
+		})
+
+		It("should configure Heat to use application credentials", func() {
+			Eventually(func(g Gomega) {
+				cm := th.GetSecret(heatConfigSecretName)
+				g.Expect(cm).ShouldNot(BeNil())
+
+				heatCfg := string(cm.Data["00-default.conf"])
+				// Verify [trustee] section uses application credentials
+				g.Expect(heatCfg).Should(ContainSubstring("auth_type=v3applicationcredential"))
+				g.Expect(heatCfg).Should(ContainSubstring("application_credential_id=test-ac-id"))
+				g.Expect(heatCfg).Should(ContainSubstring("application_credential_secret=test-ac-secret"))
+				// Verify no password authentication in trustee section
+				g.Expect(heatCfg).ShouldNot(ContainSubstring("[trustee]"))
+				g.Expect(heatCfg).ToNot(MatchRegexp(`\[trustee\][^\[]*auth_type=password`))
+			}, timeout, interval).Should(Succeed())
+		})
+	})
 })

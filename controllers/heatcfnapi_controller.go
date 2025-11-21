@@ -303,6 +303,42 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		return nil
 	}
 
+	// Application Credential secret watching function
+	acSecretFn := func(_ context.Context, o client.Object) []reconcile.Request {
+		name := o.GetName()
+		ns := o.GetNamespace()
+		result := []reconcile.Request{}
+
+		// Only handle Secret objects
+		if _, isSecret := o.(*corev1.Secret); !isSecret {
+			return nil
+		}
+
+		// Check if this is a heat AC secret by name pattern (ac-heat-secret)
+		expectedSecretName := keystonev1.GetACSecretName("heat")
+		if name == expectedSecretName {
+			// get all HeatCfnAPI CRs in this namespace
+			heatCfnAPIs := &heatv1beta1.HeatCfnAPIList{}
+			listOpts := []client.ListOption{
+				client.InNamespace(ns),
+			}
+			if err := r.List(context.Background(), heatCfnAPIs, listOpts...); err != nil {
+				return nil
+			}
+
+			// Enqueue reconcile for all heat CFN API instances
+			for _, cr := range heatCfnAPIs.Items {
+				objKey := client.ObjectKey{
+					Namespace: ns,
+					Name:      cr.Name,
+				}
+				result = append(result, reconcile.Request{NamespacedName: objKey})
+			}
+		}
+
+		return result
+	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.HeatCfnAPI{}).
 		Owns(&keystonev1.KeystoneService{}).
@@ -316,6 +352,8 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
 			builder.WithPredicates(predicate.ResourceVersionChangedPredicate{}),
 		).
+		Watches(&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(acSecretFn)).
 		Watches(&topologyv1.Topology{},
 			handler.EnqueueRequestsFromMapFunc(r.findObjectsForSrc),
 			builder.WithPredicates(predicate.GenerationChangedPredicate{})).
@@ -662,6 +700,20 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	}
 
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
+	// run check parent Heat CR config maps - end
+
+	// Verify Application Credentials if available
+	ctrlResult, err = keystonev1.VerifyApplicationCredentialsForService(
+		ctx,
+		r.Client,
+		instance.Namespace,
+		heat.ServiceName,
+		&secretVars,
+		10*time.Second,
+	)
+	if (err != nil || ctrlResult != ctrl.Result{}) {
+		return ctrlResult, err
+	}
 	// run check parent Heat CR config maps - end
 
 	//
