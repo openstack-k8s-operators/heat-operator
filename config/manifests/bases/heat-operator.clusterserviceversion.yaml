@@ -18,20 +18,32 @@ spec:
   apiservicedefinitions: {}
   customresourcedefinitions:
     owned:
-    - description: HeatAPI is the Schema for the heatapis API
+    - description: HeatAPI ...
       displayName: Heat API
       kind: HeatAPI
       name: heatapis.heat.openstack.org
+      specDescriptors:
+      - description: TLS - Parameters related to the TLS
+        displayName: TLS
+        path: tls
       version: v1beta1
-    - description: HeatCfnAPI is the Schema for the heatcfnapis API
+    - description: HeatCfnAPI ...
       displayName: Heat Cfn API
       kind: HeatCfnAPI
       name: heatcfnapis.heat.openstack.org
+      specDescriptors:
+      - description: TLS - Parameters related to the TLS
+        displayName: TLS
+        path: tls
       version: v1beta1
-    - description: HeatEngine is the Schema for the heatengines API
+    - description: HeatEngine defined.
       displayName: Heat Engine
       kind: HeatEngine
       name: heatengines.heat.openstack.org
+      specDescriptors:
+      - description: TLS - Parameters related to the TLS
+        displayName: TLS
+        path: tls
       version: v1beta1
     - description: Heat is the Schema for the heats API
       displayName: Heat
