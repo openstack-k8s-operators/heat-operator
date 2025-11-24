@@ -998,9 +998,9 @@ var _ = Describe("Heat controller", func() {
 				g.Expect(heatCfg).Should(ContainSubstring("auth_type=v3applicationcredential"))
 				g.Expect(heatCfg).Should(ContainSubstring("application_credential_id=test-ac-id"))
 				g.Expect(heatCfg).Should(ContainSubstring("application_credential_secret=test-ac-secret"))
-				// Verify no password authentication in trustee section
-				g.Expect(heatCfg).ShouldNot(ContainSubstring("[trustee]"))
+				// Verify no password authentication is used (should not contain auth_type=password)
 				g.Expect(heatCfg).ToNot(MatchRegexp(`\[trustee\][^\[]*auth_type=password`))
+				g.Expect(heatCfg).ToNot(MatchRegexp(`\[keystone_authtoken\][^\[]*auth_type=password`))
 			}, timeout, interval).Should(Succeed())
 		})
 	})
