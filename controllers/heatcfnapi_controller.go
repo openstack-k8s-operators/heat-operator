@@ -315,7 +315,7 @@ func (r *HeatCfnAPIReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		}
 
 		// Check if this is a heat AC secret by name pattern (ac-heat-secret)
-		expectedSecretName := keystonev1.GetACSecretName("heat")
+		expectedSecretName := keystonev1.GetACSecretName(heat.ServiceName)
 		if name == expectedSecretName {
 			// get all HeatCfnAPI CRs in this namespace
 			heatCfnAPIs := &heatv1beta1.HeatCfnAPIList{}

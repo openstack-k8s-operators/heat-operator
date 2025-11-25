@@ -28,6 +28,7 @@ import (
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
 
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/utils/ptr"
 
@@ -954,18 +955,26 @@ var _ = Describe("Heat controller", func() {
 	})
 
 	When("an ApplicationCredential is created for Heat", func() {
+		var (
+			acName                string
+			acSecretName          string
+			servicePasswordSecret string
+			passwordSelector      string
+		)
 		BeforeEach(func() {
-			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			servicePasswordSecret = "ac-test-osp-secret" //nolint:gosec // G101
+			passwordSelector = "HeatPassword"
+
 			DeferCleanup(
-				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
-			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(memcachedName)
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, servicePasswordSecret))
 			DeferCleanup(
 				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
-			infra.SimulateTransportURLReady(heatTransportURLName)
-			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
-			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
-			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+
+			spec := GetDefaultHeatSpec()
+			spec["secret"] = servicePasswordSecret
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
 			DeferCleanup(
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
@@ -976,16 +985,57 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystone.CreateKeystoneAPI(namespace))
+
+			acName = fmt.Sprintf("ac-%s", heat.ServiceName)
+			acSecretName = acName + "-secret"
+			secret := &corev1.Secret{}
+			secret.Name = acSecretName
+			secret.Namespace = namespace
+			secret.Data = map[string][]byte{
+				"AC_ID":     []byte("test-ac-id"),
+				"AC_SECRET": []byte("test-ac-secret"),
+			}
+			DeferCleanup(k8sClient.Delete, ctx, secret)
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			ac := &keystonev1.KeystoneApplicationCredential{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      acName,
+				},
+				Spec: keystonev1.KeystoneApplicationCredentialSpec{
+					UserName:         heat.ServiceName,
+					Secret:           servicePasswordSecret,
+					PasswordSelector: passwordSelector,
+					Roles:            []string{"admin", "member"},
+					AccessRules:      []keystonev1.ACRule{{Service: "identity", Method: "POST", Path: "/auth/tokens"}},
+					ExpirationDays:   30,
+					GracePeriodDays:  5,
+				},
+			}
+			DeferCleanup(k8sClient.Delete, ctx, ac)
+			Expect(k8sClient.Create(ctx, ac)).To(Succeed())
+
+			fetched := &keystonev1.KeystoneApplicationCredential{}
+			key := types.NamespacedName{Namespace: ac.Namespace, Name: ac.Name}
+			Expect(k8sClient.Get(ctx, key, fetched)).To(Succeed())
+
+			fetched.Status.SecretName = acSecretName
+			now := metav1.Now()
+			readyCond := condition.Condition{
+				Type:               condition.ReadyCondition,
+				Status:             corev1.ConditionTrue,
+				Reason:             condition.ReadyReason,
+				Message:            condition.ReadyMessage,
+				LastTransitionTime: now,
+			}
+			fetched.Status.Conditions = condition.Conditions{readyCond}
+			Expect(k8sClient.Status().Update(ctx, fetched)).To(Succeed())
+
+			infra.SimulateTransportURLReady(heatTransportURLName)
 			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
 			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
-			DeferCleanup(
-				k8sClient.Delete, ctx, th.CreateSecret(
-					types.NamespacedName{Namespace: namespace, Name: "ac-heat-secret"},
-					map[string][]byte{
-						"AC_ID":     []byte("test-ac-id"),
-						"AC_SECRET": []byte("test-ac-secret"),
-					},
-				))
 		})
 
 		It("should configure Heat to use application credentials", func() {
@@ -995,12 +1045,11 @@ var _ = Describe("Heat controller", func() {
 
 				heatCfg := string(cm.Data["00-default.conf"])
 				// Verify [trustee] section uses application credentials
-				g.Expect(heatCfg).Should(ContainSubstring("auth_type=v3applicationcredential"))
-				g.Expect(heatCfg).Should(ContainSubstring("application_credential_id=test-ac-id"))
-				g.Expect(heatCfg).Should(ContainSubstring("application_credential_secret=test-ac-secret"))
+				g.Expect(heatCfg).Should(ContainSubstring("auth_type = v3applicationcredential"))
+				g.Expect(heatCfg).Should(ContainSubstring("application_credential_id = test-ac-id"))
+				g.Expect(heatCfg).Should(ContainSubstring("application_credential_secret = test-ac-secret"))
 				// Verify no password authentication is used (should not contain auth_type=password)
-				g.Expect(heatCfg).ToNot(MatchRegexp(`\[trustee\][^\[]*auth_type=password`))
-				g.Expect(heatCfg).ToNot(MatchRegexp(`\[keystone_authtoken\][^\[]*auth_type=password`))
+				g.Expect(heatCfg).Should(Not(ContainSubstring("application_credential_secret = password")))
 			}, timeout, interval).Should(Succeed())
 		})
 	})

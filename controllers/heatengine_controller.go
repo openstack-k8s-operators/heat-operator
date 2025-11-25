@@ -44,6 +44,7 @@ import (
 	heatengine "github.com/openstack-k8s-operators/heat-operator/pkg/heatengine"
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
+	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/deployment"
@@ -266,7 +267,7 @@ func (r *HeatEngineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		}
 
 		// Check if this is a heat AC secret by name pattern (ac-heat-secret)
-		expectedSecretName := keystonev1.GetACSecretName("heat")
+		expectedSecretName := keystonev1.GetACSecretName(heat.ServiceName)
 		if name == expectedSecretName {
 			// get all HeatEngine CRs in this namespace
 			heatEngines := &heatv1beta1.HeatEngineList{}

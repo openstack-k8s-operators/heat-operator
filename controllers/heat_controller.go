@@ -1151,17 +1151,15 @@ func (r *HeatReconciler) generateServiceSecrets(
 
 	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret, quorumQueues)
 
-	// Check for Application Credential secret and add parameters if it exists
-	acSecretName := keystonev1.GetACSecretName("heat")
-	acSecret, _, err := oko_secret.GetSecret(ctx, h, acSecretName, instance.Namespace)
-	if err == nil {
-		// AC secret exists, use application credentials
+	// Check for Application Credentials
+	templateParameters["UseApplicationCredentials"] = false
+	if acData, err := keystonev1.GetApplicationCredentialFromSecret(ctx, r.Client, instance.Namespace, heat.ServiceName); err != nil {
+		h.GetLogger().Error(err, "Failed to get ApplicationCredential for service", "service", heat.ServiceName)
+	} else if acData != nil {
 		templateParameters["UseApplicationCredentials"] = true
-		templateParameters["ACID"] = strings.TrimSuffix(string(acSecret.Data["AC_ID"]), "\n")
-		templateParameters["ACSecret"] = strings.TrimSuffix(string(acSecret.Data["AC_SECRET"]), "\n")
-	} else {
-		// AC secret doesn't exist, use password authentication
-		templateParameters["UseApplicationCredentials"] = false
+		templateParameters["ACID"] = acData.ID
+		templateParameters["ACSecret"] = acData.Secret
+		h.GetLogger().Info("Using ApplicationCredentials auth", "service", heat.ServiceName)
 	}
 
 	// Render vhost configuration for API and CFN
