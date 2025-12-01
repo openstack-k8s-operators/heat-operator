@@ -1151,6 +1151,17 @@ func (r *HeatReconciler) generateServiceSecrets(
 
 	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret, quorumQueues)
 
+	// Check for Application Credentials
+	templateParameters["UseApplicationCredentials"] = false
+	if acData, err := keystonev1.GetApplicationCredentialFromSecret(ctx, r.Client, instance.Namespace, heat.ServiceName); err != nil {
+		h.GetLogger().Error(err, "Failed to get ApplicationCredential for service", "service", heat.ServiceName)
+	} else if acData != nil {
+		templateParameters["UseApplicationCredentials"] = true
+		templateParameters["ACID"] = acData.ID
+		templateParameters["ACSecret"] = acData.Secret
+		h.GetLogger().Info("Using ApplicationCredentials auth", "service", heat.ServiceName)
+	}
+
 	// Render vhost configuration for API and CFN
 	httpdAPIVhostConfig := map[string]any{}
 	httpdCfnAPIVhostConfig := map[string]any{}

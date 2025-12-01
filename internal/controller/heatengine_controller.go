@@ -253,6 +253,7 @@ func (r *HeatEngineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		}
 		return nil
 	}
+
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.HeatEngine{}).
 		Owns(&appsv1.Deployment{}).
