@@ -44,7 +44,6 @@ import (
 	heatengine "github.com/openstack-k8s-operators/heat-operator/internal/heatengine"
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
-	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/deployment"
@@ -415,20 +414,6 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	}
 
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
-	// run check parent heat CR config maps - end
-
-	// Verify Application Credentials if available
-	ctrlResult, err = keystonev1.VerifyApplicationCredentialsForService(
-		ctx,
-		r.Client,
-		instance.Namespace,
-		heat.ServiceName,
-		&secretVars,
-		10*time.Second,
-	)
-	if (err != nil || ctrlResult != ctrl.Result{}) {
-		return ctrlResult, err
-	}
 	// run check parent heat CR config maps - end
 
 	//

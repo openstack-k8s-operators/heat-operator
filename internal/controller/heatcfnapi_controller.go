@@ -664,20 +664,6 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 	// run check parent Heat CR config maps - end
 
-	// Verify Application Credentials if available
-	ctrlResult, err = keystonev1.VerifyApplicationCredentialsForService(
-		ctx,
-		r.Client,
-		instance.Namespace,
-		heat.ServiceName,
-		&secretVars,
-		10*time.Second,
-	)
-	if (err != nil || ctrlResult != ctrl.Result{}) {
-		return ctrlResult, err
-	}
-	// run check parent Heat CR config maps - end
-
 	//
 	// TLS input validation
 	//
