@@ -255,42 +255,6 @@ func (r *HeatEngineReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Ma
 		return nil
 	}
 
-	// Application Credential secret watching function
-	acSecretFn := func(_ context.Context, o client.Object) []reconcile.Request {
-		name := o.GetName()
-		ns := o.GetNamespace()
-		result := []reconcile.Request{}
-
-		// Only handle Secret objects
-		if _, isSecret := o.(*corev1.Secret); !isSecret {
-			return nil
-		}
-
-		// Check if this is a heat AC secret by name pattern (ac-heat-secret)
-		expectedSecretName := keystonev1.GetACSecretName(heat.ServiceName)
-		if name == expectedSecretName {
-			// get all HeatEngine CRs in this namespace
-			heatEngines := &heatv1beta1.HeatEngineList{}
-			listOpts := []client.ListOption{
-				client.InNamespace(ns),
-			}
-			if err := r.List(context.Background(), heatEngines, listOpts...); err != nil {
-				return nil
-			}
-
-			// Enqueue reconcile for all heat engine instances
-			for _, cr := range heatEngines.Items {
-				objKey := client.ObjectKey{
-					Namespace: ns,
-					Name:      cr.Name,
-				}
-				result = append(result, reconcile.Request{NamespacedName: objKey})
-			}
-		}
-
-		return result
-	}
-
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&heatv1beta1.HeatEngine{}).
 		Owns(&appsv1.Deployment{}).
