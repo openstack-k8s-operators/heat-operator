@@ -7,16 +7,16 @@ replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
-	github.com/onsi/ginkgo/v2 v2.27.1
+	github.com/onsi/ginkgo/v2 v2.27.2
 	github.com/onsi/gomega v1.38.2
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20251030184102-82d2cbaafd35
-	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20251027074845-ed8154b20ad1
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20251027074416-ab5c045dbe00
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20251027074416-ab5c045dbe00
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20251027074416-ab5c045dbe00
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20251027074416-ab5c045dbe00
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20251015110425-ad0381ce8cd4
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20251205192058-5cfbada0ab96
+	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20251128160419-8b3a77972a77
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20251122131503-b76943960b6c
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20251122131503-b76943960b6c
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20251122131503-b76943960b6c
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20251122131503-b76943960b6c
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20251202153403-32849708ca7a
 	k8s.io/api v0.31.14
 	k8s.io/apimachinery v0.31.14
 	k8s.io/client-go v0.31.14
@@ -83,19 +83,18 @@ require (
 	go.opentelemetry.io/otel/sdk v1.34.0 // indirect
 	go.opentelemetry.io/otel/trace v1.34.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.3.1 // indirect
-	go.uber.org/automaxprocs v1.6.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
-	go.uber.org/zap v1.27.0 // indirect
+	go.uber.org/zap v1.27.1 // indirect
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
 	golang.org/x/mod v0.27.0 // indirect
 	golang.org/x/net v0.43.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.16.0 // indirect
-	golang.org/x/sys v0.35.0 // indirect
-	golang.org/x/term v0.34.0 // indirect
-	golang.org/x/text v0.28.0 // indirect
+	golang.org/x/sync v0.17.0 // indirect
+	golang.org/x/sys v0.36.0 // indirect
+	golang.org/x/term v0.35.0 // indirect
+	golang.org/x/text v0.29.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
 	golang.org/x/tools v0.36.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
