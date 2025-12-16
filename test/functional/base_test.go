@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
 
@@ -119,4 +120,45 @@ func AssertCronJobDoesNotExist(name types.NamespacedName) {
 		err := k8sClient.Get(ctx, name, instance)
 		g.Expect(k8s_errors.IsNotFound(err)).To(BeTrue())
 	}, timeout, interval).Should(Succeed())
+}
+
+func GetHeatSpecWithRabbitMQ(rabbitmqUser *string, rabbitmqVHost *string) map[string]any {
+	spec := GetDefaultHeatSpec()
+	if rabbitmqUser != nil || rabbitmqVHost != nil {
+		messagingBus := map[string]any{}
+		if rabbitmqUser != nil {
+			messagingBus["user"] = *rabbitmqUser
+		}
+		if rabbitmqVHost != nil {
+			messagingBus["vhost"] = *rabbitmqVHost
+		}
+		spec["messagingBus"] = messagingBus
+	}
+	return spec
+}
+
+func GetHeatSpecWithNotificationsBus(notificationsCluster *string, notificationsUser *string, notificationsVHost *string) map[string]any {
+	spec := GetDefaultHeatSpec()
+	if notificationsCluster != nil || notificationsUser != nil || notificationsVHost != nil {
+		notificationsBus := map[string]any{}
+		if notificationsCluster != nil {
+			notificationsBus["cluster"] = *notificationsCluster
+		}
+		if notificationsUser != nil {
+			notificationsBus["user"] = *notificationsUser
+		}
+		if notificationsVHost != nil {
+			notificationsBus["vhost"] = *notificationsVHost
+		}
+		spec["notificationsBus"] = notificationsBus
+	}
+	return spec
+}
+
+func GetTransportURL(name types.NamespacedName) *rabbitmqv1.TransportURL {
+	instance := &rabbitmqv1.TransportURL{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, name, instance)).Should(Succeed())
+	}, timeout*5, interval).Should(Succeed())
+	return instance
 }
