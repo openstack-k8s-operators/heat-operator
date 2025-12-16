@@ -555,7 +555,16 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// create RabbitMQ transportURL CR and get the actual URL from the associated secret that is created
 	//
-	transportURL, op, err := r.transportURLCreateOrUpdate(instance)
+	serviceLabels := map[string]string{
+		common.AppSelector: heat.ServiceName,
+	}
+
+	transportURL, op, err := r.transportURLCreateOrUpdate(
+		instance,
+		serviceLabels,
+		instance.Spec.RabbitMqClusterName,
+		instance.Spec.MessagingBus,
+	)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
@@ -613,6 +622,75 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 
 	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, condition.RabbitMqTransportURLReadyMessage)
 
+	//
+	// create notifications RabbitMQ transportURL if NotificationsBus is configured
+	//
+	if instance.Spec.NotificationsBus != nil && instance.Spec.NotificationsBus.Cluster != "" {
+		notificationsTransportURL, notifOp, err := r.notificationsTransportURLCreateOrUpdate(
+			instance,
+			serviceLabels,
+			instance.Spec.NotificationsBus.Cluster,
+			*instance.Spec.NotificationsBus,
+		)
+		if err != nil {
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				heatv1beta1.HeatNotificationBusReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				heatv1beta1.HeatNotificationBusReadyErrorMessage,
+				err.Error()))
+			return ctrl.Result{}, err
+		}
+
+		if notifOp != controllerutil.OperationResultNone {
+			Log.Info(fmt.Sprintf("Notifications TransportURL %s successfully reconciled - operation: %s", notificationsTransportURL.Name, string(notifOp)))
+		}
+
+		instance.Status.NotificationsTransportURLSecret = notificationsTransportURL.Status.SecretName
+
+		if instance.Status.NotificationsTransportURLSecret == "" {
+			Log.Info(fmt.Sprintf("Waiting for Notifications TransportURL %s secret to be created", notificationsTransportURL.Name))
+
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				heatv1beta1.HeatNotificationBusReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				heatv1beta1.HeatNotificationBusReadyRunningMessage))
+
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		}
+
+		//
+		// check for required Notifications TransportURL secret
+		//
+		notificationsTransportURLSecret, notifHash, err := oko_secret.GetSecret(ctx, helper, instance.Status.NotificationsTransportURLSecret, instance.Namespace)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				Log.Info(fmt.Sprintf("Notifications TransportURL secret %s not found", instance.Status.NotificationsTransportURLSecret))
+				instance.Status.Conditions.Set(condition.FalseCondition(
+					heatv1beta1.HeatNotificationBusReadyCondition,
+					condition.RequestedReason,
+					condition.SeverityInfo,
+					heatv1beta1.HeatNotificationBusReadyRunningMessage))
+				return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+			}
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				heatv1beta1.HeatNotificationBusReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				heatv1beta1.HeatNotificationBusReadyErrorMessage,
+				err.Error()))
+			return ctrl.Result{}, err
+		}
+		secretVars[notificationsTransportURLSecret.Name] = env.SetValue(notifHash)
+
+		instance.Status.Conditions.MarkTrue(heatv1beta1.HeatNotificationBusReadyCondition, heatv1beta1.HeatNotificationBusReadyMessage)
+	} else {
+		// No notifications bus configured, mark as not required and clear status
+		instance.Status.NotificationsTransportURLSecret = ""
+		instance.Status.Conditions.MarkTrue(heatv1beta1.HeatNotificationBusReadyCondition, "NotificationsBus not configured")
+	}
+
 	db, result, err := r.ensureDB(ctx, helper, instance)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -658,10 +736,6 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// TODO check when/if Init, Update, or Upgrade should/could be skipped
 	//
-
-	serviceLabels := map[string]string{
-		common.AppSelector: heat.ServiceName,
-	}
 
 	// Handle service init
 	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
@@ -1146,10 +1220,20 @@ func (r *HeatReconciler) generateServiceSecrets(
 	transportURL := strings.TrimSuffix(string(transportURLSecret.Data["transport_url"]), "\n")
 	quorumQueues := strings.TrimSuffix(string(transportURLSecret.Data["quorumqueues"]), "\n") == "true"
 
+	// Get notifications transport URL if configured
+	var notificationsTransportURL string
+	if instance.Status.NotificationsTransportURLSecret != "" {
+		notificationsTransportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.NotificationsTransportURLSecret, instance.Namespace)
+		if err != nil {
+			return err
+		}
+		notificationsTransportURL = strings.TrimSuffix(string(notificationsTransportURLSecret.Data["transport_url"]), "\n")
+	}
+
 	databaseAccount := db.GetAccount()
 	dbSecret := db.GetSecret()
 
-	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, mc, databaseAccount, dbSecret, quorumQueues)
+	templateParameters := initTemplateParameters(instance, authURL, password, domainAdminPassword, authEncryptionKey, transportURL, notificationsTransportURL, mc, databaseAccount, dbSecret, quorumQueues)
 
 	// Render vhost configuration for API and CFN
 	httpdAPIVhostConfig := map[string]any{}
@@ -1209,16 +1293,59 @@ func (r *HeatReconciler) createHashOfInputHashes(
 	return hash, nil
 }
 
-func (r *HeatReconciler) transportURLCreateOrUpdate(instance *heatv1beta1.Heat) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
+func (r *HeatReconciler) transportURLCreateOrUpdate(
+	instance *heatv1beta1.Heat,
+	serviceLabels map[string]string,
+	rabbitMqClusterName string,
+	rabbitMqConfig rabbitmqv1.RabbitMqConfig,
+) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
 	transportURL := &rabbitmqv1.TransportURL{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      fmt.Sprintf("%s-heat-transport", instance.Name),
 			Namespace: instance.Namespace,
+			Labels:    serviceLabels,
 		},
 	}
 
 	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, transportURL, func() error {
-		transportURL.Spec.RabbitmqClusterName = instance.Spec.RabbitMqClusterName
+		transportURL.Spec.RabbitmqClusterName = rabbitMqClusterName
+
+		// Set custom username and vhost if configured
+		if rabbitMqConfig.User != "" {
+			transportURL.Spec.Username = rabbitMqConfig.User
+		}
+		// Always set Vhost - empty string means use default "/" vhost
+		transportURL.Spec.Vhost = rabbitMqConfig.Vhost
+
+		return controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
+	})
+
+	return transportURL, op, err
+}
+
+func (r *HeatReconciler) notificationsTransportURLCreateOrUpdate(
+	instance *heatv1beta1.Heat,
+	serviceLabels map[string]string,
+	rabbitMqClusterName string,
+	rabbitMqConfig rabbitmqv1.RabbitMqConfig,
+) (*rabbitmqv1.TransportURL, controllerutil.OperationResult, error) {
+	transportURL := &rabbitmqv1.TransportURL{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-heat-notifications-transport", instance.Name),
+			Namespace: instance.Namespace,
+			Labels:    serviceLabels,
+		},
+	}
+
+	op, err := controllerutil.CreateOrUpdate(context.TODO(), r.Client, transportURL, func() error {
+		transportURL.Spec.RabbitmqClusterName = rabbitMqClusterName
+
+		// Set custom username and vhost if configured
+		if rabbitMqConfig.User != "" {
+			transportURL.Spec.Username = rabbitMqConfig.User
+		}
+		// Always set Vhost - empty string means use default "/" vhost
+		transportURL.Spec.Vhost = rabbitMqConfig.Vhost
 
 		return controllerutil.SetControllerReference(instance, transportURL, r.Scheme)
 	})
@@ -1508,6 +1635,7 @@ func initTemplateParameters(
 	domainAdminPassword string,
 	authEncryptionKey string,
 	transportURL string,
+	notificationsTransportURL string,
 	mc *memcachedv1.Memcached,
 	databaseAccount *mariadbv1.MariaDBAccount,
 	dbSecret *corev1.Secret,
@@ -1521,7 +1649,7 @@ func initTemplateParameters(
 		heat.DatabaseName,
 	)
 
-	return map[string]any{
+	params := map[string]any{
 		"KeystoneInternalURL":      authURL,
 		"ServiceUser":              instance.Spec.ServiceUser,
 		"ServicePassword":          password,
@@ -1537,6 +1665,13 @@ func initTemplateParameters(
 		"Timeout":                  instance.Spec.APITimeout,
 		"QuorumQueues":             quorumQueues,
 	}
+
+	// Add notifications transport URL if configured
+	if notificationsTransportURL != "" {
+		params["NotificationsTransportURL"] = notificationsTransportURL
+	}
+
+	return params
 }
 
 func renderVhost(httpdVhostConfig map[string]any, instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool) {

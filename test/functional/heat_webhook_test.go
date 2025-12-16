@@ -207,6 +207,30 @@ var _ = Describe("Heat Webhook", func() {
 		})
 	})
 
+	It("rejects update to deprecated rabbitMqClusterName field", func() {
+		spec := GetDefaultHeatSpec()
+		spec["rabbitMqClusterName"] = "rabbitmq"
+
+		heatName := types.NamespacedName{
+			Namespace: namespace,
+			Name:      "heat-rabbitmq-test",
+		}
+
+		DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+		// Try to update rabbitMqClusterName
+		Eventually(func(g Gomega) {
+			instance := GetHeat(heatName)
+			instance.Spec.RabbitMqClusterName = "rabbitmq2"
+			err := th.K8sClient.Update(th.Ctx, instance)
+			g.Expect(err).Should(HaveOccurred())
+			g.Expect(err.Error()).To(
+				ContainSubstring("rabbitMqClusterName is deprecated and cannot be changed"))
+			g.Expect(err.Error()).To(
+				ContainSubstring("Please use messagingBus.cluster instead"))
+		}).Should(Succeed())
+	})
+
 	DescribeTable("rejects wrong topology for",
 		func(serviceNameFunc func() (string, string)) {
 
