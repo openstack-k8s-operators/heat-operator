@@ -31,6 +31,9 @@ const (
 
 	// HeatStackDomainReadyCondition ...
 	HeatStackDomainReadyCondition condition.Type = "HeatStackDomainReady"
+
+	// HeatNotificationBusReadyCondition ...
+	HeatNotificationBusReadyCondition condition.Type = "HeatNotificationBusReady"
 )
 
 // Common Messages used by API objects.
@@ -76,4 +79,19 @@ const (
 
 	// HeatStackDomainReadyErrorMessage
 	HeatStackDomainReadyErrorMessage = "HeatStackDomain error occured %s"
+
+	//
+	// HeatNotificationBusReady condition messages
+	//
+	// HeatNotificationBusReadyInitMessage
+	HeatNotificationBusReadyInitMessage = "HeatNotificationBus not started"
+
+	// HeatNotificationBusReadyRunningMessage
+	HeatNotificationBusReadyRunningMessage = "HeatNotificationBus creation in progress"
+
+	// HeatNotificationBusReadyMessage
+	HeatNotificationBusReadyMessage = "HeatNotificationBus successfully created"
+
+	// HeatNotificationBusReadyErrorMessage
+	HeatNotificationBusReadyErrorMessage = "HeatNotificationBus error occured %s"
 )
