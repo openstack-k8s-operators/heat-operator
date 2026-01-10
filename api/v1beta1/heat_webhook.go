@@ -25,6 +25,7 @@ package v1beta1
 import (
 	"fmt"
 
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -65,6 +66,7 @@ func (r *Heat) Default() {
 
 // Default - set defaults for this Heat spec
 func (spec *HeatSpec) Default() {
+	spec.HeatSpecBase.Default()
 	if spec.HeatAPI.ContainerImage == "" {
 		spec.HeatAPI.ContainerImage = heatDefaults.APIContainerImageURL
 	}
@@ -76,10 +78,34 @@ func (spec *HeatSpec) Default() {
 	}
 }
 
+// Default - set defaults for this HeatSpecBase
+func (spec *HeatSpecBase) Default() {
+	// Handle legacy RabbitMQ field and populate MessagingBus
+	if spec.RabbitMQ != nil {
+		// Copy legacy RabbitMQ config to MessagingBus if it's not set
+		if spec.MessagingBus.Cluster == "" {
+			spec.MessagingBus = *spec.RabbitMQ
+		}
+	}
+
+	// Default MessagingBus with RabbitMqClusterName
+	rabbitmqv1.DefaultRabbitMqConfig(&spec.MessagingBus, spec.RabbitMqClusterName)
+
+	// Default NotificationsBus if it's specified
+	// Note: user/vhost are NOT inherited from MessagingBus to ensure separation
+	// (RPC and notifications should never share credentials)
+	if spec.NotificationsBus != nil {
+		// Ensure cluster name is set if not already
+		if spec.NotificationsBus.Cluster != "" {
+			rabbitmqv1.DefaultRabbitMqConfig(spec.NotificationsBus, spec.NotificationsBus.Cluster)
+		}
+	}
+}
+
 // Default - set defaults for this Heat spec core. This version is called
 // by the OpenStackControlplane
 func (spec *HeatSpecCore) Default() {
-	// nothing here yet
+	spec.HeatSpecBase.Default()
 }
 
 var _ webhook.Validator = &Heat{}
@@ -173,6 +199,13 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotations map[string]string, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
 
+	// Reject changes to deprecated RabbitMqClusterName field - users should use the new messagingBus.cluster field instead
+	if r.RabbitMqClusterName != old.RabbitMqClusterName {
+		allErrs = append(allErrs, field.Forbidden(
+			basePath.Child("rabbitMqClusterName"),
+			"rabbitMqClusterName is deprecated and cannot be changed. Please use messagingBus.cluster instead"))
+	}
+
 	// Allow users to bypass this validation in cases where they have independently verified
 	// the validity of their new database to ensure consistency with the current one.
 	if _, ok := annotations[HeatDatabaseMigrationAnnotation]; !ok {
@@ -202,6 +235,13 @@ func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotation
 
 func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path, namespace string) field.ErrorList {
 	var allErrs field.ErrorList
+
+	// Reject changes to deprecated RabbitMqClusterName field - users should use the new messagingBus.cluster field instead
+	if r.RabbitMqClusterName != old.RabbitMqClusterName {
+		allErrs = append(allErrs, field.Forbidden(
+			basePath.Child("rabbitMqClusterName"),
+			"rabbitMqClusterName is deprecated and cannot be changed. Please use messagingBus.cluster instead"))
+	}
 
 	// We currently have no logic in place to perform database migrations. Changing databases
 	// would render all of the existing stacks unmanageable. We should block changes to the
