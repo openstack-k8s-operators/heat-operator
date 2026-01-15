@@ -345,17 +345,6 @@ func (r *HeatReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 
 	// index authAppCredSecretField
 	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.Heat{}, authAppCredSecretField, func(rawObj client.Object) []string {
-		cr := rawObj.(*heatv1beta1.Heat)
-		if cr.Spec.Auth.ApplicationCredentialSecret == "" {
-			return nil
-		}
-		return []string{cr.Spec.Auth.ApplicationCredentialSecret}
-	}); err != nil {
-		return err
-	}
-
-	// index authAppCredSecretField
-	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.Heat{}, authAppCredSecretField, func(rawObj client.Object) []string {
 		// Extract the application credential secret name from the spec, if one is provided
 		cr := rawObj.(*heatv1beta1.Heat)
 		if cr.Spec.Auth.ApplicationCredentialSecret == "" {
