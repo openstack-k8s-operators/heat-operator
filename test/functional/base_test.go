@@ -19,7 +19,9 @@ package functional_test
 import (
 	. "github.com/onsi/gomega" //revive:disable:dot-imports
 
+	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -99,4 +101,22 @@ func CreateHeatMessageBusSecret(namespace string, name string) *corev1.Secret {
 func HeatConditionGetter(name types.NamespacedName) condition.Conditions {
 	instance := GetHeat(name)
 	return instance.Status.Conditions
+}
+
+func GetCronJob(name types.NamespacedName) *batchv1.CronJob {
+	cron := &batchv1.CronJob{}
+	Eventually(func(g Gomega) {
+		g.Expect(k8sClient.Get(ctx, name, cron)).Should(Succeed())
+	}, timeout, interval).Should(Succeed())
+	return cron
+}
+
+// AssertCronJobDoesNotExist ensures the CronJob resource does not exist in a
+// k8s cluster.
+func AssertCronJobDoesNotExist(name types.NamespacedName) {
+	instance := &batchv1.CronJob{}
+	Eventually(func(g Gomega) {
+		err := k8sClient.Get(ctx, name, instance)
+		g.Expect(k8s_errors.IsNotFound(err)).To(BeTrue())
+	}, timeout, interval).Should(Succeed())
 }

@@ -58,6 +58,12 @@ var _ = Describe("Heat Webhook", func() {
 				heatv1.HeatEngineContainerImage,
 			))
 		})
+
+		It("should have DBPurge defaults initialized by webhook", func() {
+			Heat := GetHeat(heatName)
+			Expect(Heat.Spec.DBPurge.Age).Should(Equal(heatv1.DBPurgeDefaultAge))
+			Expect(Heat.Spec.DBPurge.Schedule).Should(Equal(heatv1.DBPurgeDefaultSchedule))
+		})
 	})
 
 	When("A Heat instance is created with container images", func() {

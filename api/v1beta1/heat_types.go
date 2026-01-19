@@ -135,6 +135,10 @@ type HeatSpecBase struct {
 	// TopologyRef to apply the Topology defined by the associated CR referenced
 	// by name
 	TopologyRef *topologyv1.TopoRef `json:"topologyRef,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// DBPurge defines parameters for the database purge CronJob
+	DBPurge DBPurge `json:"dbPurge,omitempty"`
 }
 
 // HeatStatus defines the observed state of Heat
@@ -228,6 +232,7 @@ func (instance Heat) StatusConditionsList() condition.Conditions {
 		condition.UnknownCondition(HeatAPIReadyCondition, condition.InitReason, HeatAPIReadyInitMessage),
 		condition.UnknownCondition(HeatCfnAPIReadyCondition, condition.InitReason, HeatCfnAPIReadyInitMessage),
 		condition.UnknownCondition(HeatEngineReadyCondition, condition.InitReason, HeatEngineReadyInitMessage),
+		condition.UnknownCondition(condition.CronJobReadyCondition, condition.InitReason, condition.CronJobReadyInitMessage),
 		// service account, role, rolebinding conditions
 		condition.UnknownCondition(condition.ServiceAccountReadyCondition, condition.InitReason, condition.ServiceAccountReadyInitMessage),
 		condition.UnknownCondition(condition.RoleReadyCondition, condition.InitReason, condition.RoleReadyInitMessage),
@@ -242,6 +247,8 @@ func SetupDefaults() {
 		APIContainerImageURL:    util.GetEnvVar("RELATED_IMAGE_HEAT_API_IMAGE_URL_DEFAULT", HeatAPIContainerImage),
 		CfnAPIContainerImageURL: util.GetEnvVar("RELATED_IMAGE_HEAT_CFNAPI_IMAGE_URL_DEFAULT", HeatCfnAPIContainerImage),
 		EngineContainerImageURL: util.GetEnvVar("RELATED_IMAGE_HEAT_ENGINE_IMAGE_URL_DEFAULT", HeatEngineContainerImage),
+		DBPurgeAge:              DBPurgeDefaultAge,
+		DBPurgeSchedule:         DBPurgeDefaultSchedule,
 	}
 
 	SetupHeatDefaults(heatDefaults)

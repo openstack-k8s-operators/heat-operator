@@ -23,6 +23,7 @@ import (
 
 	"github.com/openstack-k8s-operators/lib-common/modules/common"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/cronjob"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/job"
@@ -151,6 +152,7 @@ var keystoneAPI *keystonev1.KeystoneAPI
 // +kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;create;update;patch;delete;watch
 // +kubebuilder:rbac:groups=core,resources=services,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=batch,resources=jobs,verbs=get;list;watch;create;update;patch;delete;
+// +kubebuilder:rbac:groups=batch,resources=cronjobs,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=mariadb.openstack.org,resources=mariadbdatabases,verbs=get;list;watch;create;update;patch;delete;
 // +kubebuilder:rbac:groups=memcached.openstack.org,resources=memcacheds,verbs=get;list;watch;
 // +kubebuilder:rbac:groups=rabbitmq.openstack.org,resources=transporturls,verbs=get;list;watch;create;update;patch;delete
@@ -349,6 +351,7 @@ func (r *HeatReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 		Owns(&mariadbv1.MariaDBDatabase{}).
 		Owns(&mariadbv1.MariaDBAccount{}).
 		Owns(&batchv1.Job{}).
+		Owns(&batchv1.CronJob{}).
 		Owns(&rabbitmqv1.TransportURL{}).
 		Owns(&corev1.ServiceAccount{}).
 		Owns(&rbacv1.Role{}).
@@ -696,6 +699,22 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+
+	// create DBPurge CronJob
+	// DBPurge is not optional and always created to purge all soft deleted
+	// records. This command should be executed periodically to avoid heat
+	// database becomes bigger by getting filled by soft-deleted records
+	ctrlResult, err = r.ensureDBPurgeJob(ctx, helper, instance, serviceLabels)
+	if err != nil {
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.CronJobReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.CronJobReadyErrorMessage,
+			err.Error()))
+		return ctrlResult, err
+	}
+	instance.Status.Conditions.MarkTrue(condition.CronJobReadyCondition, condition.CronJobReadyMessage)
 
 	//
 	// normal reconcile tasks
@@ -1569,4 +1588,36 @@ func validateAuthEncryptionKey(instance *heatv1beta1.Heat, ospSecret *corev1.Sec
 
 	return heatAuthEncKey, nil
 
+}
+
+// ensureDBPurgeJob - Create the CronJob to purge soft-deleted DB records
+func (r *HeatReconciler) ensureDBPurgeJob(
+	ctx context.Context,
+	h *helper.Helper,
+	instance *heatv1beta1.Heat,
+	serviceLabels map[string]string,
+) (ctrl.Result, error) {
+
+	cronSpec := heat.CronJobSpec{
+		Name:     fmt.Sprintf("%s-db-purge", instance.Name),
+		Command:  heat.HeatManage,
+		Schedule: instance.Spec.DBPurge.Schedule,
+		Labels:   serviceLabels,
+	}
+
+	cronjobDef := heat.DBPurgeJob(
+		instance,
+		cronSpec,
+	)
+
+	dbPurgeCronJob := cronjob.NewCronJob(
+		cronjobDef,
+		time.Second*5,
+	)
+	ctrlResult, err := dbPurgeCronJob.CreateOrPatch(ctx, h)
+	if err != nil {
+		return ctrlResult, err
+	}
+
+	return ctrlResult, err
 }
