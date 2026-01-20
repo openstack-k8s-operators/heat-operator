@@ -1207,14 +1207,14 @@ func (r *HeatReconciler) generateServiceSecrets(
 			if k8s_errors.IsNotFound(err) {
 				Log.Error(err, "Failed to get ApplicationCredential secret", "secret", key)
 			}
-		} else {
-			acID, okID := acSecret.Data[keystonev1.ACIDSecretKey]
-			acSecretData, okSecret := acSecret.Data[keystonev1.ACSecretSecretKey]
-			if okID && len(acID) > 0 && okSecret && len(acSecretData) > 0 {
-				templateParameters["ApplicationCredentialID"] = string(acID)
-				templateParameters["ApplicationCredentialSecret"] = string(acSecretData)
-				Log.Info("Using ApplicationCredentials auth from Heat spec", "secret", instance.Spec.Auth.ApplicationCredentialSecret)
-			}
+			return err
+		}
+		acID, okID := acSecret.Data[keystonev1.ACIDSecretKey]
+		acSecretData, okSecret := acSecret.Data[keystonev1.ACSecretSecretKey]
+		if okID && len(acID) > 0 && okSecret && len(acSecretData) > 0 {
+			templateParameters["ApplicationCredentialID"] = string(acID)
+			templateParameters["ApplicationCredentialSecret"] = string(acSecretData)
+			Log.Info("Using ApplicationCredentials auth from Heat spec", "secret", instance.Spec.Auth.ApplicationCredentialSecret)
 		}
 	}
 
