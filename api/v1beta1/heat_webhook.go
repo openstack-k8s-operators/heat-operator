@@ -41,6 +41,8 @@ type HeatDefaults struct {
 	APIContainerImageURL    string
 	CfnAPIContainerImageURL string
 	EngineContainerImageURL string
+	DBPurgeAge              int
+	DBPurgeSchedule         string
 }
 
 var heatDefaults HeatDefaults
@@ -74,12 +76,23 @@ func (spec *HeatSpec) Default() {
 	if spec.HeatEngine.ContainerImage == "" {
 		spec.HeatEngine.ContainerImage = heatDefaults.EngineContainerImageURL
 	}
+	if spec.DBPurge.Age == 0 {
+		spec.DBPurge.Age = heatDefaults.DBPurgeAge
+	}
+	if spec.DBPurge.Schedule == "" {
+		spec.DBPurge.Schedule = heatDefaults.DBPurgeSchedule
+	}
 }
 
 // Default - set defaults for this Heat spec core. This version is called
 // by the OpenStackControlplane
 func (spec *HeatSpecCore) Default() {
-	// nothing here yet
+	if spec.DBPurge.Age == 0 {
+		spec.DBPurge.Age = heatDefaults.DBPurgeAge
+	}
+	if spec.DBPurge.Schedule == "" {
+		spec.DBPurge.Schedule = heatDefaults.DBPurgeSchedule
+	}
 }
 
 var _ webhook.Validator = &Heat{}

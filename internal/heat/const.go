@@ -89,6 +89,9 @@ const (
 	// Heat is the global ServiceType that refers to all the components deployed
 	// by the heat-operator
 	Heat storage.PropagationType = "Heat"
+
+	// HeatManage is the base command used for DBPurge
+	HeatManage = "/usr/bin/heat-manage"
 )
 
 // DbsyncPropagation keeps track of the DBSync Service Propagation Type

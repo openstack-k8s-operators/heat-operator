@@ -49,6 +49,7 @@ var _ = Describe("Heat controller", func() {
 	var memcachedSpec memcachedv1.MemcachedSpec
 	var keystoneAPI *keystonev1.KeystoneAPI
 	var heatDbSyncName types.NamespacedName
+	var heatDbPurgeCronJobName types.NamespacedName
 
 	BeforeEach(func() {
 
@@ -75,6 +76,10 @@ var _ = Describe("Heat controller", func() {
 		}
 		heatDbSyncName = types.NamespacedName{
 			Name:      "heat-db-sync",
+			Namespace: namespace,
+		}
+		heatDbPurgeCronJobName = types.NamespacedName{
+			Name:      "heat-db-purge",
 			Namespace: namespace,
 		}
 		err := os.Setenv("OPERATOR_TEMPLATES", "../../templates")
@@ -476,6 +481,46 @@ var _ = Describe("Heat controller", func() {
 				corev1.ConditionFalse,
 			)
 		})
+
+		It("should have CronJob ready condition and configures DB Purge job", func() {
+			th.ExpectCondition(
+				heatName,
+				ConditionGetterFunc(HeatConditionGetter),
+				condition.CronJobReadyCondition,
+				corev1.ConditionTrue,
+			)
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				cron := GetCronJob(heatDbPurgeCronJobName)
+				g.Expect(cron.Spec.Schedule).To(Equal(heat.Spec.DBPurge.Schedule))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should update DB Purge job schedule", func() {
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				heat.Spec.DBPurge.Schedule = "*/30 * * * *"
+				g.Expect(k8sClient.Update(ctx, heat)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				cron := GetCronJob(heatDbPurgeCronJobName)
+				g.Expect(cron.Spec.Schedule).To(Equal(heat.Spec.DBPurge.Schedule))
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("A Heat instance is created without DB", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+		})
+
+		It("dbPurge cronJob does not exist yet", func() {
+			AssertCronJobDoesNotExist(heatDbPurgeCronJobName)
+		})
 	})
 
 	When("heatAPI is configured with CA bundle", func() {
@@ -592,12 +637,14 @@ var _ = Describe("Heat controller", func() {
 		It("sets nodeSelector in resource specs", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(GetCronJob(heatDbPurgeCronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
 			}, timeout, interval).Should(Succeed())
 		})
 
 		It("updates nodeSelector in resource specs when changed", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(GetCronJob(heatDbPurgeCronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
 			}, timeout, interval).Should(Succeed())
 
 			Eventually(func(g Gomega) {
@@ -612,11 +659,17 @@ var _ = Describe("Heat controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo2": "bar2"}))
 			}, timeout, interval).Should(Succeed())
+			th.SimulateJobSuccess(heatDbSyncName)
+
+			Eventually(func(g Gomega) {
+				g.Expect(GetCronJob(heatDbPurgeCronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo2": "bar2"}))
+			}, timeout, interval).Should(Succeed())
 		})
 
 		It("removes nodeSelector from resource specs when cleared", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(GetCronJob(heatDbPurgeCronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
 			}, timeout, interval).Should(Succeed())
 
 			Eventually(func(g Gomega) {
@@ -629,11 +682,17 @@ var _ = Describe("Heat controller", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(BeNil())
 			}, timeout, interval).Should(Succeed())
+			th.SimulateJobSuccess(heatDbSyncName)
+
+			Eventually(func(g Gomega) {
+				g.Expect(GetCronJob(heatDbPurgeCronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(BeNil())
+			}, timeout, interval).Should(Succeed())
 		})
 
 		It("removes nodeSelector from resource specs when nilled", func() {
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
+				g.Expect(GetCronJob(heatDbPurgeCronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(Equal(map[string]string{"foo": "bar"}))
 			}, timeout, interval).Should(Succeed())
 
 			Eventually(func(g Gomega) {
@@ -644,6 +703,11 @@ var _ = Describe("Heat controller", func() {
 
 			Eventually(func(g Gomega) {
 				g.Expect(th.GetJob(heatDbSyncName).Spec.Template.Spec.NodeSelector).To(BeNil())
+			}, timeout, interval).Should(Succeed())
+			th.SimulateJobSuccess(heatDbSyncName)
+
+			Eventually(func(g Gomega) {
+				g.Expect(GetCronJob(heatDbPurgeCronJobName).Spec.JobTemplate.Spec.Template.Spec.NodeSelector).To(BeNil())
 			}, timeout, interval).Should(Succeed())
 		})
 	})

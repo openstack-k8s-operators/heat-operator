@@ -24,6 +24,13 @@ import (
 	"k8s.io/apimachinery/pkg/util/validation/field"
 )
 
+const (
+	// DBPurgeDefaultAge indicates the number of days of purging DB records
+	DBPurgeDefaultAge = 30
+	// DBPurgeDefaultSchedule is in crontab format, and the default runs the job once every day at 1:00am
+	DBPurgeDefaultSchedule = "1 0 * * *"
+)
+
 // HeatTemplate -
 type HeatTemplate struct {
 	// +kubebuilder:validation:Optional
@@ -114,6 +121,20 @@ type PasswordSelector struct {
 	// +kubebuilder:default="HeatStackDomainAdminPassword"
 	// StackDomainAdminPassword - Selector to get the heat stack domain admin password from the Secret
 	StackDomainAdminPassword string `json:"stackDomainAdminPassword"`
+}
+
+// DBPurge struct is used to model the parameters exposed to the Heat CronJob
+// DBPurge struct is used to model the parameters exposed to the Heat API CronJob
+type DBPurge struct {
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default=30
+	// +kubebuilder:validation:Minimum=1
+	// Age is the DBPurgeAge parameter and indicates the number of days of purging DB records
+	Age int `json:"age"`
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:default="1 0 * * *"
+	// Schedule defines the crontab format string to schedule the DBPurge cronJob
+	Schedule string `json:"schedule"`
 }
 
 // HeatExtraVolMounts exposes additional parameters processed by the heat-operator
