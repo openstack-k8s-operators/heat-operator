@@ -96,7 +96,7 @@ var _ = Describe("Heat controller", func() {
 			Heat := GetHeat(heatName)
 			Expect(Heat.Spec.DatabaseInstance).Should(Equal("openstack"))
 			Expect(Heat.Spec.DatabaseAccount).Should(Equal("heat"))
-			Expect(Heat.Spec.RabbitMqClusterName).Should(Equal("rabbitmq"))
+			Expect(Heat.Spec.MessagingBus.Cluster).Should(Equal("rabbitmq"))
 			Expect(Heat.Spec.ServiceUser).Should(Equal("heat"))
 			Expect(*(Heat.Spec.HeatAPI.Replicas)).Should(Equal(int32(1)))
 			Expect(*(Heat.Spec.HeatCfnAPI.Replicas)).Should(Equal(int32(1)))
