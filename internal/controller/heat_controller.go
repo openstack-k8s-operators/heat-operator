@@ -71,6 +71,8 @@ import (
 var (
 	ErrPasswordSelectorNotFound  = errors.New("password selector not found in secret")
 	ErrAuthEncryptionKeyTooShort = errors.New("AuthEncryptionKey must be at least 32 characters")
+	ErrACSecretNotFound          = errors.New("ApplicationCredential secret not found")
+	ErrACSecretMissingKeys       = errors.New("ApplicationCredential secret missing required keys")
 )
 
 // HeatReconciler reconciles a Heat object
@@ -253,12 +255,14 @@ const (
 	tlsAPIPublicField        = ".spec.tls.api.public.secretName"
 	customServiceConfigField = ".spec.customServiceConfigSecrets"
 	topologyField            = ".spec.topologyRef.Name"
+	authAppCredSecretField   = ".spec.auth.applicationCredentialSecret" // #nosec G101
 )
 
 var (
 	heatWatchFields = []string{
 		passwordSecretField,
 		customServiceConfigField,
+		authAppCredSecretField,
 	}
 	heatAPIWatchFields = []string{
 		passwordSecretField,
@@ -341,6 +345,18 @@ func (r *HeatReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager)
 			return result
 		}
 		return nil
+	}
+
+	// index authAppCredSecretField
+	if err := mgr.GetFieldIndexer().IndexField(context.Background(), &heatv1beta1.Heat{}, authAppCredSecretField, func(rawObj client.Object) []string {
+		// Extract the application credential secret name from the spec, if one is provided
+		cr := rawObj.(*heatv1beta1.Heat)
+		if cr.Spec.Auth.ApplicationCredentialSecret == "" {
+			return nil
+		}
+		return []string{cr.Spec.Auth.ApplicationCredentialSecret}
+	}); err != nil {
+		return err
 	}
 
 	return ctrl.NewControllerManagedBy(mgr).
@@ -508,6 +524,37 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 	secretVars[ospSecret.Name] = env.SetValue(hash)
+
+	// Verify Application Credential secret if specified
+	if instance.Spec.Auth.ApplicationCredentialSecret != "" {
+		acSecret := types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.Auth.ApplicationCredentialSecret}
+		acHash, _, err := oko_secret.VerifySecret(ctx, acSecret, []string{keystonev1.ACIDSecretKey, keystonev1.ACSecretSecretKey}, helper.GetClient(), 0)
+		if err != nil {
+			if k8s_errors.IsNotFound(err) {
+				Log.Info("ApplicationCredential secret not found, waiting", "secret", instance.Spec.Auth.ApplicationCredentialSecret)
+			} else {
+				Log.Error(err, "Failed to get ApplicationCredential secret", "secret", instance.Spec.Auth.ApplicationCredentialSecret)
+			}
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.InputReadyWaitingMessage))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		}
+		if acHash == "" {
+			Log.Info("ApplicationCredential secret missing required keys", "secret", instance.Spec.Auth.ApplicationCredentialSecret)
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.InputReadyCondition,
+				condition.ErrorReason,
+				condition.SeverityWarning,
+				"ApplicationCredential secret %s missing required keys (AC_ID, AC_SECRET)",
+				instance.Spec.Auth.ApplicationCredentialSecret))
+			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		}
+		// AC secret exists and is valid - add to configVars for hash tracking
+		secretVars[instance.Spec.Auth.ApplicationCredentialSecret] = env.SetValue(acHash)
+	}
 
 	instance.Status.Conditions.MarkTrue(condition.InputReadyCondition, condition.InputReadyMessage)
 
@@ -1191,6 +1238,26 @@ func (r *HeatReconciler) generateServiceSecrets(
 		templateParameters["MemcachedAuthCert"] = fmt.Sprint(memcachedv1.CertMountPath())
 		templateParameters["MemcachedAuthKey"] = fmt.Sprint(memcachedv1.KeyMountPath())
 		templateParameters["MemcachedAuthCa"] = fmt.Sprint(memcachedv1.CaMountPath())
+	}
+
+	// Retrieve Application Credential data from Heat Auth section if specified
+	Log := r.GetLogger(ctx)
+	if instance.Spec.Auth.ApplicationCredentialSecret != "" {
+		acSecret := &corev1.Secret{}
+		key := types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.Auth.ApplicationCredentialSecret}
+		if err := h.GetClient().Get(ctx, key, acSecret); err != nil {
+			Log.Error(err, "Failed to get ApplicationCredential secret", "secret", instance.Spec.Auth.ApplicationCredentialSecret)
+			return err
+		}
+		acID, okID := acSecret.Data[keystonev1.ACIDSecretKey]
+		acSecretData, okSecret := acSecret.Data[keystonev1.ACSecretSecretKey]
+		if okID && len(acID) > 0 && okSecret && len(acSecretData) > 0 {
+			templateParameters["ApplicationCredentialID"] = string(acID)
+			templateParameters["ApplicationCredentialSecret"] = string(acSecretData)
+			Log.Info("Using ApplicationCredentials auth from Heat spec", "secret", instance.Spec.Auth.ApplicationCredentialSecret)
+		} else {
+			return fmt.Errorf("%w: %s", ErrACSecretMissingKeys, instance.Spec.Auth.ApplicationCredentialSecret)
+		}
 	}
 
 	secrets := createSecretTemplates(instance, customData, templateParameters, secretLabels)
