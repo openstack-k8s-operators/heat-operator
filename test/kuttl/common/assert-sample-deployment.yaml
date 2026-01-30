@@ -35,7 +35,8 @@ spec:
     stackDomainAdminPassword: HeatStackDomainAdminPassword
     service: HeatPassword
   preserveJobs: false
-  rabbitMqClusterName: rabbitmq
+  messagingBus:
+    cluster: rabbitmq
   secret: osp-secret
   serviceUser: "heat"
 status:
