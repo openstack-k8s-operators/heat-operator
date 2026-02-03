@@ -4,9 +4,6 @@ aliases:
   heat-approvers:
   - rabi
   - slagle
-  ci-approvers:
-  - frenzyfriday
-  - viroel
   openstack-approvers:
   - abays
   - dprince
