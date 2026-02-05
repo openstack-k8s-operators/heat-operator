@@ -91,12 +91,11 @@ type HeatSpecBase struct {
 	// Memcached instance name.
 	MemcachedInstance string `json:"memcachedInstance"`
 
-	// +kubebuilder:validation:Required
-	// +kubebuilder:default=rabbitmq
+	// +kubebuilder:validation:Optional
 	// RabbitMQ instance name
 	// Needed to request a transportURL that is created and used in Heat
 	// Deprecated: Use MessagingBus.Cluster instead
-	RabbitMqClusterName string `json:"rabbitMqClusterName" deprecated:"messagingBus.cluster"`
+	RabbitMqClusterName string `json:"rabbitMqClusterName,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// MessagingBus - Messaging Bus configuration
@@ -105,11 +104,6 @@ type HeatSpecBase struct {
 	// +kubebuilder:validation:Optional
 	// NotificationsBus - Notifications Bus configuration (optional, separate from MessagingBus)
 	NotificationsBus *rabbitmqv1.RabbitMqConfig `json:"notificationsBus,omitempty"`
-
-	// +kubebuilder:validation:Optional
-	// RabbitMQ - RabbitMQ configuration overrides
-	// Deprecated: Use MessagingBus instead
-	RabbitMQ *rabbitmqv1.RabbitMqConfig `json:"rabbitmq,omitempty" deprecated:"messagingBus"`
 
 	// +kubebuilder:validation:Optional
 	// CustomServiceConfig - customize the service config using this parameter to change service defaults,

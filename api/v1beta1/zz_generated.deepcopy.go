@@ -700,11 +700,6 @@ func (in *HeatSpecBase) DeepCopyInto(out *HeatSpecBase) {
 		*out = new(rabbitmqv1beta1.RabbitMqConfig)
 		**out = **in
 	}
-	if in.RabbitMQ != nil {
-		in, out := &in.RabbitMQ, &out.RabbitMQ
-		*out = new(rabbitmqv1beta1.RabbitMqConfig)
-		**out = **in
-	}
 	if in.CustomServiceConfigSecrets != nil {
 		in, out := &in.CustomServiceConfigSecrets, &out.CustomServiceConfigSecrets
 		*out = make([]string, len(*in))

@@ -2050,30 +2050,11 @@ spec:
                   e.g. to check logs
                 type: boolean
               rabbitMqClusterName:
-                default: rabbitmq
                 description: |-
                   RabbitMQ instance name
                   Needed to request a transportURL that is created and used in Heat
                   Deprecated: Use MessagingBus.Cluster instead
                 type: string
-              rabbitmq:
-                description: |-
-                  RabbitMQ - RabbitMQ configuration overrides
-                  Deprecated: Use MessagingBus instead
-                properties:
-                  cluster:
-                    description: Name of the cluster
-                    minLength: 1
-                    type: string
-                  user:
-                    description: User - RabbitMQ username
-                    type: string
-                  vhost:
-                    description: Vhost - RabbitMQ vhost name
-                    type: string
-                required:
-                - cluster
-                type: object
               secret:
                 description: |-
                   Secret containing OpenStack password information for heat HeatDatabasePassword, HeatPassword
@@ -2107,7 +2088,6 @@ spec:
             - heatCfnAPI
             - heatEngine
             - memcachedInstance
-            - rabbitMqClusterName
             - secret
             type: object
           status:

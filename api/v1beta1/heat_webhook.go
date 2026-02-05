@@ -25,7 +25,6 @@ package v1beta1
 import (
 	"fmt"
 
-	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	common_webhook "github.com/openstack-k8s-operators/lib-common/modules/common/webhook"
@@ -83,29 +82,14 @@ func (spec *HeatSpec) Default() {
 
 // Default - set defaults for this HeatSpecBase
 func (spec *HeatSpecBase) Default() {
-	// Handle legacy RabbitMQ field and populate MessagingBus
-	if spec.RabbitMQ != nil {
-		// Copy legacy RabbitMQ config to MessagingBus if it's not set
-		if spec.MessagingBus.Cluster == "" {
-			spec.MessagingBus = *spec.RabbitMQ
-		}
-	}
-
-	// Default MessagingBus with RabbitMqClusterName
-	// Only migrate from deprecated field if the new field is not already set
+	// Default MessagingBus.Cluster if not set
+	// Migration from deprecated fields is handled by openstack-operator
 	if spec.MessagingBus.Cluster == "" {
-		rabbitmqv1.DefaultRabbitMqConfig(&spec.MessagingBus, spec.RabbitMqClusterName)
+		spec.MessagingBus.Cluster = "rabbitmq"
 	}
 
-	// Default NotificationsBus if it's specified
-	// Note: user/vhost are NOT inherited from MessagingBus to ensure separation
-	// (RPC and notifications should never share credentials)
-	if spec.NotificationsBus != nil {
-		// Ensure cluster name is set if not already
-		if spec.NotificationsBus.Cluster != "" {
-			rabbitmqv1.DefaultRabbitMqConfig(spec.NotificationsBus, spec.NotificationsBus.Cluster)
-		}
-	}
+	// NotificationsBus.Cluster is not defaulted - it must be explicitly set if NotificationsBus is configured
+	// This ensures users make a conscious choice about which cluster to use for notifications
 
 	// Default DBPurge parameters
 	if spec.DBPurge.Age == 0 {
@@ -125,9 +109,6 @@ func (spec *HeatSpecBase) getDeprecatedFields(old *HeatSpecBase) []common_webhoo
 			NewDeprecatedValue:  &spec.RabbitMqClusterName,
 			NewValue:            &spec.MessagingBus.Cluster,
 		},
-		// Note: The "rabbitmq" complex field (RabbitMqConfig) is not included here
-		// because the centralized pattern currently only supports *string fields.
-		// Complex field deprecation is handled separately via webhook defaulting.
 	}
 
 	// If old spec is provided (UPDATE operation), add old values
