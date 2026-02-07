@@ -17,6 +17,7 @@ limitations under the License.
 package v1beta1
 
 import (
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/util"
@@ -40,6 +41,7 @@ const (
 	// HeatDatabaseMigrationAnnotation - Allows users to bypass the webhook validations for changes to databaseInstance
 	HeatDatabaseMigrationAnnotation = "heat.openstack.org/database-migration"
 )
+
 
 // HeatSpec defines the desired state of Heat
 type HeatSpec struct {
@@ -89,11 +91,19 @@ type HeatSpecBase struct {
 	// Memcached instance name.
 	MemcachedInstance string `json:"memcachedInstance"`
 
-	// +kubebuilder:validation:Required
-	// +kubebuilder:default=rabbitmq
+	// +kubebuilder:validation:Optional
 	// RabbitMQ instance name
 	// Needed to request a transportURL that is created and used in Heat
-	RabbitMqClusterName string `json:"rabbitMqClusterName"`
+	// Deprecated: Use MessagingBus.Cluster instead
+	RabbitMqClusterName string `json:"rabbitMqClusterName,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// MessagingBus - Messaging Bus configuration
+	MessagingBus rabbitmqv1.RabbitMqConfig `json:"messagingBus,omitempty"`
+
+	// +kubebuilder:validation:Optional
+	// NotificationsBus - Notifications Bus configuration (optional, separate from MessagingBus)
+	NotificationsBus *rabbitmqv1.RabbitMqConfig `json:"notificationsBus,omitempty"`
 
 	// +kubebuilder:validation:Optional
 	// CustomServiceConfig - customize the service config using this parameter to change service defaults,
@@ -154,6 +164,9 @@ type HeatStatus struct {
 
 	// TransportURLSecret - Secret containing RabbitMQ transportURL
 	TransportURLSecret string `json:"transportURLSecret,omitempty"`
+
+	// NotificationsTransportURLSecret - Secret containing Notifications RabbitMQ transportURL
+	NotificationsTransportURLSecret string `json:"notificationsTransportURLSecret,omitempty"`
 
 	// ReadyCount of Heat API instance
 	HeatAPIReadyCount int32 `json:"heatApiReadyCount,omitempty"`
@@ -226,6 +239,7 @@ func (instance Heat) StatusConditionsList() condition.Conditions {
 		condition.UnknownCondition(condition.DBSyncReadyCondition, condition.InitReason, condition.DBSyncReadyInitMessage),
 		condition.UnknownCondition(condition.MemcachedReadyCondition, condition.InitReason, condition.MemcachedReadyInitMessage),
 		condition.UnknownCondition(condition.RabbitMqTransportURLReadyCondition, condition.InitReason, condition.RabbitMqTransportURLReadyInitMessage),
+		condition.UnknownCondition(condition.NotificationBusInstanceReadyCondition, condition.InitReason, condition.NotificationBusInstanceReadyInitMessage),
 		condition.UnknownCondition(condition.InputReadyCondition, condition.InitReason, condition.InputReadyInitMessage),
 		condition.UnknownCondition(condition.ServiceConfigReadyCondition, condition.InitReason, condition.ServiceConfigReadyInitMessage),
 		condition.UnknownCondition(HeatStackDomainReadyCondition, condition.InitReason, HeatStackDomainReadyInitMessage),

@@ -37,6 +37,7 @@ import (
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/heat-operator/internal/heat"
 	memcachedv1 "github.com/openstack-k8s-operators/infra-operator/apis/memcached/v1beta1"
+	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
@@ -97,7 +98,7 @@ var _ = Describe("Heat controller", func() {
 			Heat := GetHeat(heatName)
 			Expect(Heat.Spec.DatabaseInstance).Should(Equal("openstack"))
 			Expect(Heat.Spec.DatabaseAccount).Should(Equal("heat"))
-			Expect(Heat.Spec.RabbitMqClusterName).Should(Equal("rabbitmq"))
+			Expect(Heat.Spec.MessagingBus.Cluster).Should(Equal("rabbitmq"))
 			Expect(Heat.Spec.ServiceUser).Should(Equal("heat"))
 			Expect(*(Heat.Spec.HeatAPI.Replicas)).Should(Equal(int32(1)))
 			Expect(*(Heat.Spec.HeatCfnAPI.Replicas)).Should(Equal(int32(1)))
@@ -1015,6 +1016,174 @@ var _ = Describe("Heat controller", func() {
 				g.Expect(heatCfg).ShouldNot(ContainSubstring("rabbit_quorum_queue=true"))
 				g.Expect(heatCfg).ShouldNot(ContainSubstring("rabbit_transient_quorum_queue=true"))
 				g.Expect(heatCfg).ShouldNot(ContainSubstring("amqp_durable_queues=true"))
+			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("A Heat instance is created with default RabbitMQ settings", func() {
+		BeforeEach(func() {
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+		})
+
+		It("should create a TransportURL without custom user/vhost", func() {
+			transportURL := GetTransportURL(heatTransportURLName)
+			Expect(transportURL.Spec.RabbitmqClusterName).Should(Equal("rabbitmq"))
+			Expect(transportURL.Spec.Username).Should(Equal(""))
+			Expect(transportURL.Spec.Vhost).Should(Equal(""))
+		})
+	})
+
+	When("A Heat instance is created with custom RabbitMQ settings", func() {
+		BeforeEach(func() {
+			customUser := "heat"
+			customVHost := "/heat"
+			spec := GetHeatSpecWithRabbitMQ(&customUser, &customVHost)
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+		})
+
+		It("should create a TransportURL with custom user and vhost", func() {
+			transportURL := GetTransportURL(heatTransportURLName)
+			Expect(transportURL.Spec.RabbitmqClusterName).Should(Equal("rabbitmq"))
+			Expect(transportURL.Spec.Username).Should(Equal("heat"))
+			Expect(transportURL.Spec.Vhost).Should(Equal("/heat"))
+		})
+	})
+
+	When("A Heat instance is created with only custom RabbitMQ user", func() {
+		BeforeEach(func() {
+			customUser := "heat"
+			spec := GetHeatSpecWithRabbitMQ(&customUser, nil)
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+		})
+
+		It("should create a TransportURL with custom user only", func() {
+			transportURL := GetTransportURL(heatTransportURLName)
+			Expect(transportURL.Spec.RabbitmqClusterName).Should(Equal("rabbitmq"))
+			Expect(transportURL.Spec.Username).Should(Equal("heat"))
+			Expect(transportURL.Spec.Vhost).Should(Equal(""))
+		})
+	})
+
+	When("A Heat instance is created with only custom RabbitMQ vhost", func() {
+		BeforeEach(func() {
+			customVHost := "/heat"
+			spec := GetHeatSpecWithRabbitMQ(nil, &customVHost)
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+		})
+
+		It("should create a TransportURL with custom vhost only", func() {
+			transportURL := GetTransportURL(heatTransportURLName)
+			Expect(transportURL.Spec.RabbitmqClusterName).Should(Equal("rabbitmq"))
+			Expect(transportURL.Spec.Username).Should(Equal(""))
+			Expect(transportURL.Spec.Vhost).Should(Equal("/heat"))
+		})
+	})
+
+	When("A Heat instance is created with notificationsBus configured", func() {
+		BeforeEach(func() {
+			notificationsCluster := "notifications-rabbitmq"
+			notificationsUser := "heat-notifications"
+			notificationsVHost := "/notifications"
+			spec := GetHeatSpecWithNotificationsBus(&notificationsCluster, &notificationsUser, &notificationsVHost)
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+		})
+
+		It("should have notificationsBus spec configured correctly", func() {
+			heat := GetHeat(heatName)
+			Expect(heat.Spec.NotificationsBus).ShouldNot(BeNil())
+			Expect(heat.Spec.NotificationsBus.Cluster).Should(Equal("notifications-rabbitmq"))
+			Expect(heat.Spec.NotificationsBus.User).Should(Equal("heat-notifications"))
+			Expect(heat.Spec.NotificationsBus.Vhost).Should(Equal("/notifications"))
+		})
+	})
+
+	When("Heat starts with notifications enabled and then disables them", func() {
+		BeforeEach(func() {
+			notificationsCluster := "notifications-rabbitmq"
+			notificationsUser := "heat-notifications"
+			notificationsVHost := "/notifications"
+			spec := GetHeatSpecWithNotificationsBus(&notificationsCluster, &notificationsUser, &notificationsVHost)
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, "notifications-rabbitmq-secret"))
+
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					"openstack",
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+			// Simulate the main transport URL
+			infra.SimulateTransportURLReady(heatTransportURLName)
+
+			// Wait for the notifications transport URL to be created by the controller
+			notificationsTransportURLName := types.NamespacedName{
+				Namespace: namespace,
+				Name:      heatName.Name + "-heat-notifications-transport",
+			}
+			Eventually(func() error {
+				return k8sClient.Get(ctx, notificationsTransportURLName, &rabbitmqv1.TransportURL{})
+			}, timeout, interval).Should(Succeed())
+
+			// Simulate the notifications transport URL as ready
+			infra.SimulateTransportURLReady(notificationsTransportURLName)
+		})
+
+		It("should initially have notifications enabled", func() {
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				g.Expect(heat.Status.NotificationsTransportURLSecret).ToNot(BeEmpty())
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should disable notifications when notificationsBus is removed", func() {
+			// Verify notifications are initially enabled
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				g.Expect(heat.Status.NotificationsTransportURLSecret).ToNot(BeEmpty())
+			}, timeout, interval).Should(Succeed())
+
+			// Update the Heat spec to remove notificationsBus
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				heat.Spec.NotificationsBus = nil
+				g.Expect(k8sClient.Update(ctx, heat)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			// Wait for notifications to be disabled
+			Eventually(func(g Gomega) {
+				heat := GetHeat(heatName)
+				g.Expect(heat.Status.NotificationsTransportURLSecret).To(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 		})
 	})

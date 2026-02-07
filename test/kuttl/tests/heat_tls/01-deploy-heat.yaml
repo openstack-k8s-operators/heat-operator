@@ -1,1 +1,29 @@
-../../../../config/samples/heat_v1beta1_heat_tls.yaml
+apiVersion: heat.openstack.org/v1beta1
+kind: Heat
+metadata:
+  name: heat
+spec:
+  customServiceConfig: |
+    [DEFAULT]
+    debug = True
+  databaseInstance: openstack
+  heatAPI:
+    tls:
+      api:
+        internal:
+          secretName: cert-heat-api-internal-svc
+        public:
+          secretName: cert-heat-api-public-svc
+      caBundleSecretName: combined-ca-bundle
+  heatCfnAPI:
+    tls:
+      api:
+        internal:
+          secretName: cert-heat-cfnapi-internal-svc
+        public:
+          secretName: cert-heat-cfnapi-public-svc
+      caBundleSecretName: combined-ca-bundle
+  heatEngine: {}
+  messagingBus:
+    cluster: rabbitmq
+  secret: osp-secret

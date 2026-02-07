@@ -27,6 +27,7 @@ import (
 
 	topologyv1 "github.com/openstack-k8s-operators/infra-operator/apis/topology/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
+	common_webhook "github.com/openstack-k8s-operators/lib-common/modules/common/webhook"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -67,6 +68,7 @@ func (r *Heat) Default() {
 
 // Default - set defaults for this Heat spec
 func (spec *HeatSpec) Default() {
+	spec.HeatSpecBase.Default()
 	if spec.HeatAPI.ContainerImage == "" {
 		spec.HeatAPI.ContainerImage = heatDefaults.APIContainerImageURL
 	}
@@ -76,6 +78,20 @@ func (spec *HeatSpec) Default() {
 	if spec.HeatEngine.ContainerImage == "" {
 		spec.HeatEngine.ContainerImage = heatDefaults.EngineContainerImageURL
 	}
+}
+
+// Default - set defaults for this HeatSpecBase
+func (spec *HeatSpecBase) Default() {
+	// Default MessagingBus.Cluster if not set
+	// Migration from deprecated fields is handled by openstack-operator
+	if spec.MessagingBus.Cluster == "" {
+		spec.MessagingBus.Cluster = "rabbitmq"
+	}
+
+	// NotificationsBus.Cluster is not defaulted - it must be explicitly set if NotificationsBus is configured
+	// This ensures users make a conscious choice about which cluster to use for notifications
+
+	// Default DBPurge parameters
 	if spec.DBPurge.Age == 0 {
 		spec.DBPurge.Age = heatDefaults.DBPurgeAge
 	}
@@ -84,15 +100,55 @@ func (spec *HeatSpec) Default() {
 	}
 }
 
+// getDeprecatedFields returns the centralized list of deprecated fields for HeatSpecBase
+func (spec *HeatSpecBase) getDeprecatedFields(old *HeatSpecBase) []common_webhook.DeprecatedFieldUpdate {
+	deprecatedFields := []common_webhook.DeprecatedFieldUpdate{
+		{
+			DeprecatedFieldName: "rabbitMqClusterName",
+			NewFieldPath:        []string{"messagingBus", "cluster"},
+			NewDeprecatedValue:  &spec.RabbitMqClusterName,
+			NewValue:            &spec.MessagingBus.Cluster,
+		},
+	}
+
+	// If old spec is provided (UPDATE operation), add old values
+	if old != nil {
+		deprecatedFields[0].OldDeprecatedValue = &old.RabbitMqClusterName
+	}
+
+	return deprecatedFields
+}
+
+// validateDeprecatedFieldsCreate validates deprecated fields during CREATE operations
+func (spec *HeatSpecBase) validateDeprecatedFieldsCreate(basePath *field.Path) ([]string, field.ErrorList) {
+	// Get deprecated fields list (without old values for CREATE)
+	deprecatedFieldsUpdate := spec.getDeprecatedFields(nil)
+
+	// Convert to DeprecatedField list for CREATE validation
+	deprecatedFields := make([]common_webhook.DeprecatedField, len(deprecatedFieldsUpdate))
+	for i, df := range deprecatedFieldsUpdate {
+		deprecatedFields[i] = common_webhook.DeprecatedField{
+			DeprecatedFieldName: df.DeprecatedFieldName,
+			NewFieldPath:        df.NewFieldPath,
+			DeprecatedValue:     df.NewDeprecatedValue,
+			NewValue:            df.NewValue,
+		}
+	}
+
+	return common_webhook.ValidateDeprecatedFieldsCreate(deprecatedFields, basePath), nil
+}
+
+// validateDeprecatedFieldsUpdate validates deprecated fields during UPDATE operations
+func (spec *HeatSpecBase) validateDeprecatedFieldsUpdate(old HeatSpecBase, basePath *field.Path) ([]string, field.ErrorList) {
+	// Get deprecated fields list with old values
+	deprecatedFields := spec.getDeprecatedFields(&old)
+	return common_webhook.ValidateDeprecatedFieldsUpdate(deprecatedFields, basePath)
+}
+
 // Default - set defaults for this Heat spec core. This version is called
 // by the OpenStackControlplane
 func (spec *HeatSpecCore) Default() {
-	if spec.DBPurge.Age == 0 {
-		spec.DBPurge.Age = heatDefaults.DBPurgeAge
-	}
-	if spec.DBPurge.Schedule == "" {
-		spec.DBPurge.Schedule = heatDefaults.DBPurgeSchedule
-	}
+	spec.HeatSpecBase.Default()
 }
 
 var _ webhook.Validator = &Heat{}
@@ -101,26 +157,34 @@ var _ webhook.Validator = &Heat{}
 func (r *Heat) ValidateCreate() (admission.Warnings, error) {
 	heatlog.Info("validate create", "name", r.Name)
 
+	var allWarns []string
 	var allErrs field.ErrorList
 	basePath := field.NewPath("spec")
 
-	if err := r.Spec.ValidateCreate(basePath, r.Namespace); err != nil {
-		allErrs = append(allErrs, err...)
-	}
+	warns, errs := r.Spec.ValidateCreate(basePath, r.Namespace)
+	allWarns = append(allWarns, warns...)
+	allErrs = append(allErrs, errs...)
 
 	if len(allErrs) != 0 {
-		return nil, apierrors.NewInvalid(
+		return allWarns, apierrors.NewInvalid(
 			schema.GroupKind{Group: "heat.openstack.org", Kind: "Heat"},
 			r.Name, allErrs)
 	}
 
-	return nil, nil
+	return allWarns, nil
 }
 
 // ValidateCreate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate an heat spec.
-func (r *HeatSpec) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
+func (r *HeatSpec) ValidateCreate(basePath *field.Path, namespace string) ([]string, field.ErrorList) {
 	var allErrs field.ErrorList
+	var allWarns []string
+
+	// Validate deprecated fields
+	if warns, err := r.HeatSpecBase.validateDeprecatedFieldsCreate(basePath); err != nil {
+		allWarns = append(allWarns, warns...)
+		allErrs = append(allErrs, err...)
+	}
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
@@ -134,11 +198,18 @@ func (r *HeatSpec) ValidateCreate(basePath *field.Path, namespace string) field.
 
 	allErrs = append(allErrs, r.ValidateHeatTopology(basePath, namespace)...)
 
-	return allErrs
+	return allWarns, allErrs
 }
 
-func (r *HeatSpecCore) ValidateCreate(basePath *field.Path, namespace string) field.ErrorList {
+func (r *HeatSpecCore) ValidateCreate(basePath *field.Path, namespace string) ([]string, field.ErrorList) {
 	var allErrs field.ErrorList
+	var allWarns []string
+
+	// Validate deprecated fields
+	if warns, err := r.HeatSpecBase.validateDeprecatedFieldsCreate(basePath); err != nil {
+		allWarns = append(allWarns, warns...)
+		allErrs = append(allErrs, err...)
+	}
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
@@ -152,7 +223,7 @@ func (r *HeatSpecCore) ValidateCreate(basePath *field.Path, namespace string) fi
 
 	allErrs = append(allErrs, r.ValidateHeatTopology(basePath, namespace)...)
 
-	return allErrs
+	return allWarns, allErrs
 }
 
 // ValidateUpdate implements webhook.Validator so a webhook will be registered for the type
@@ -164,27 +235,35 @@ func (r *Heat) ValidateUpdate(old runtime.Object) (admission.Warnings, error) {
 			fmt.Errorf("expected a Heatv1 object, but got %T", oldHeat))
 	}
 
+	var allWarns []string
 	var allErrs field.ErrorList
 	basePath := field.NewPath("spec")
 	annotations := r.GetAnnotations()
 
-	if err := r.Spec.ValidateUpdate(oldHeat.Spec, basePath, annotations, r.Namespace); err != nil {
-		allErrs = append(allErrs, err...)
-	}
+	warns, errs := r.Spec.ValidateUpdate(oldHeat.Spec, basePath, annotations, r.Namespace)
+	allWarns = append(allWarns, warns...)
+	allErrs = append(allErrs, errs...)
 
 	if len(allErrs) != 0 {
-		return nil, apierrors.NewInvalid(
+		return allWarns, apierrors.NewInvalid(
 			schema.GroupKind{Group: "heat.openstack.org", Kind: "Heat"},
 			r.Name, allErrs)
 	}
 
-	return nil, nil
+	return allWarns, nil
 }
 
 // ValidateUpdate - Exported function wrapping non-exported validate functions,
 // this function can be called externally to validate Heat spec.
-func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotations map[string]string, namespace string) field.ErrorList {
+func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotations map[string]string, namespace string) ([]string, field.ErrorList) {
 	var allErrs field.ErrorList
+	var allWarns []string
+
+	// Validate deprecated fields using reflection
+	if warns, err := r.HeatSpecBase.validateDeprecatedFieldsUpdate(old.HeatSpecBase, basePath); err != nil {
+		allWarns = append(allWarns, warns...)
+		allErrs = append(allErrs, err...)
+	}
 
 	// Allow users to bypass this validation in cases where they have independently verified
 	// the validity of their new database to ensure consistency with the current one.
@@ -210,11 +289,18 @@ func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotation
 		r.HeatCfnAPI.Override.Service)...)
 
 	allErrs = append(allErrs, r.ValidateHeatTopology(basePath, namespace)...)
-	return allErrs
+	return allWarns, allErrs
 }
 
-func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path, namespace string) field.ErrorList {
+func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path, namespace string) ([]string, field.ErrorList) {
 	var allErrs field.ErrorList
+	var allWarns []string
+
+	// Validate deprecated fields using reflection
+	if warns, err := r.HeatSpecBase.validateDeprecatedFieldsUpdate(old.HeatSpecBase, basePath); err != nil {
+		allWarns = append(allWarns, warns...)
+		allErrs = append(allErrs, err...)
+	}
 
 	// We currently have no logic in place to perform database migrations. Changing databases
 	// would render all of the existing stacks unmanageable. We should block changes to the
@@ -236,7 +322,7 @@ func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path, na
 		r.HeatCfnAPI.Override.Service)...)
 
 	allErrs = append(allErrs, r.ValidateHeatTopology(basePath, namespace)...)
-	return allErrs
+	return allWarns, allErrs
 }
 
 // ValidateDelete implements webhook.Validator so a webhook will be registered for the type

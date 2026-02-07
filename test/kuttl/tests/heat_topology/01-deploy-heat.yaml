@@ -1,1 +1,17 @@
-../../../../config/samples/heat_v1beta1_heat_topology.yaml
+apiVersion: heat.openstack.org/v1beta1
+kind: Heat
+metadata:
+  name: heat
+spec:
+  customServiceConfig: |
+    [DEFAULT]
+    debug = True
+  databaseInstance: openstack
+  topologyRef:
+    name: heat-topology
+  heatAPI: {}
+  heatCfnAPI: {}
+  heatEngine: {}
+  messagingBus:
+    cluster: rabbitmq
+  secret: osp-secret

@@ -17,6 +17,7 @@ limitations under the License.
 package functional_test
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
 )
 
 var _ = Describe("Heat Webhook", func() {
@@ -211,6 +213,34 @@ var _ = Describe("Heat Webhook", func() {
 				g.Expect(th.K8sClient.Update(th.Ctx, instance)).Should(Succeed())
 			}).Should(Succeed())
 		})
+	})
+
+	It("rejects update to deprecated rabbitMqClusterName field", func() {
+		spec := GetDefaultHeatSpec()
+		spec["rabbitMqClusterName"] = "rabbitmq"
+
+		heatName := types.NamespacedName{
+			Namespace: namespace,
+			Name:      "heat-rabbitmq-test",
+		}
+
+		DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+		// Try to update rabbitMqClusterName
+		Eventually(func(g Gomega) {
+			instance := GetHeat(heatName)
+			instance.Spec.RabbitMqClusterName = "rabbitmq2"
+			err := th.K8sClient.Update(th.Ctx, instance)
+			g.Expect(err).Should(HaveOccurred())
+
+			var statusError *k8s_errors.StatusError
+			g.Expect(errors.As(err, &statusError)).To(BeTrue())
+			g.Expect(statusError.ErrStatus.Details.Kind).To(Not(BeEmpty()))
+			g.Expect(err.Error()).To(
+				ContainSubstring("field \"spec.rabbitMqClusterName\" is deprecated"))
+			g.Expect(statusError.ErrStatus.Message).To(
+				ContainSubstring("use \"spec.messagingBus.cluster\" instead"))
+		}).Should(Succeed())
 	})
 
 	DescribeTable("rejects wrong topology for",
