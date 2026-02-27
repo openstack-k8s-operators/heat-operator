@@ -502,28 +502,38 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
 	//
-	ospSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
+	// Associate to PasswordSelectors.Service field a password validator to
+	// ensure pwd invalid detected patterns are rejected.
+	validateFields := map[string]oko_secret.Validator{
+		instance.Spec.PasswordSelectors.Service: oko_secret.PasswordValidator{},
+	}
+	hash, ctrlResult, err := oko_secret.VerifySecretFields(
+		ctx,
+		types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.Secret},
+		validateFields,
+		helper.GetClient(),
+		time.Duration(10)*time.Second,
+	)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			// Since the OpenStack secret should have been manually created by the user and referenced in the spec,
-			// we treat this as a warning because it means that the service will not be able to start.
-			Log.Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.InputReadyCondition,
-				condition.ErrorReason,
-				condition.SeverityWarning,
-				condition.InputReadyWaitingMessage))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.InputReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
 			condition.InputReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		// Since the service secret should have been manually created by the user and referenced in the spec,
+		// we treat this as a warning because it means that the service will not be able to start.
+		log.FromContext(ctx).Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyWaitingMessage))
+		return ctrlResult, err
 	}
-	secretVars[ospSecret.Name] = env.SetValue(hash)
+	secretVars[instance.Spec.Secret] = env.SetValue(hash)
 
 	// Verify Application Credential secret if specified
 	if instance.Spec.Auth.ApplicationCredentialSecret != "" {
@@ -645,28 +655,39 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// check for required TransportURL secret holding transport URL string
 	//
-
-	transportURLSecret, hash, err := oko_secret.GetSecret(ctx, helper, instance.Status.TransportURLSecret, instance.Namespace)
+	// transportURLFields are not pure password fields. We do not associate a
+	// password validator and we only verify that the entry exists in the
+	// secret
+	transportValidateFields := map[string]oko_secret.Validator{
+		"transport_url": oko_secret.NoOpValidator{},
+	}
+	hash, ctrlResult, err = oko_secret.VerifySecretFields(
+		ctx,
+		types.NamespacedName{
+			Namespace: instance.Namespace,
+			Name:      instance.Status.TransportURLSecret,
+		},
+		transportValidateFields,
+		helper.GetClient(),
+		time.Duration(10)*time.Second)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			Log.Info(fmt.Sprintf("TransportURL secret %s not found", instance.Status.TransportURLSecret))
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.RabbitMqTransportURLReadyCondition,
-				condition.RequestedReason,
-				condition.SeverityInfo,
-				condition.RabbitMqTransportURLReadyRunningMessage))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
 			condition.RabbitMqTransportURLReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		Log.Info(fmt.Sprintf("TransportURL secret %s not found", instance.Status.TransportURLSecret))
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.RabbitMqTransportURLReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.RabbitMqTransportURLReadyRunningMessage))
+		return ctrlResult, err
 	}
-	secretVars[transportURLSecret.Name] = env.SetValue(hash)
-
+	secretVars[instance.Status.TransportURLSecret] = env.SetValue(hash)
 	// run check TransportURL secret - end
 
 	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, condition.RabbitMqTransportURLReadyMessage)
@@ -711,27 +732,40 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		//
 		// check for required Notifications TransportURL secret
 		//
-		notificationsTransportURLSecret, notifHash, err := oko_secret.GetSecret(ctx, helper, instance.Status.NotificationsTransportURLSecret, instance.Namespace)
+		// transportURLFields are not pure password fields. We do not associate a
+		// password validator and we only verify that the entry exists in the
+		// secret
+		transportValidateFields := map[string]oko_secret.Validator{
+			"transport_url": oko_secret.NoOpValidator{},
+		}
+		hash, ctrlResult, err := oko_secret.VerifySecretFields(
+			ctx,
+			types.NamespacedName{
+				Namespace: instance.Namespace,
+				Name:      instance.Status.NotificationsTransportURLSecret,
+			},
+			transportValidateFields,
+			helper.GetClient(),
+			time.Duration(10)*time.Second,
+		)
 		if err != nil {
-			if k8s_errors.IsNotFound(err) {
-				Log.Info(fmt.Sprintf("Notifications TransportURL secret %s not found", instance.Status.NotificationsTransportURLSecret))
-				instance.Status.Conditions.Set(condition.FalseCondition(
-					condition.NotificationBusInstanceReadyCondition,
-					condition.RequestedReason,
-					condition.SeverityInfo,
-					condition.NotificationBusInstanceReadyRunningMessage))
-				return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-			}
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.NotificationBusInstanceReadyCondition,
 				condition.ErrorReason,
 				condition.SeverityWarning,
 				condition.NotificationBusInstanceReadyErrorMessage,
 				err.Error()))
-			return ctrl.Result{}, err
+			return ctrlResult, err
+		} else if (ctrlResult != ctrl.Result{}) {
+			Log.Info(fmt.Sprintf("TransportURL secret %s not found", instance.Status.TransportURLSecret))
+			instance.Status.Conditions.Set(condition.FalseCondition(
+				condition.NotificationBusInstanceReadyCondition,
+				condition.RequestedReason,
+				condition.SeverityInfo,
+				condition.NotificationBusInstanceReadyRunningMessage))
+			return ctrlResult, err
 		}
-		secretVars[notificationsTransportURLSecret.Name] = env.SetValue(notifHash)
-
+		secretVars[instance.Status.NotificationsTransportURLSecret] = env.SetValue(hash)
 		instance.Status.Conditions.MarkTrue(condition.NotificationBusInstanceReadyCondition, condition.NotificationBusInstanceReadyMessage)
 	} else {
 		// No notifications bus configured, mark as not required and clear status
@@ -786,7 +820,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 
 	// Handle service init
-	ctrlResult, err := r.reconcileInit(ctx, instance, helper, serviceLabels)
+	ctrlResult, err = r.reconcileInit(ctx, instance, helper, serviceLabels)
 	if err != nil || (ctrlResult != ctrl.Result{}) {
 		return ctrlResult, err
 	}
@@ -840,6 +874,10 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 
 	// Create domain for Heat stacks
+	ospSecret, _, err := oko_secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 	ctrlResult, err = r.ensureStackDomain(ctx, helper, instance, ospSecret)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
