@@ -351,51 +351,73 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	//
 	// check for required OpenStack secret holding passwords for service/admin user and add hash to the vars map
 	//
-	ospSecret, hash, err := secret.GetSecret(ctx, helper, instance.Spec.Secret, instance.Namespace)
+	// Associate to PasswordSelectors.Service field a password validator to
+	// ensure pwd invalid detected patterns are rejected.
+	validateFields := map[string]secret.Validator{
+		instance.Spec.PasswordSelectors.Service: secret.PasswordValidator{},
+	}
+	hash, ctrlResult, err := secret.VerifySecretFields(
+		ctx,
+		types.NamespacedName{Namespace: instance.Namespace, Name: instance.Spec.Secret},
+		validateFields,
+		helper.GetClient(),
+		time.Duration(10)*time.Second,
+	)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			// Since the OpenStack secret should have been manually created by the user and referenced in the spec,
-			// we treat this as a warning because it means that the service will not be able to start.
-			Log.Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.InputReadyCondition,
-				condition.ErrorReason,
-				condition.SeverityWarning,
-				condition.InputReadyWaitingMessage))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.InputReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
 			condition.InputReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		// Since the service secret should have been manually created by the user and referenced in the spec,
+		// we treat this as a warning because it means that the service will not be able to start.
+		log.FromContext(ctx).Info(fmt.Sprintf("OpenStack secret %s not found", instance.Spec.Secret))
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.ErrorReason,
+			condition.SeverityWarning,
+			condition.InputReadyWaitingMessage))
+		return ctrlResult, err
 	}
-	secretVars[ospSecret.Name] = env.SetValue(hash)
+	secretVars[instance.Spec.Secret] = env.SetValue(hash)
 
 	//
 	// check for required TransportURL secret holding transport URL string
 	//
-	_, hash, err = secret.GetSecret(ctx, helper, instance.Spec.TransportURLSecret, instance.Namespace)
+	// transportURLFields are not pure password fields. We do not associate a
+	// password validator and we only verify that the entry exists in the
+	// secret
+	transportValidateFields := map[string]secret.Validator{
+		"transport_url": secret.NoOpValidator{},
+	}
+	hash, ctrlResult, err = secret.VerifySecretFields(
+		ctx,
+		types.NamespacedName{
+			Namespace: instance.Namespace,
+			Name:      instance.Spec.TransportURLSecret,
+		},
+		transportValidateFields,
+		helper.GetClient(),
+		time.Duration(10)*time.Second)
 	if err != nil {
-		if k8s_errors.IsNotFound(err) {
-			// The parent Heat CR should have created the TransportURL secret, so we treat this as a warning.
-			Log.Info(fmt.Sprintf("Transport secret %s not found", instance.Spec.TransportURLSecret))
-			instance.Status.Conditions.Set(condition.FalseCondition(
-				condition.InputReadyCondition,
-				condition.ErrorReason,
-				condition.SeverityWarning,
-				condition.InputReadyWaitingMessage))
-			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
-		}
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.InputReadyCondition,
 			condition.ErrorReason,
 			condition.SeverityWarning,
 			condition.InputReadyErrorMessage,
 			err.Error()))
-		return ctrl.Result{}, err
+		return ctrlResult, err
+	} else if (ctrlResult != ctrl.Result{}) {
+		Log.Info(fmt.Sprintf("TransportURL secret %s not found", instance.Spec.TransportURLSecret))
+		instance.Status.Conditions.Set(condition.FalseCondition(
+			condition.InputReadyCondition,
+			condition.RequestedReason,
+			condition.SeverityInfo,
+			condition.InputReadyWaitingMessage))
+		return ctrlResult, err
 	}
 	secretVars[instance.Spec.TransportURLSecret] = env.SetValue(hash)
 	// run check TransportURL secret - end
@@ -405,7 +427,7 @@ func (r *HeatEngineReconciler) reconcileNormal(
 	//
 	parentHeatName := heat.GetOwningHeatName(instance)
 
-	ctrlResult, err := r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-config-data", parentHeatName), &secretVars)
+	ctrlResult, err = r.getSecret(ctx, helper, instance, fmt.Sprintf("%s-config-data", parentHeatName), &secretVars)
 	// note r.getSecret adds Conditions with condition.InputReadyWaitingMessage
 	// when secret is not found
 	if err != nil {
