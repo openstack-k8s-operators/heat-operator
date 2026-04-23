@@ -42,7 +42,6 @@ const (
 	HeatDatabaseMigrationAnnotation = "heat.openstack.org/database-migration"
 )
 
-
 // HeatSpec defines the desired state of Heat
 type HeatSpec struct {
 	HeatSpecBase `json:",inline"`
@@ -176,6 +175,12 @@ type HeatStatus struct {
 
 	// ReadyCount of Heat Engine instance
 	HeatEngineReadyCount int32 `json:"heatEngineReadyCount,omitempty"`
+
+	// ApplicationCredentialSecret - the AC secret Heat is currently
+	// consuming and protecting with the openstack.org/heat-ac-consumer
+	// finalizer. Tracked so the controller can remove its finalizer from the
+	// old secret when the openstack-operator rotates the reference.
+	ApplicationCredentialSecret string `json:"applicationCredentialSecret,omitempty"`
 
 	// ObservedGeneration - the most recent generation observed for this
 	// service. If the observed generation is less than the spec generation,
