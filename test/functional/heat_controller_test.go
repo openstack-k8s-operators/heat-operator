@@ -1316,4 +1316,159 @@ var _ = Describe("Heat controller", func() {
 			}, timeout, interval).Should(Succeed())
 		})
 	})
+
+	When("ApplicationCredential consumer finalizer is managed", func() {
+		var (
+			acSecretName          string
+			servicePasswordSecret string
+		)
+
+		BeforeEach(func() {
+			servicePasswordSecret = "ac-test-osp-secret" //nolint:gosec // G101
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, servicePasswordSecret))
+
+			acSecretName = "ac-heat-a1b2c-secret" //nolint:gosec // G101
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      acSecretName,
+				},
+				Data: map[string][]byte{
+					keystonev1.ACIDSecretKey:     []byte("a1b2ctest-ac-id"),
+					keystonev1.ACSecretSecretKey: []byte("test-ac-secret"),
+				},
+			}
+			DeferCleanup(k8sClient.Delete, ctx, secret)
+			Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+
+			spec := GetDefaultHeatSpec()
+			spec["secret"] = servicePasswordSecret
+			spec["auth"] = map[string]interface{}{
+				"applicationCredentialSecret": acSecretName,
+			}
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystone.CreateKeystoneAPI(namespace))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+
+			heatDatabase := types.NamespacedName{
+				Namespace: namespace,
+				Name:      GetHeat(heatName).Spec.DatabaseAccount,
+			}
+			acc, accSecret := mariadb.CreateMariaDBAccountAndSecret(heatDatabase, mariadbv1.MariaDBAccountSpec{})
+			DeferCleanup(k8sClient.Delete, ctx, acc)
+			DeferCleanup(k8sClient.Delete, ctx, accSecret)
+
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			mariadb.SimulateMariaDBAccountCompleted(heatDatabase)
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+			th.SimulateJobSuccess(heatDbSyncName)
+		})
+
+		It("should add the consumer finalizer to the AC secret", func() {
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      acSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.ACConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should track the consumed AC secret in status", func() {
+			Eventually(func(g Gomega) {
+				h := GetHeat(heatName)
+				g.Expect(h.Status.ApplicationCredentialSecret).To(Equal(acSecretName))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should move the finalizer from the old to the new secret on rotation", func() {
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      acSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.ACConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			newACSecretName := "ac-heat-x9y8z-secret" //nolint:gosec // G101
+			newSecret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: namespace,
+					Name:      newACSecretName,
+				},
+				Data: map[string][]byte{
+					keystonev1.ACIDSecretKey:     []byte("x9y8zrotated-ac-id"),
+					keystonev1.ACSecretSecretKey: []byte("rotated-ac-secret"),
+				},
+			}
+			DeferCleanup(k8sClient.Delete, ctx, newSecret)
+			Expect(k8sClient.Create(ctx, newSecret)).To(Succeed())
+
+			Eventually(func(g Gomega) {
+				h := GetHeat(heatName)
+				h.Spec.Auth.ApplicationCredentialSecret = newACSecretName
+				g.Expect(k8sClient.Update(ctx, h)).Should(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      newACSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.ACConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      acSecretName,
+				})
+				g.Expect(secret.Finalizers).NotTo(
+					ContainElement(heat.ACConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				h := GetHeat(heatName)
+				g.Expect(h.Status.ApplicationCredentialSecret).To(Equal(newACSecretName))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should remove the consumer finalizer from AC secret on CR deletion", func() {
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      acSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.ACConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			th.DeleteInstance(GetHeat(heatName))
+
+			secret := th.GetSecret(types.NamespacedName{
+				Namespace: namespace,
+				Name:      acSecretName,
+			})
+			Expect(secret.Finalizers).NotTo(
+				ContainElement(heat.ACConsumerFinalizer))
+		})
+	})
 })
