@@ -1735,13 +1735,14 @@ func createSecretTemplates(instance *heatv1beta1.Heat, customData map[string]str
 	return []util.Template{
 		// Secret
 		{
-			Name:          secretName,
-			Namespace:     instance.Namespace,
-			Type:          util.TemplateTypeConfig,
-			InstanceType:  instance.Kind,
-			CustomData:    customData,
-			ConfigOptions: templateParameters,
-			Labels:        secretLabels,
+			Name:            secretName,
+			Namespace:       instance.Namespace,
+			Type:            util.TemplateTypeConfig,
+			InstanceType:    instance.Kind,
+			CustomData:      customData,
+			ConfigOptions:   templateParameters,
+			Labels:          secretLabels,
+			CommonTemplates: []string{"ssl.conf"},
 		},
 	}
 }
