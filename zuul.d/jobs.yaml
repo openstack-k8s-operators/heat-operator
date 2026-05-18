@@ -36,6 +36,7 @@
         heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
         heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_raw
         heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_software_config
+        heat_tempest_plugin.tests.functional.test_software_config.ParallelDeploymentsTest.test_deployments_metadata
         heat_integrationtests.functional.test_aws_stack
         heat_integrationtests.functional.test_cancel_update.CancelUpdateTest.test_cancel_update_server_with_port
         heat_integrationtests.functional.test_reload_on_sighup
