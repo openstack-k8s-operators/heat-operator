@@ -140,6 +140,11 @@ These are user defined, and should be present prior to the deployment of the Hea
 
 To undeploy the operator, simply set the `enabled` value to false from within the `OpenStackControlPlane` resource.
 
+### Customize httpd
+
+- [Customize httpd](config/samples/httpd-overrides): inject custom httpd
+  configuration through extraMounts interface
+
 ## Contributing
 
 The following guide relies on a already deployed `OpenStackControlPlane`. If you don't already have this, you can
