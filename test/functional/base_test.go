@@ -19,6 +19,7 @@ package functional_test
 import (
 	. "github.com/onsi/gomega" //revive:disable:dot-imports
 
+	appsv1 "k8s.io/api/apps/v1"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	k8s_errors "k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
+	"github.com/openstack-k8s-operators/heat-operator/internal/heat"
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
 )
@@ -153,6 +155,81 @@ func GetHeatSpecWithNotificationsBus(notificationsCluster *string, notifications
 		spec["notificationsBus"] = notificationsBus
 	}
 	return spec
+}
+
+func simulateHeatSubCRReady(g Gomega, name types.NamespacedName) {
+	heatAPI := &heatv1.HeatAPI{}
+	g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      name.Name + "-api",
+	}, heatAPI)).To(Succeed())
+	heatAPI.Status.ObservedGeneration = heatAPI.Generation
+	heatAPI.Status.ReadyCount = 1
+	heatAPI.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
+	g.Expect(k8sClient.Status().Update(ctx, heatAPI)).To(Succeed())
+
+	heatCfnAPI := &heatv1.HeatCfnAPI{}
+	g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      name.Name + "-cfnapi",
+	}, heatCfnAPI)).To(Succeed())
+	heatCfnAPI.Status.ObservedGeneration = heatCfnAPI.Generation
+	heatCfnAPI.Status.ReadyCount = 1
+	heatCfnAPI.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
+	g.Expect(k8sClient.Status().Update(ctx, heatCfnAPI)).To(Succeed())
+
+	heatEngine := &heatv1.HeatEngine{}
+	g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      name.Name + "-engine",
+	}, heatEngine)).To(Succeed())
+	heatEngine.Status.ObservedGeneration = heatEngine.Generation
+	heatEngine.Status.ReadyCount = 1
+	heatEngine.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
+	g.Expect(k8sClient.Status().Update(ctx, heatEngine)).To(Succeed())
+}
+
+func simulateHeatSubServicesReady(name types.NamespacedName) {
+	Eventually(func(g Gomega) {
+		for _, depName := range []string{"heat-api", "heat-cfnapi", "heat-engine"} {
+			deployment := &appsv1.Deployment{}
+			g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+				Namespace: name.Namespace,
+				Name:      depName,
+			}, deployment)).To(Succeed())
+		}
+	}, timeout, interval).Should(Succeed())
+	th.SimulateDeploymentReplicaReady(types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      "heat-api",
+	})
+	th.SimulateDeploymentReplicaReady(types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      "heat-cfnapi",
+	})
+	th.SimulateDeploymentReplicaReady(types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      "heat-engine",
+	})
+	Eventually(func(g Gomega) {
+		simulateHeatSubCRReady(g, name)
+	}, timeout, interval).Should(Succeed())
+	keystone.SimulateKeystoneServiceReady(types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      heat.ServiceName,
+	})
+	keystone.SimulateKeystoneEndpointReady(types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      heat.ServiceName,
+	})
+	keystone.SimulateKeystoneServiceReady(types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      heat.CfnServiceName,
+	})
+	keystone.SimulateKeystoneEndpointReady(types.NamespacedName{
+		Namespace: name.Namespace,
+		Name:      heat.CfnServiceName,
+	})
 }
 
 func GetTransportURL(name types.NamespacedName) *rabbitmqv1.TransportURL {

@@ -92,6 +92,9 @@ const (
 
 	// HeatManage is the base command used for DBPurge
 	HeatManage = "/usr/bin/heat-manage"
+
+	// ACConsumerFinalizer is added to AC secrets that heat is actively consuming
+	ACConsumerFinalizer = "openstack.org/heat-ac-consumer"
 )
 
 // DbsyncPropagation keeps track of the DBSync Service Propagation Type
