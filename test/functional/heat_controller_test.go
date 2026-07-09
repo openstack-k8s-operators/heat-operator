@@ -530,7 +530,7 @@ var _ = Describe("Heat controller", func() {
 		BeforeEach(func() {
 			spec := GetDefaultHeatSpec()
 			heatAPI := GetDefaultHeatAPISpec()
-			heatAPI["tls"] = map[string]any{
+			heatAPI["tls"] = map[string]any{ //nolint:gosec
 				"caBundleSecretName": "combined-ca-bundle",
 			}
 			spec["heatAPI"] = heatAPI

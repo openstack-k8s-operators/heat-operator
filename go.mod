@@ -1,22 +1,22 @@
 module github.com/openstack-k8s-operators/heat-operator
 
-go 1.24.4
+go 1.26.3
 
 replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 
 require (
 	github.com/go-logr/logr v1.4.3
 	github.com/google/uuid v1.6.0
-	github.com/gophercloud/gophercloud/v2 v2.8.0
-	github.com/onsi/ginkgo/v2 v2.28.2
-	github.com/onsi/gomega v1.42.0
+	github.com/gophercloud/gophercloud/v2 v2.13.0
+	github.com/onsi/ginkgo/v2 v2.32.0
+	github.com/onsi/gomega v1.42.1
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
 	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260629124631-33e3b7eda748
 	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20260630073023-c9c3dbc3a240
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260626101608-0959e9d46047
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260626101608-0959e9d46047
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260626101608-0959e9d46047
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260626101608-0959e9d46047
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260713090837-13a3b65580c3
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260713090837-13a3b65580c3
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260713090837-13a3b65580c3
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260713090837-13a3b65580c3
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260703152144-e683c6ed203f
 	k8s.io/api v0.31.14
 	k8s.io/apimachinery v0.31.14
@@ -52,7 +52,7 @@ require (
 	github.com/google/gnostic-models v0.7.0 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/gofuzz v1.2.0 // indirect
-	github.com/google/pprof v0.0.0-20260115054156-294ebfa9ad83 // indirect
+	github.com/google/pprof v0.0.0-20260402051712-545e8a4df936 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.20.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
@@ -87,15 +87,15 @@ require (
 	go.yaml.in/yaml/v2 v2.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/exp v0.0.0-20241217172543-b2144cdd0a67 // indirect
-	golang.org/x/mod v0.32.0 // indirect
-	golang.org/x/net v0.49.0 // indirect
+	golang.org/x/mod v0.36.0 // indirect
+	golang.org/x/net v0.56.0 // indirect
 	golang.org/x/oauth2 v0.30.0 // indirect
-	golang.org/x/sync v0.19.0 // indirect
-	golang.org/x/sys v0.41.0 // indirect
-	golang.org/x/term v0.40.0 // indirect
-	golang.org/x/text v0.34.0 // indirect
+	golang.org/x/sync v0.21.0 // indirect
+	golang.org/x/sys v0.46.0 // indirect
+	golang.org/x/term v0.44.0 // indirect
+	golang.org/x/text v0.38.0 // indirect
 	golang.org/x/time v0.12.0 // indirect
-	golang.org/x/tools v0.41.0 // indirect
+	golang.org/x/tools v0.45.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.5.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250106144421-5f5ef82da422 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250115164207-1a7da9e5054f // indirect
@@ -136,8 +136,5 @@ replace k8s.io/cli-runtime => k8s.io/cli-runtime v0.31.14 //allow-merging
 replace k8s.io/code-generator => k8s.io/code-generator v0.31.14 //allow-merging
 
 replace k8s.io/component-base => k8s.io/component-base v0.31.14 //allow-merging
-
-// custom RabbitmqClusterSpecCore for OpenStackControlplane (v2.16.0_patches)
-replace github.com/rabbitmq/cluster-operator/v2 => github.com/openstack-k8s-operators/rabbitmq-cluster-operator/v2 v2.6.1-0.20250929174222-a0d328fa4dec //allow-merging
 
 replace k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20250627150254-e9823e99808e //allow-merging
