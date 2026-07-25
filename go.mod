@@ -5,7 +5,7 @@ go 1.26.3
 replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 
 require (
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud/v2 v2.13.0
 	github.com/onsi/ginkgo/v2 v2.32.0
