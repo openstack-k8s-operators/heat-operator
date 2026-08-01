@@ -5,19 +5,19 @@ go 1.26.3
 replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 
 require (
-	github.com/go-logr/logr v1.4.3
+	github.com/go-logr/logr v1.4.4
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud/v2 v2.13.0
 	github.com/onsi/ginkgo/v2 v2.32.0
 	github.com/onsi/gomega v1.42.1
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260723061747-66bf6fca9dfd
-	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20260725001628-3d6a573c5777
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260724091355-a86f6d29e055
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260724091355-a86f6d29e055
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260724091355-a86f6d29e055
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260724091355-a86f6d29e055
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260722153822-fa2443790f63
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260730060158-27ac5ce68f29
+	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20260727152316-e841be643d15
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260725150835-623a52fe0391
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260725150835-623a52fe0391
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260725150835-623a52fe0391
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260725150835-623a52fe0391
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260728091439-b5039a181b44
 	k8s.io/api v0.33.13
 	k8s.io/apimachinery v0.33.13
 	k8s.io/client-go v0.33.13
