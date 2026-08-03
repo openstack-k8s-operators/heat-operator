@@ -96,7 +96,9 @@ func Deployment(
 						// httpd needs to have access to the certificates in /etc/pki/tls/certs/...
 						// setting the FSGroup results in everything mounted to the pod to have the
 						// heat group set, now the certs will be mounted
-						FSGroup: ptr.To(heat.HeatGID),
+						FSGroup:      ptr.To(heat.HeatGID),
+						RunAsGroup:   ptr.To(heat.HeatGID),
+						RunAsNonRoot: ptr.To(true),
 					},
 					Containers: []corev1.Container{
 						{

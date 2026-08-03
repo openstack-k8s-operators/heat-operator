@@ -41,12 +41,14 @@ func GetHeatDBSecurityContext() *corev1.SecurityContext {
 
 // GetHeatSecurityContext returns the security context for heat services
 func GetHeatSecurityContext() *corev1.SecurityContext {
-	var runAsUser = HeatUID
-	var runAsGroup = HeatGID
+	trueVal := true
+	runAsUser := int64(HeatUID)
+	runAsGroup := int64(HeatGID)
 
 	return &corev1.SecurityContext{
-		RunAsUser:  &runAsUser,
-		RunAsGroup: &runAsGroup,
+		RunAsUser:    &runAsUser,
+		RunAsGroup:   &runAsGroup,
+		RunAsNonRoot: &trueVal,
 	}
 }
 
