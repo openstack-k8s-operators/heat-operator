@@ -86,53 +86,59 @@ spec:
   template:
     spec:
       containers:
-      - args:
-        - -c
-        - /usr/local/bin/kolla_httpd_setup && /usr/local/bin/kolla_start
+      - command:
+        - /usr/sbin/httpd
+        args:
+        - -DFOREGROUND
         volumeMounts:
-        - mountPath: /var/lib/kolla/config_files/config.json
-          name: config-data
-          readOnly: true
-          subPath: heat-api-config.json
         - mountPath: /etc/heat/heat.conf.d
           name: config-data-custom
-          readOnly: true
-        - mountPath: /var/lib/config-data/default
-          name: config-data
           readOnly: true
         - mountPath: /etc/my.cnf
           name: config-data
           readOnly: true
           subPath: my.cnf
+        - mountPath: /etc/httpd/conf/httpd.conf
+          name: config-data
+          readOnly: true
+          subPath: heat-api-httpd.conf
+        - mountPath: /etc/httpd/conf.d/ssl.conf
+          name: config-data
+          readOnly: true
+          subPath: ssl.conf
+        - mountPath: /run/httpd
+          name: run-httpd
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
           subPath: tls-ca-bundle.pem
-        - mountPath: /var/lib/config-data/tls/certs/internal.crt
+        - mountPath: /etc/pki/tls/certs/internal.crt
           name: internal-tls-certs
           readOnly: true
           subPath: tls.crt
-        - mountPath: /var/lib/config-data/tls/private/internal.key
+        - mountPath: /etc/pki/tls/private/internal.key
           name: internal-tls-certs
           readOnly: true
           subPath: tls.key
-        - mountPath: /var/lib/config-data/tls/certs/public.crt
+        - mountPath: /etc/pki/tls/certs/public.crt
           name: public-tls-certs
           readOnly: true
           subPath: tls.crt
-        - mountPath: /var/lib/config-data/tls/private/public.key
+        - mountPath: /etc/pki/tls/private/public.key
           name: public-tls-certs
           readOnly: true
           subPath: tls.key
       volumes:
       - name: config-data-custom
         secret:
-          defaultMode: 420
+          defaultMode: 288
           secretName: heat-api-config-data
       - name: config-data
         secret:
-          defaultMode: 420
+          defaultMode: 288
           secretName: heat-config-data
+      - name: run-httpd
+        emptyDir: {}
       - name: combined-ca-bundle
         secret:
           defaultMode: 292
@@ -155,53 +161,59 @@ spec:
   template:
     spec:
       containers:
-      - args:
-        - -c
-        - /usr/local/bin/kolla_httpd_setup && /usr/local/bin/kolla_start
+      - command:
+        - /usr/sbin/httpd
+        args:
+        - -DFOREGROUND
         volumeMounts:
-        - mountPath: /var/lib/kolla/config_files/config.json
-          name: config-data
-          readOnly: true
-          subPath: heat-cfnapi-config.json
         - mountPath: /etc/heat/heat.conf.d
           name: config-data-custom
-          readOnly: true
-        - mountPath: /var/lib/config-data/default
-          name: config-data
           readOnly: true
         - mountPath: /etc/my.cnf
           name: config-data
           readOnly: true
           subPath: my.cnf
+        - mountPath: /etc/httpd/conf/httpd.conf
+          name: config-data
+          readOnly: true
+          subPath: heat-cfnapi-httpd.conf
+        - mountPath: /etc/httpd/conf.d/ssl.conf
+          name: config-data
+          readOnly: true
+          subPath: ssl.conf
+        - mountPath: /run/httpd
+          name: run-httpd
         - mountPath: /etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem
           name: combined-ca-bundle
           readOnly: true
           subPath: tls-ca-bundle.pem
-        - mountPath: /var/lib/config-data/tls/certs/internal.crt
+        - mountPath: /etc/pki/tls/certs/internal.crt
           name: internal-tls-certs
           readOnly: true
           subPath: tls.crt
-        - mountPath: /var/lib/config-data/tls/private/internal.key
+        - mountPath: /etc/pki/tls/private/internal.key
           name: internal-tls-certs
           readOnly: true
           subPath: tls.key
-        - mountPath: /var/lib/config-data/tls/certs/public.crt
+        - mountPath: /etc/pki/tls/certs/public.crt
           name: public-tls-certs
           readOnly: true
           subPath: tls.crt
-        - mountPath: /var/lib/config-data/tls/private/public.key
+        - mountPath: /etc/pki/tls/private/public.key
           name: public-tls-certs
           readOnly: true
           subPath: tls.key
       volumes:
       - name: config-data-custom
         secret:
-          defaultMode: 420
+          defaultMode: 288
           secretName: heat-cfnapi-config-data
       - name: config-data
         secret:
-          defaultMode: 420
+          defaultMode: 288
           secretName: heat-config-data
+      - name: run-httpd
+        emptyDir: {}
       - name: combined-ca-bundle
         secret:
           defaultMode: 292
@@ -224,19 +236,13 @@ spec:
   template:
     spec:
       containers:
-      - args:
-        - -c
-        - /usr/local/bin/kolla_start
+      - command:
+        - /usr/bin/heat-engine
+        - --config-dir
+        - /etc/heat/heat.conf.d
         volumeMounts:
-        - mountPath: /var/lib/kolla/config_files/config.json
-          name: config-data
-          readOnly: true
-          subPath: heat-engine-config.json
         - mountPath: /etc/heat/heat.conf.d
           name: config-data-custom
-          readOnly: true
-        - mountPath: /var/lib/config-data/default
-          name: config-data
           readOnly: true
         - mountPath: /etc/my.cnf
           name: config-data
@@ -249,11 +255,11 @@ spec:
       volumes:
       - name: config-data-custom
         secret:
-          defaultMode: 420
+          defaultMode: 288
           secretName: heat-engine-config-data
       - name: config-data
         secret:
-          defaultMode: 420
+          defaultMode: 288
           secretName: heat-config-data
       - name: combined-ca-bundle
         secret:
