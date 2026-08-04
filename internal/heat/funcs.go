@@ -20,36 +20,6 @@ func GetOwningHeatName(instance client.Object) string {
 	return ""
 }
 
-// GetHeatDBSecurityContext returns the security context for heat database operations
-func GetHeatDBSecurityContext() *corev1.SecurityContext {
-	trueVal := true
-	falseVal := false
-	runAsUser := int64(HeatUID)
-	runAsGroup := int64(HeatGID)
-	return &corev1.SecurityContext{
-		RunAsUser:                &runAsUser,
-		RunAsGroup:               &runAsGroup,
-		RunAsNonRoot:             &trueVal,
-		AllowPrivilegeEscalation: &falseVal,
-		Capabilities: &corev1.Capabilities{
-			Drop: []corev1.Capability{
-				"ALL",
-			},
-		},
-	}
-}
-
-// GetHeatSecurityContext returns the security context for heat services
-func GetHeatSecurityContext() *corev1.SecurityContext {
-	var runAsUser = HeatUID
-	var runAsGroup = HeatGID
-
-	return &corev1.SecurityContext{
-		RunAsUser:  &runAsUser,
-		RunAsGroup: &runAsGroup,
-	}
-}
-
 // FormatProbes creates a probe configuration for the specified port
 func FormatProbes(port int32) *corev1.Probe {
 

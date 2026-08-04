@@ -26,6 +26,9 @@ import (
 	common "github.com/openstack-k8s-operators/lib-common/modules/common"
 	affinity "github.com/openstack-k8s-operators/lib-common/modules/common/affinity"
 	env "github.com/openstack-k8s-operators/lib-common/modules/common/env"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/pod"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/volume"
+	"github.com/openstack-k8s-operators/lib-common/modules/users"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
@@ -33,23 +36,13 @@ import (
 	"k8s.io/utils/ptr"
 )
 
-const (
-	// ServiceCommand -
-	ServiceCommand = "/usr/local/bin/kolla_start"
-)
-
 // Deployment func
 func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[string]string, topology *topologyv1.Topology, memcached *memcachedv1.Memcached) (*appsv1.Deployment, error) {
-
-	var err error
 
 	livenessProbe := formatProbes()
 	readinessProbe := formatProbes()
 
-	args := []string{"-c", ServiceCommand}
-
 	envVars := map[string]env.Setter{}
-	envVars["KOLLA_CONFIG_STRATEGY"] = env.SetValue("COPY_ALWAYS")
 	envVars["CONFIG_HASH"] = env.SetValue(configHash)
 
 	// Default oslo.service graceful_shutdown_timeout is 60, so align with that
@@ -57,9 +50,9 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 
 	volumes := heat.GetVolumes(heat.ServiceName, instance.Name,
 		instance.Spec.ExtraMounts, heat.HeatEnginePropagation)
-	volumeMounts := heat.GetVolumeMounts(instance.Name, instance.Spec.ExtraMounts,
+	volumeMounts := heat.GetVolumeMounts(instance.Spec.ExtraMounts,
 		heat.HeatEnginePropagation)
-	secretVolumes, secretMounts := heat.GetConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
+	secretVolumes, secretMounts := volume.ConfigSecretVolumes(instance.Spec.CustomServiceConfigSecrets)
 	volumes = append(volumes, secretVolumes...)
 	volumeMounts = append(volumeMounts, secretMounts...)
 
@@ -71,8 +64,10 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 
 	// add MTLS cert if defined
 	if memcached.GetMemcachedMTLSSecret() != "" {
+		certMountPath := memcachedv1.CertPathDst
+		keyMountPath := memcachedv1.KeyPathDst
 		volumes = append(volumes, memcached.CreateMTLSVolume())
-		volumeMounts = append(volumeMounts, memcached.CreateMTLSVolumeMounts(nil, nil)...)
+		volumeMounts = append(volumeMounts, memcached.CreateMTLSVolumeMounts(&certMountPath, &keyMountPath)...)
 	}
 
 	deployment := &appsv1.Deployment{
@@ -90,22 +85,18 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 					Labels: labels,
 				},
 				Spec: corev1.PodSpec{
-					ServiceAccountName: instance.Spec.ServiceAccount,
-					SecurityContext: &corev1.PodSecurityContext{
-						// httpd needs to have access to the certificates in /etc/pki/tls/certs/...
-						// setting the FSGroup results in everything mounted to the pod to have the
-						// heat group set, now the certs will be mounted
-						FSGroup: ptr.To(heat.HeatGID),
-					},
+					ServiceAccountName:           instance.Spec.ServiceAccount,
+					AutomountServiceAccountToken: ptr.To(false),
+					SecurityContext:              pod.RestrictivePodSecurityContext(users.HeatUID, users.HeatGID),
 					Containers: []corev1.Container{
 						{
 							Name: fmt.Sprintf("%s-%s", heat.ServiceName, heat.EngineComponent),
 							Command: []string{
-								"/bin/bash",
+								"/usr/bin/heat-engine",
+								"--config-dir", "/etc/heat/heat.conf.d",
 							},
-							Args:            args,
 							Image:           instance.Spec.ContainerImage,
-							SecurityContext: heat.GetHeatSecurityContext(),
+							SecurityContext: pod.RestrictiveSecurityContext(users.HeatUID, users.HeatGID),
 							Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),
 							VolumeMounts:    volumeMounts,
 							Resources:       instance.Spec.Resources,
@@ -139,7 +130,7 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 		)
 	}
 
-	return deployment, err
+	return deployment, nil
 }
 
 func formatProbes() *corev1.Probe {
