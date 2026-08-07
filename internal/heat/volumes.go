@@ -16,26 +16,24 @@ limitations under the License.
 package heat
 
 import (
-	"strconv"
-
 	heatv1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 	"github.com/openstack-k8s-operators/lib-common/modules/storage"
 	corev1 "k8s.io/api/core/v1"
 )
+
+var configMode int32 = 0440
 
 // GetVolumes ...
 func GetVolumes(parentName string, name string,
 	extraVol []heatv1.HeatExtraVolMounts,
 	svc []storage.PropagationType) []corev1.Volume {
 
-	var config0644AccessMode int32 = 0644
-
 	volumes := []corev1.Volume{
 		{
 			Name: "config-data-custom",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0644AccessMode,
+					DefaultMode: &configMode,
 					SecretName:  name + "-config-data",
 				},
 			},
@@ -44,7 +42,8 @@ func GetVolumes(parentName string, name string,
 			Name: "config-data",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					SecretName: parentName + "-config-data",
+					DefaultMode: &configMode,
+					SecretName:  parentName + "-config-data",
 				},
 			},
 		},
@@ -66,24 +65,13 @@ func GetVolumes(parentName string, name string,
 }
 
 // GetVolumeMounts ...
-func GetVolumeMounts(name string,
+func GetVolumeMounts(
 	extraVol []heatv1.HeatExtraVolMounts,
 	svc []storage.PropagationType) []corev1.VolumeMount {
 	vm := []corev1.VolumeMount{
 		{
-			Name:      "config-data",
-			MountPath: "/var/lib/kolla/config_files/config.json",
-			SubPath:   name + "-config.json",
-			ReadOnly:  true,
-		},
-		{
 			Name:      "config-data-custom",
 			MountPath: "/etc/heat/heat.conf.d",
-			ReadOnly:  true,
-		},
-		{
-			Name:      "config-data",
-			MountPath: "/var/lib/config-data/default",
 			ReadOnly:  true,
 		},
 		{
@@ -130,33 +118,4 @@ func getDBSyncVolumeMounts(
 		}
 	}
 	return volumeMounts
-}
-
-// GetConfigSecretVolumes - Returns a list of volumes associated with a list of Secret names
-func GetConfigSecretVolumes(secretNames []string) ([]corev1.Volume, []corev1.VolumeMount) {
-	var config0640AccessMode int32 = 0640
-	secretVolumes := []corev1.Volume{}
-	secretMounts := []corev1.VolumeMount{}
-
-	for idx, secretName := range secretNames {
-		secretVol := corev1.Volume{
-			Name: secretName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secretName,
-					DefaultMode: &config0640AccessMode,
-				},
-			},
-		}
-		secretMount := corev1.VolumeMount{
-			Name: secretName,
-			// Each secret needs its own MountPath
-			MountPath: "/var/lib/config-data/secret-" + strconv.Itoa(idx),
-			ReadOnly:  true,
-		}
-		secretVolumes = append(secretVolumes, secretVol)
-		secretMounts = append(secretMounts, secretMount)
-	}
-
-	return secretVolumes, secretMounts
 }

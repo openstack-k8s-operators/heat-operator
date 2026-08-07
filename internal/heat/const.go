@@ -58,12 +58,6 @@ const (
 	HeatCfnPublicPort int32 = 8000
 	// HeatCfnInternalPort -
 	HeatCfnInternalPort int32 = 8000
-	// HeatUID is the UID for the heat user (heat:heat)
-	HeatUID int64 = 42418
-	// HeatGID is the GID for the heat group (heat:heat)
-	HeatGID int64 = 42418
-	// KollaConfigDbSync -
-	KollaConfigDbSync = "/var/lib/config-data/merged/db-sync-config.json"
 	// APIComponent -
 	APIComponent = "api"
 	// CfnAPIComponent -

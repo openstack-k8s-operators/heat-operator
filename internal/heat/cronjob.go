@@ -20,9 +20,12 @@ import (
 
 	heatv1beta1 "github.com/openstack-k8s-operators/heat-operator/api/v1beta1"
 
+	"github.com/openstack-k8s-operators/lib-common/modules/common/pod"
+	"github.com/openstack-k8s-operators/lib-common/modules/serviceuser"
 	batchv1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 )
 
 // CronJobSpec defines the spec for a CronJob
@@ -39,8 +42,6 @@ func DBPurgeJob(
 	instance *heatv1beta1.Heat,
 	cronSpec CronJobSpec,
 ) *batchv1.CronJob {
-	var config0644AccessMode int32 = 0644
-
 	cronCommand := fmt.Sprintf(
 		"%s --config-dir /etc/heat/heat.conf.d purge_deleted %d",
 		cronSpec.Command,
@@ -61,7 +62,7 @@ func DBPurgeJob(
 			Name: "db-purge-config-data",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0644AccessMode,
+					DefaultMode: &configMode,
 					SecretName:  instance.Name + "-config-data",
 					Items: []corev1.KeyToPath{
 						{
@@ -76,7 +77,7 @@ func DBPurgeJob(
 			Name: "config-data",
 			VolumeSource: corev1.VolumeSource{
 				Secret: &corev1.SecretVolumeSource{
-					DefaultMode: &config0644AccessMode,
+					DefaultMode: &configMode,
 					SecretName:  instance.Name + "-config-data",
 				},
 			},
@@ -139,13 +140,15 @@ func DBPurgeJob(
 									},
 									Args:            args,
 									VolumeMounts:    cronJobVolumeMounts,
-									SecurityContext: GetHeatDBSecurityContext(),
+									SecurityContext: pod.RestrictiveSecurityContext(serviceuser.HeatUID, serviceuser.HeatGID),
 								},
 							},
-							Volumes:            cronJobVolume,
-							RestartPolicy:      corev1.RestartPolicyNever,
-							ServiceAccountName: instance.RbacResourceName(),
-							NodeSelector:       nodeSelector,
+							Volumes:                      cronJobVolume,
+							RestartPolicy:                corev1.RestartPolicyNever,
+							ServiceAccountName:           instance.RbacResourceName(),
+							AutomountServiceAccountToken: ptr.To(false),
+							SecurityContext:              pod.RestrictivePodSecurityContext(serviceuser.HeatUID, serviceuser.HeatGID),
+							NodeSelector:                 nodeSelector,
 						},
 					},
 				},
