@@ -57,11 +57,6 @@
       "path": "/etc/httpd/run",
       "owner": "heat:apache",
       "recurse": true
-    },
-    {
-      "path": "/var/www/cgi-bin/heat",
-      "owner": "heat:heat",
-      "recurse": true
     }
   ]
 }
