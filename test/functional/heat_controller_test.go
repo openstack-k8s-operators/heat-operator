@@ -951,14 +951,10 @@ var _ = Describe("Heat controller", func() {
 
 			// Step 2: Enable quorum queues by updating the transport URL secret
 			Eventually(func(g Gomega) {
-				// Get the Heat instance to find the actual transport URL secret name
-				heat := GetHeat(heatName)
-				g.Expect(heat.Status.TransportURLSecret).ShouldNot(BeEmpty())
-
 				transportSecret := &corev1.Secret{}
 				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
 					Namespace: namespace,
-					Name:      heat.Status.TransportURLSecret,
+					Name:      HeatMessageBusSecretName,
 				}, transportSecret)).Should(Succeed())
 
 				transportSecret.Data["quorumqueues"] = []byte("true")
@@ -1140,13 +1136,16 @@ var _ = Describe("Heat controller", func() {
 					},
 				),
 			)
+			apiFixture := setupHeatKeystoneFixture(logger)
+			DeferCleanup(apiFixture.Cleanup)
+			keystoneAPIName := keystone.CreateKeystoneAPIWithFixture(namespace, apiFixture)
+			keystone.UpdateKeystoneAPIEndpoint(keystoneAPIName, "internal", apiFixture.Endpoint())
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
 
 			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
 
-			// Simulate the main transport URL
 			infra.SimulateTransportURLReady(heatTransportURLName)
 
-			// Wait for the notifications transport URL to be created by the controller
 			notificationsTransportURLName := types.NamespacedName{
 				Namespace: namespace,
 				Name:      heatName.Name + "-heat-notifications-transport",
@@ -1154,9 +1153,12 @@ var _ = Describe("Heat controller", func() {
 			Eventually(func() error {
 				return k8sClient.Get(ctx, notificationsTransportURLName, &rabbitmqv1.TransportURL{})
 			}, timeout, interval).Should(Succeed())
-
-			// Simulate the notifications transport URL as ready
 			infra.SimulateTransportURLReady(notificationsTransportURLName)
+
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+			th.SimulateJobSuccess(heatDbSyncName)
+			simulateHeatSubServicesReady(heatName)
 		})
 
 		It("should initially have notifications enabled", func() {
@@ -1180,10 +1182,45 @@ var _ = Describe("Heat controller", func() {
 				g.Expect(k8sClient.Update(ctx, heat)).To(Succeed())
 			}, timeout, interval).Should(Succeed())
 
-			// Wait for notifications to be disabled
+			// Wait for notifications to be disabled. Teardown of the
+			// notifications TransportURL/secret is now deferred until every
+			// sub-service has rolled out the config that no longer references
+			// the bus (allServicesReady). Re-drive the full readiness chain for
+			// the rolled generation on each iteration so allServicesReady flips
+			// true, then assert the secret ref is released.
 			Eventually(func(g Gomega) {
-				heat := GetHeat(heatName)
-				g.Expect(heat.Status.NotificationsTransportURLSecret).To(BeEmpty())
+				for _, depName := range []string{"heat-api", "heat-cfnapi", "heat-engine"} {
+					th.SimulateDeploymentReplicaReady(types.NamespacedName{
+						Namespace: namespace,
+						Name:      depName,
+					})
+				}
+				simulateHeatSubCRReady(g, heatName)
+				keystone.SimulateKeystoneServiceReady(types.NamespacedName{
+					Namespace: namespace,
+					Name:      heat.ServiceName,
+				})
+				keystone.SimulateKeystoneEndpointReady(types.NamespacedName{
+					Namespace: namespace,
+					Name:      heat.ServiceName,
+				})
+				keystone.SimulateKeystoneServiceReady(types.NamespacedName{
+					Namespace: namespace,
+					Name:      heat.CfnServiceName,
+				})
+				keystone.SimulateKeystoneEndpointReady(types.NamespacedName{
+					Namespace: namespace,
+					Name:      heat.CfnServiceName,
+				})
+
+				h := GetHeat(heatName)
+				if h.Annotations == nil {
+					h.Annotations = map[string]string{}
+				}
+				h.Annotations["test-reconcile-trigger"] = fmt.Sprintf("%d", time.Now().UnixNano())
+				g.Expect(k8sClient.Update(ctx, h)).To(Succeed())
+
+				g.Expect(GetHeat(heatName).Status.NotificationsTransportURLSecret).To(BeEmpty())
 			}, timeout, interval).Should(Succeed())
 		})
 	})
@@ -1317,6 +1354,279 @@ var _ = Describe("Heat controller", func() {
 		})
 	})
 
+	When("TransportURL consumer finalizer is managed", func() {
+		BeforeEach(func() {
+			DeferCleanup(k8sClient.Delete, ctx,
+				CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			DeferCleanup(k8sClient.Delete, ctx,
+				CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, GetDefaultHeatSpec()))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+
+			heatDatabase := types.NamespacedName{
+				Namespace: namespace,
+				Name:      GetHeat(heatName).Spec.DatabaseAccount,
+			}
+			acc, accSecret := mariadb.CreateMariaDBAccountAndSecret(heatDatabase, mariadbv1.MariaDBAccountSpec{})
+			DeferCleanup(k8sClient.Delete, ctx, acc)
+			DeferCleanup(k8sClient.Delete, ctx, accSecret)
+			mariaDBDatabaseName := mariadb.CreateMariaDBDatabase(namespace, heat.DatabaseCRName, mariadbv1.MariaDBDatabaseSpec{})
+			mariaDBDatabase := mariadb.GetMariaDBDatabase(mariaDBDatabaseName)
+			DeferCleanup(k8sClient.Delete, ctx, mariaDBDatabase)
+
+			apiFixture := setupHeatKeystoneFixture(logger)
+			DeferCleanup(apiFixture.Cleanup)
+			keystoneAPIName := keystone.CreateKeystoneAPIWithFixture(namespace, apiFixture)
+			keystone.UpdateKeystoneAPIEndpoint(keystoneAPIName, "internal", apiFixture.Endpoint())
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			mariadb.SimulateMariaDBAccountCompleted(heatDatabase)
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+			th.SimulateJobSuccess(heatDbSyncName)
+		})
+
+		It("should add the consumer finalizer to the transport secret", func() {
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      HeatMessageBusSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should remove the consumer finalizer from transport secret on CR deletion", func() {
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      HeatMessageBusSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			th.DeleteInstance(GetHeat(heatName))
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      HeatMessageBusSecretName,
+				})
+				g.Expect(secret.Finalizers).NotTo(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("should move the finalizer from the old to the new secret on transport rotation", func() {
+			oldSecretName := HeatMessageBusSecretName
+			newSecretName := "rabbitmq-secret-rotated"
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      oldSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			simulateHeatSubServicesReady(heatName)
+			Eventually(func(g Gomega) {
+				h := GetHeat(heatName)
+				g.Expect(h.Status.Conditions.IsTrue(condition.ReadyCondition)).To(BeTrue())
+				g.Expect(h.Status.TransportURLSecret).To(Equal(oldSecretName))
+			}, timeout, interval).Should(Succeed())
+
+			newSecret := th.CreateSecret(
+				types.NamespacedName{
+					Namespace: namespace,
+					Name:      newSecretName,
+				},
+				map[string][]byte{
+					"transport_url": []byte("rabbit://rotated-user:rotated-pass@rabbitmq/fake"),
+				},
+			)
+			DeferCleanup(k8sClient.Delete, ctx, newSecret)
+
+			Eventually(func(g Gomega) {
+				transport := infra.GetTransportURL(heatTransportURLName)
+				transport.Status.SecretName = newSecretName
+				g.Expect(k8sClient.Status().Update(ctx, transport)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      newSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			Consistently(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      oldSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				for _, depName := range []string{"heat-api", "heat-cfnapi", "heat-engine"} {
+					th.SimulateDeploymentReplicaReady(types.NamespacedName{
+						Namespace: namespace,
+						Name:      depName,
+					})
+				}
+				simulateHeatSubCRReady(g, heatName)
+				h := GetHeat(heatName)
+				if h.Annotations == nil {
+					h.Annotations = map[string]string{}
+				}
+				h.Annotations["test-reconcile-trigger"] = fmt.Sprintf("%d", time.Now().UnixNano())
+				g.Expect(k8sClient.Update(ctx, h)).To(Succeed())
+			}, 10*time.Second, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      oldSecretName,
+				})
+				g.Expect(secret.Finalizers).NotTo(
+					ContainElement(heat.TransportConsumerFinalizer))
+				h := GetHeat(heatName)
+				g.Expect(h.Status.TransportURLSecret).To(Equal(newSecretName))
+			}, 10*time.Second, interval).Should(Succeed())
+		})
+
+		It("should hold the finalizer until the last sub-CR is ready", func() {
+			oldSecretName := HeatMessageBusSecretName
+			newSecretName := "rabbitmq-secret-rotated"
+
+			simulateHeatSubServicesReady(heatName)
+			Eventually(func(g Gomega) {
+				h := GetHeat(heatName)
+				g.Expect(h.Status.Conditions.IsTrue(condition.ReadyCondition)).To(BeTrue())
+			}, timeout, interval).Should(Succeed())
+
+			newSecret := th.CreateSecret(
+				types.NamespacedName{
+					Namespace: namespace,
+					Name:      newSecretName,
+				},
+				map[string][]byte{
+					"transport_url": []byte("rabbit://rotated-user:rotated-pass@rabbitmq/fake"),
+				},
+			)
+			DeferCleanup(k8sClient.Delete, ctx, newSecret)
+
+			Eventually(func(g Gomega) {
+				transport := infra.GetTransportURL(heatTransportURLName)
+				transport.Status.SecretName = newSecretName
+				g.Expect(k8sClient.Status().Update(ctx, transport)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      newSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			// Simulate only HeatAPI and HeatCfnAPI ready, but NOT HeatEngine.
+			Eventually(func(g Gomega) {
+				th.SimulateDeploymentReplicaReady(types.NamespacedName{
+					Namespace: namespace,
+					Name:      "heat-api",
+				})
+				th.SimulateDeploymentReplicaReady(types.NamespacedName{
+					Namespace: namespace,
+					Name:      "heat-cfnapi",
+				})
+
+				heatAPI := &heatv1.HeatAPI{}
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      heatName.Name + "-api",
+				}, heatAPI)).To(Succeed())
+				heatAPI.Status.ObservedGeneration = heatAPI.Generation
+				heatAPI.Status.ReadyCount = 1
+				heatAPI.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
+				g.Expect(k8sClient.Status().Update(ctx, heatAPI)).To(Succeed())
+
+				heatCfnAPI := &heatv1.HeatCfnAPI{}
+				g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+					Namespace: namespace,
+					Name:      heatName.Name + "-cfnapi",
+				}, heatCfnAPI)).To(Succeed())
+				heatCfnAPI.Status.ObservedGeneration = heatCfnAPI.Generation
+				heatCfnAPI.Status.ReadyCount = 1
+				heatCfnAPI.Status.Conditions.MarkTrue(condition.ReadyCondition, condition.ReadyMessage)
+				g.Expect(k8sClient.Status().Update(ctx, heatCfnAPI)).To(Succeed())
+
+				h := GetHeat(heatName)
+				if h.Annotations == nil {
+					h.Annotations = map[string]string{}
+				}
+				h.Annotations["test-reconcile-trigger"] = fmt.Sprintf("%d", time.Now().UnixNano())
+				g.Expect(k8sClient.Update(ctx, h)).To(Succeed())
+			}, 10*time.Second, interval).Should(Succeed())
+
+			// The old secret's finalizer MUST be held (HeatEngine not ready)
+			Consistently(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      oldSecretName,
+				})
+				g.Expect(secret.Finalizers).To(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, timeout, interval).Should(Succeed())
+
+			// Now simulate all sub-CRs ready including HeatEngine
+			Eventually(func(g Gomega) {
+				for _, depName := range []string{"heat-api", "heat-cfnapi", "heat-engine"} {
+					th.SimulateDeploymentReplicaReady(types.NamespacedName{
+						Namespace: namespace,
+						Name:      depName,
+					})
+				}
+				simulateHeatSubCRReady(g, heatName)
+				h := GetHeat(heatName)
+				if h.Annotations == nil {
+					h.Annotations = map[string]string{}
+				}
+				h.Annotations["test-reconcile-trigger"] = fmt.Sprintf("%d", time.Now().UnixNano())
+				g.Expect(k8sClient.Update(ctx, h)).To(Succeed())
+			}, 10*time.Second, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
+				secret := th.GetSecret(types.NamespacedName{
+					Namespace: namespace,
+					Name:      oldSecretName,
+				})
+				g.Expect(secret.Finalizers).NotTo(
+					ContainElement(heat.TransportConsumerFinalizer))
+			}, 10*time.Second, interval).Should(Succeed())
+		})
+	})
+
 	When("ApplicationCredential consumer finalizer is managed", func() {
 		var (
 			acSecretName          string
@@ -1369,19 +1679,20 @@ var _ = Describe("Heat controller", func() {
 			mariaDBDatabase := mariadb.GetMariaDBDatabase(mariaDBDatabaseName)
 			DeferCleanup(k8sClient.Delete, ctx, mariaDBDatabase)
 
-			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
 			DeferCleanup(
 				mariadb.DeleteDBService,
 				mariadb.CreateDBService(
 					namespace,
-					GetHeat(heatName).Spec.DatabaseInstance,
+					"openstack",
 					corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 3306}},
 					},
 				),
 			)
-			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
-			infra.SimulateMemcachedReady(memcachedName)
+
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
 
 			infra.SimulateTransportURLReady(heatTransportURLName)
 			mariadb.SimulateMariaDBAccountCompleted(heatDatabase)
@@ -1453,26 +1764,29 @@ var _ = Describe("Heat controller", func() {
 			}, timeout, interval).Should(Succeed())
 
 			Eventually(func(g Gomega) {
+				for _, depName := range []string{"heat-api", "heat-cfnapi", "heat-engine"} {
+					th.SimulateDeploymentReplicaReady(types.NamespacedName{
+						Namespace: namespace,
+						Name:      depName,
+					})
+				}
 				simulateHeatSubCRReady(g, heatName)
-				th.SimulateDeploymentReplicaReady(types.NamespacedName{
-					Namespace: namespace,
-					Name:      "heat-api",
-				})
-				th.SimulateDeploymentReplicaReady(types.NamespacedName{
-					Namespace: namespace,
-					Name:      "heat-cfnapi",
-				})
-				th.SimulateDeploymentReplicaReady(types.NamespacedName{
-					Namespace: namespace,
-					Name:      "heat-engine",
-				})
+				h := GetHeat(heatName)
+				if h.Annotations == nil {
+					h.Annotations = map[string]string{}
+				}
+				h.Annotations["test-reconcile-trigger"] = fmt.Sprintf("%d", time.Now().UnixNano())
+				g.Expect(k8sClient.Update(ctx, h)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			Eventually(func(g Gomega) {
 				secret := th.GetSecret(types.NamespacedName{
 					Namespace: namespace,
 					Name:      acSecretName,
 				})
 				g.Expect(secret.Finalizers).NotTo(
 					ContainElement(heat.ACConsumerFinalizer))
-			}, timeout, interval).Should(Succeed())
+			}, 10*time.Second, interval).Should(Succeed())
 
 			Eventually(func(g Gomega) {
 				h := GetHeat(heatName)
