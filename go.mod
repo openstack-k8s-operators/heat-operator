@@ -13,11 +13,11 @@ require (
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
 	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260820165931-18e54edd62e6
 	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20260819172128-3fb418138f26
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260818072803-e18950de3098
-	github.com/openstack-k8s-operators/lib-common/modules/users v0.0.0-20260818072803-e18950de3098
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260824142420-113dc64ecfd4
+	github.com/openstack-k8s-operators/lib-common/modules/users v0.0.0-20260824142420-113dc64ecfd4
 	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260819100335-e5e0d9345b7e
 	k8s.io/api v0.33.13
 	k8s.io/apimachinery v0.33.13
