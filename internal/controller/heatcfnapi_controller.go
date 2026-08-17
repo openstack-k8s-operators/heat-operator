@@ -62,8 +62,9 @@ import (
 // HeatCfnAPIReconciler reconciles a Heat object
 type HeatCfnAPIReconciler struct {
 	client.Client
-	Scheme  *runtime.Scheme
-	Kclient kubernetes.Interface
+	APIReader client.Reader
+	Scheme    *runtime.Scheme
+	Kclient   kubernetes.Interface
 }
 
 // GetLogger returns a logger object with a prefix of "controller.name" and additional controller context fields
@@ -877,20 +878,30 @@ func (r *HeatCfnAPIReconciler) reconcileNormal(ctx context.Context, instance *he
 			condition.DeploymentReadyRunningMessage))
 		return ctrlResult, nil
 	}
+	// Read expected hash from annotation set by parent
+	expectedHash := ""
+	if ann := instance.GetAnnotations(); ann != nil {
+		expectedHash = ann["openstack.org/input-secret-hash"]
+	}
+
 	// Update the ReadyCount and evaluate the readiness only when the last
 	// ObservedGeneration is seen
 	deploy := depl.GetDeployment()
 	if deploy.Generation == deploy.Status.ObservedGeneration {
 		instance.Status.ReadyCount = deploy.Status.ReadyReplicas
 
-		// Mark the Deployment as Ready only if the number of Replicas is equals
-		// to the Deployed instances (ReadyCount), and the the Status.Replicas
-		// match Status.ReadyReplicas. If a deployment update is in progress,
-		// Replicas > ReadyReplicas.
-		// In addition, make sure the controller sees the last Generation
-		// by comparing it with the ObservedGeneration.
+		ready := false
 		if deployment.IsReady(deploy) {
+			ready, err = deployment.IsReadyForInput(ctx, r.APIReader,
+				types.NamespacedName{Name: deploy.Name, Namespace: deploy.Namespace},
+				inputHash)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+		}
+		if ready {
 			instance.Status.Conditions.MarkTrue(condition.DeploymentReadyCondition, condition.DeploymentReadyMessage)
+			instance.Status.AppliedInputSecretHash = expectedHash
 		} else {
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.DeploymentReadyCondition,

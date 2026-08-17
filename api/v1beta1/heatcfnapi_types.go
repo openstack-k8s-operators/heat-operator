@@ -93,6 +93,10 @@ type HeatCfnAPIStatus struct {
 
 	// LastAppliedTopology - the last applied Topology
 	LastAppliedTopology *topologyv1.TopoRef `json:"lastAppliedTopology,omitempty"`
+
+	// AppliedInputSecretHash - hash of the input secrets that the child has
+	// confirmed it is running with (set after IsReadyForInput succeeds)
+	AppliedInputSecretHash string `json:"appliedInputSecretHash,omitempty"`
 }
 
 //+kubebuilder:object:root=true
