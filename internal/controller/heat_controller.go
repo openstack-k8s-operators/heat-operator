@@ -27,6 +27,7 @@ import (
 	"github.com/openstack-k8s-operators/lib-common/modules/common/endpoint"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/env"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/job"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/object"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	"github.com/openstack-k8s-operators/lib-common/modules/common/tls"
 
@@ -78,8 +79,9 @@ var (
 // HeatReconciler reconciles a Heat object
 type HeatReconciler struct {
 	client.Client
-	Kclient kubernetes.Interface
-	Scheme  *runtime.Scheme
+	APIReader client.Reader
+	Kclient   kubernetes.Interface
+	Scheme    *runtime.Scheme
 }
 
 // GetLogger returns a logger object with a prefix of "controller.name" and additional controller context fields
@@ -472,8 +474,39 @@ func (r *HeatReconciler) reconcileDelete(ctx context.Context, instance *heatv1be
 		instance.Status.ApplicationCredentialSecret,
 		instance.Spec.Auth.ApplicationCredentialSecret,
 	} {
-		if err := keystonev1.RemoveACSecretConsumerFinalizer(ctx, helper, instance.Namespace,
+		if err := object.RemoveSecretConsumerFinalizer(ctx, helper, instance.Namespace,
 			secretName, heat.ACConsumerFinalizer); err != nil {
+			return ctrl.Result{}, err
+		}
+	}
+
+	// Remove consumer finalizer from transport secrets Heat was consuming.
+	// Check both status and the TransportURL CR to handle the edge case where
+	// the reconciler crashed after adding the finalizer but before updating
+	// the status.
+	transportSecretNames := []string{
+		instance.Status.TransportURLSecret,
+		instance.Status.NotificationsTransportURLSecret,
+	}
+	for _, tuName := range []string{
+		fmt.Sprintf("%s-heat-transport", instance.Name),
+		fmt.Sprintf("%s-heat-notifications-transport", instance.Name),
+	} {
+		tu := &rabbitmqv1.TransportURL{}
+		if err := helper.GetClient().Get(ctx, types.NamespacedName{
+			Name:      tuName,
+			Namespace: instance.Namespace,
+		}, tu); err != nil {
+			if !k8s_errors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+		} else {
+			transportSecretNames = append(transportSecretNames, tu.Status.SecretName)
+		}
+	}
+	for _, secretName := range transportSecretNames {
+		if err := object.RemoveSecretConsumerFinalizer(ctx, helper, instance.Namespace,
+			secretName, heat.TransportConsumerFinalizer); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -645,9 +678,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		Log.Info(fmt.Sprintf("TransportURL %s successfully reconciled - operation: %s", transportURL.Name, string(op)))
 	}
 
-	instance.Status.TransportURLSecret = transportURL.Status.SecretName
-
-	if instance.Status.TransportURLSecret == "" {
+	if transportURL.Status.SecretName == "" {
 		Log.Info(fmt.Sprintf("Waiting for TransportURL %s secret to be created", transportURL.Name))
 
 		instance.Status.Conditions.Set(condition.FalseCondition(
@@ -657,6 +688,19 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.RabbitMqTransportURLReadyRunningMessage))
 
 		return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+	}
+
+	// Set status early for first-time setup so PatchInstance persists it
+	// even on early returns. During rotation (old != current), the status
+	// is only updated by FinalizeSecretRotation at end of reconcile.
+	if instance.Status.TransportURLSecret == "" ||
+		instance.Status.TransportURLSecret == transportURL.Status.SecretName {
+		instance.Status.TransportURLSecret = transportURL.Status.SecretName
+	}
+
+	if err := object.ManageSecretConsumerFinalizer(ctx, helper, instance.Namespace,
+		transportURL.Status.SecretName, heat.TransportConsumerFinalizer); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	//
@@ -672,7 +716,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		ctx,
 		types.NamespacedName{
 			Namespace: instance.Namespace,
-			Name:      instance.Status.TransportURLSecret,
+			Name:      transportURL.Status.SecretName,
 		},
 		transportValidateFields,
 		helper.GetClient(),
@@ -686,7 +730,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrlResult, err
 	} else if (ctrlResult != ctrl.Result{}) {
-		Log.Info(fmt.Sprintf("TransportURL secret %s not found", instance.Status.TransportURLSecret))
+		Log.Info(fmt.Sprintf("TransportURL secret %s not found", transportURL.Status.SecretName))
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.RabbitMqTransportURLReadyCondition,
 			condition.RequestedReason,
@@ -694,7 +738,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			condition.RabbitMqTransportURLReadyRunningMessage))
 		return ctrlResult, err
 	}
-	secretVars[instance.Status.TransportURLSecret] = env.SetValue(hash)
+	secretVars[transportURL.Status.SecretName] = env.SetValue(hash)
 	// run check TransportURL secret - end
 
 	instance.Status.Conditions.MarkTrue(condition.RabbitMqTransportURLReadyCondition, condition.RabbitMqTransportURLReadyMessage)
@@ -702,8 +746,10 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	//
 	// create notifications RabbitMQ transportURL if NotificationsBus is configured
 	//
+	var notificationsTransportURL *rabbitmqv1.TransportURL
 	if instance.Spec.NotificationsBus != nil && instance.Spec.NotificationsBus.Cluster != "" {
-		notificationsTransportURL, notifOp, err := r.notificationsTransportURLCreateOrUpdate(
+		var notifOp controllerutil.OperationResult
+		notificationsTransportURL, notifOp, err = r.notificationsTransportURLCreateOrUpdate(
 			instance,
 			serviceLabels,
 			*instance.Spec.NotificationsBus,
@@ -722,9 +768,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			Log.Info(fmt.Sprintf("Notifications TransportURL %s successfully reconciled - operation: %s", notificationsTransportURL.Name, string(notifOp)))
 		}
 
-		instance.Status.NotificationsTransportURLSecret = notificationsTransportURL.Status.SecretName
-
-		if instance.Status.NotificationsTransportURLSecret == "" {
+		if notificationsTransportURL.Status.SecretName == "" {
 			Log.Info(fmt.Sprintf("Waiting for Notifications TransportURL %s secret to be created", notificationsTransportURL.Name))
 
 			instance.Status.Conditions.Set(condition.FalseCondition(
@@ -734,6 +778,19 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 				condition.NotificationBusInstanceReadyRunningMessage))
 
 			return ctrl.Result{RequeueAfter: time.Second * 10}, nil
+		}
+
+		// Set status early for first-time setup so PatchInstance persists it
+		// even on early returns. During rotation (old != current), the status
+		// is only updated by FinalizeSecretRotation at end of reconcile.
+		if instance.Status.NotificationsTransportURLSecret == "" ||
+			instance.Status.NotificationsTransportURLSecret == notificationsTransportURL.Status.SecretName {
+			instance.Status.NotificationsTransportURLSecret = notificationsTransportURL.Status.SecretName
+		}
+
+		if err := object.ManageSecretConsumerFinalizer(ctx, helper, instance.Namespace,
+			notificationsTransportURL.Status.SecretName, heat.TransportConsumerFinalizer); err != nil {
+			return ctrl.Result{}, err
 		}
 
 		//
@@ -749,7 +806,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			ctx,
 			types.NamespacedName{
 				Namespace: instance.Namespace,
-				Name:      instance.Status.NotificationsTransportURLSecret,
+				Name:      notificationsTransportURL.Status.SecretName,
 			},
 			transportValidateFields,
 			helper.GetClient(),
@@ -764,7 +821,7 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 				err.Error()))
 			return ctrlResult, err
 		} else if (ctrlResult != ctrl.Result{}) {
-			Log.Info(fmt.Sprintf("TransportURL secret %s not found", instance.Status.TransportURLSecret))
+			Log.Info(fmt.Sprintf("TransportURL secret %s not found", notificationsTransportURL.Status.SecretName))
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.NotificationBusInstanceReadyCondition,
 				condition.RequestedReason,
@@ -772,12 +829,17 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 				condition.NotificationBusInstanceReadyRunningMessage))
 			return ctrlResult, err
 		}
-		secretVars[instance.Status.NotificationsTransportURLSecret] = env.SetValue(hash)
+		secretVars[notificationsTransportURL.Status.SecretName] = env.SetValue(hash)
 		instance.Status.Conditions.MarkTrue(condition.NotificationBusInstanceReadyCondition, condition.NotificationBusInstanceReadyMessage)
 	} else {
-		// No notifications bus configured, mark as not required and clear status
-		instance.Status.NotificationsTransportURLSecret = ""
-		instance.Status.Conditions.MarkTrue(condition.NotificationBusInstanceReadyCondition, "NotificationsBus not configured")
+		// Notifications bus disabled. Config regenerated below no longer
+		// references the notifications transport URL, so its input hash
+		// changes and the Deployment rolls. Defer teardown of the
+		// TransportURL and its consumer finalizer until that rollout is
+		// complete (allServicesReady at end of reconcile), otherwise the
+		// RabbitMQ user backing the secret would be revoked while pods still
+		// use it.
+		instance.Status.Conditions.Remove(condition.NotificationBusInstanceReadyCondition)
 	}
 
 	db, result, err := r.ensureDB(ctx, helper, instance)
@@ -796,7 +858,11 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// - %-config secret holding minimal heat config required to get the service up, user can add additional files to be added to the service
 	// - parameters which has passwords gets added from the OpenStack secret via the init container
 	//
-	err = r.generateServiceSecrets(ctx, instance, helper, &secretVars, memcached, db)
+	notificationsTransportURLSecretName := ""
+	if notificationsTransportURL != nil {
+		notificationsTransportURLSecretName = notificationsTransportURL.Status.SecretName
+	}
+	err = r.generateServiceSecrets(ctx, instance, helper, &secretVars, memcached, db, transportURL.Status.SecretName, notificationsTransportURLSecretName)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			condition.ServiceConfigReadyCondition,
@@ -824,9 +890,8 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	// The old secret's finalizer is removed later (after all services deploy)
 	// so that rapid rotations don't revoke a credential still in use by pods.
 	if instance.Spec.Auth.ApplicationCredentialSecret != "" {
-		if err := keystonev1.ManageACSecretFinalizer(ctx, helper, instance.Namespace,
+		if err := object.ManageSecretConsumerFinalizer(ctx, helper, instance.Namespace,
 			instance.Spec.Auth.ApplicationCredentialSecret,
-			"",
 			heat.ACConsumerFinalizer); err != nil {
 			instance.Status.Conditions.Set(condition.FalseCondition(
 				condition.ServiceConfigReadyCondition,
@@ -924,8 +989,21 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 	}
 	instance.Status.Conditions.MarkTrue(heatv1beta1.HeatStackDomainReadyCondition, heatv1beta1.HeatStackDomainReadyMessage)
 
+	// Compute expectedInputHash from all rotating secret names
+	secretNames := []string{transportURL.Status.SecretName}
+	if notificationsTransportURL != nil {
+		secretNames = append(secretNames, notificationsTransportURL.Status.SecretName)
+	}
+	if instance.Spec.Auth.ApplicationCredentialSecret != "" {
+		secretNames = append(secretNames, instance.Spec.Auth.ApplicationCredentialSecret)
+	}
+	expectedInputHash, err := util.ObjectHash(secretNames)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to compute expected input hash: %w", err)
+	}
+
 	// deploy heat-engine
-	heatEngine, op, err := r.engineDeploymentCreateOrUpdate(ctx, instance, memcached)
+	heatEngine, engineOp, err := r.engineDeploymentCreateOrUpdate(ctx, instance, memcached, transportURL.Status.SecretName, expectedInputHash)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatEngineReadyCondition,
@@ -935,41 +1013,25 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
-	// Check the observed Generation and mirror the condition from the
-	// underlying resource reconciliation
-	ngObsGen, err := r.checkHeatEngineGeneration(ctx, instance)
-	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			heatv1beta1.HeatEngineReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			"%s", err.Error()))
-		return ctrl.Result{}, err
-	}
-	// Only mirror the underlying condition if the observedGeneration is
-	// the last seen
-	if !ngObsGen {
-		instance.Status.Conditions.Set(condition.UnknownCondition(
-			heatv1beta1.HeatEngineReadyCondition,
-			condition.InitReason,
-			heatv1beta1.HeatEngineReadyInitMessage,
-		))
-	} else {
-		// Mirror HeatEngine status' ReadyCount to this parent CR
+	if heatEngine.Generation == heatEngine.Status.ObservedGeneration &&
+		heatEngine.Status.AppliedInputSecretHash == expectedInputHash {
 		instance.Status.HeatEngineReadyCount = heatEngine.Status.ReadyCount
-
-		// Mirror HeatEngine's condition status
 		c := heatEngine.Status.Conditions.Mirror(heatv1beta1.HeatEngineReadyCondition)
 		if c != nil {
 			instance.Status.Conditions.Set(c)
 		}
-		if op != controllerutil.OperationResultNone {
-			Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		if engineOp != controllerutil.OperationResultNone {
+			Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(engineOp)))
 		}
+	} else {
+		instance.Status.Conditions.Set(condition.UnknownCondition(
+			heatv1beta1.HeatEngineReadyCondition,
+			condition.RequestedReason,
+			condition.DeploymentReadyRunningMessage))
 	}
 
 	// deploy heat-api
-	heatAPI, op, err := r.apiDeploymentCreateOrUpdate(ctx, instance, memcached)
+	heatAPI, apiOp, err := r.apiDeploymentCreateOrUpdate(ctx, instance, memcached, transportURL.Status.SecretName, expectedInputHash)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatAPIReadyCondition,
@@ -980,43 +1042,25 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		return ctrl.Result{}, err
 	}
 
-	// Check the observed Generation and mirror the condition from the
-	// underlying resource reconciliation
-	apiObsGen, err := r.checkHeatAPIGeneration(ctx, instance)
-	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			heatv1beta1.HeatAPIReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			heatv1beta1.HeatAPIReadyErrorMessage,
-			err.Error()))
-		return ctrl.Result{}, err
-	}
-	// Only mirror the underlying condition if the observedGeneration is
-	// the last seen
-	if !apiObsGen {
-		instance.Status.Conditions.Set(condition.UnknownCondition(
-			heatv1beta1.HeatAPIReadyCondition,
-			condition.InitReason,
-			heatv1beta1.HeatAPIReadyInitMessage,
-		))
-	} else {
-		// Mirror HeatAPI status' ReadyCount to this parent CR
+	if heatAPI.Generation == heatAPI.Status.ObservedGeneration &&
+		heatAPI.Status.AppliedInputSecretHash == expectedInputHash {
 		instance.Status.HeatAPIReadyCount = heatAPI.Status.ReadyCount
-
-		// Mirror HeatAPI's condition status
 		c := heatAPI.Status.Conditions.Mirror(heatv1beta1.HeatAPIReadyCondition)
 		if c != nil {
 			instance.Status.Conditions.Set(c)
 		}
-
-		if op != controllerutil.OperationResultNone {
-			Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
+		if apiOp != controllerutil.OperationResultNone {
+			Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(apiOp)))
 		}
+	} else {
+		instance.Status.Conditions.Set(condition.UnknownCondition(
+			heatv1beta1.HeatAPIReadyCondition,
+			condition.RequestedReason,
+			condition.DeploymentReadyRunningMessage))
 	}
 
 	// deploy heat-api-cfn
-	heatCfnAPI, op, err := r.cfnapiDeploymentCreateOrUpdate(ctx, instance, memcached)
+	heatCfnAPI, cfnOp, err := r.cfnapiDeploymentCreateOrUpdate(ctx, instance, memcached, transportURL.Status.SecretName, expectedInputHash)
 	if err != nil {
 		instance.Status.Conditions.Set(condition.FalseCondition(
 			heatv1beta1.HeatCfnAPIReadyCondition,
@@ -1026,56 +1070,45 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 			err.Error()))
 		return ctrl.Result{}, err
 	}
-	// Check the observed Generation and mirror the condition from the
-	// underlying resource reconciliation
-	cfnObsGen, err := r.checkHeatCfnGeneration(ctx, instance)
-	if err != nil {
-		instance.Status.Conditions.Set(condition.FalseCondition(
-			heatv1beta1.HeatCfnAPIReadyCondition,
-			condition.ErrorReason,
-			condition.SeverityWarning,
-			heatv1beta1.HeatAPIReadyErrorMessage,
-			err.Error()))
-		return ctrl.Result{}, err
-	}
-	// Only mirror the underlying condition if the observedGeneration is
-	// the last seen
-	if !cfnObsGen {
-		instance.Status.Conditions.Set(condition.UnknownCondition(
-			heatv1beta1.HeatCfnAPIReadyCondition,
-			condition.InitReason,
-			heatv1beta1.HeatCfnAPIReadyInitMessage,
-		))
-	} else {
-		// Mirror HeatCfnAPI status' ReadyCount to this parent CR
+
+	if heatCfnAPI.Generation == heatCfnAPI.Status.ObservedGeneration &&
+		heatCfnAPI.Status.AppliedInputSecretHash == expectedInputHash {
 		instance.Status.HeatCfnAPIReadyCount = heatCfnAPI.Status.ReadyCount
-		// Mirror HeatCfnAPI's condition status
 		c := heatCfnAPI.Status.Conditions.Mirror(heatv1beta1.HeatCfnAPIReadyCondition)
 		if c != nil {
 			instance.Status.Conditions.Set(c)
 		}
-		if op != controllerutil.OperationResultNone {
-			Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(op)))
-		}
-	}
-	// Manage the old AC secret's finalizer and status tracking.
-	// On rotation (old != new), only remove the old secret's finalizer after
-	// all sub-services are ready with the new credentials. This prevents
-	// premature revocation during rapid rotations.
-	isRotation := instance.Status.ApplicationCredentialSecret != "" && instance.Status.ApplicationCredentialSecret != instance.Spec.Auth.ApplicationCredentialSecret
-
-	if isRotation {
-		allServicesReady := instance.Status.Conditions.AllSubConditionIsTrue()
-		if allServicesReady {
-			if err := keystonev1.RemoveACSecretConsumerFinalizer(ctx, helper, instance.Namespace,
-				instance.Status.ApplicationCredentialSecret, heat.ACConsumerFinalizer); err != nil {
-				return ctrl.Result{}, err
-			}
-			instance.Status.ApplicationCredentialSecret = instance.Spec.Auth.ApplicationCredentialSecret
+		if cfnOp != controllerutil.OperationResultNone {
+			Log.Info(fmt.Sprintf("Deployment %s successfully reconciled - operation: %s", instance.Name, string(cfnOp)))
 		}
 	} else {
-		instance.Status.ApplicationCredentialSecret = instance.Spec.Auth.ApplicationCredentialSecret
+		instance.Status.Conditions.Set(condition.UnknownCondition(
+			heatv1beta1.HeatCfnAPIReadyCondition,
+			condition.RequestedReason,
+			condition.DeploymentReadyRunningMessage))
 	}
+
+	allServicesReady := heatEngine.Generation == heatEngine.Status.ObservedGeneration &&
+		heatEngine.Status.AppliedInputSecretHash == expectedInputHash &&
+		heatEngine.IsReady() &&
+		heatAPI.Generation == heatAPI.Status.ObservedGeneration &&
+		heatAPI.Status.AppliedInputSecretHash == expectedInputHash &&
+		heatAPI.IsReady() &&
+		heatCfnAPI.Generation == heatCfnAPI.Status.ObservedGeneration &&
+		heatCfnAPI.Status.AppliedInputSecretHash == expectedInputHash &&
+		heatCfnAPI.IsReady()
+
+	acSecretName, err := object.FinalizeSecretRotation(
+		ctx, helper, instance.Namespace,
+		instance.Status.ApplicationCredentialSecret,
+		instance.Spec.Auth.ApplicationCredentialSecret,
+		heat.ACConsumerFinalizer,
+		allServicesReady,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	instance.Status.ApplicationCredentialSecret = acSecretName
 
 	// We reached the end of the Reconcile, update the Ready condition based on
 	// the sub conditions
@@ -1083,6 +1116,73 @@ func (r *HeatReconciler) reconcileNormal(ctx context.Context, instance *heatv1be
 		instance.Status.Conditions.MarkTrue(
 			condition.ReadyCondition, condition.ReadyMessage)
 	}
+
+	// Finalize transport URL rotation
+	transportSecretName, err := object.FinalizeSecretRotation(
+		ctx, helper, instance.Namespace,
+		instance.Status.TransportURLSecret,
+		transportURL.Status.SecretName,
+		heat.TransportConsumerFinalizer,
+		allServicesReady,
+	)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	instance.Status.TransportURLSecret = transportSecretName
+
+	if notificationsTransportURL != nil {
+		notifSecretName, err := object.FinalizeSecretRotation(
+			ctx, helper, instance.Namespace,
+			instance.Status.NotificationsTransportURLSecret,
+			notificationsTransportURL.Status.SecretName,
+			heat.TransportConsumerFinalizer,
+			allServicesReady,
+		)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		instance.Status.NotificationsTransportURLSecret = notifSecretName
+	} else if instance.Status.NotificationsTransportURLSecret != "" && allServicesReady {
+		// Notifications bus disabled and the Deployment has rolled out a
+		// config that no longer references it: now it is safe to release the
+		// consumer finalizer and delete the notifications TransportURL.
+		if err := object.RemoveSecretConsumerFinalizer(ctx, helper, instance.Namespace,
+			instance.Status.NotificationsTransportURLSecret, heat.TransportConsumerFinalizer); err != nil {
+			return ctrl.Result{}, err
+		}
+		notificationsTransportURLName := fmt.Sprintf("%s-heat-notifications-transport", instance.Name)
+		if err := r.transportURLDeleted(ctx, instance, notificationsTransportURLName); err != nil {
+			Log.Error(err, fmt.Sprintf("Could not delete notification TransportURL %s", notificationsTransportURLName))
+			return ctrl.Result{}, err
+		}
+		instance.Status.NotificationsTransportURLSecret = ""
+	}
+
+	// Self-heal consumer finalizers stranded on secrets superseded during
+	// rapid rotation (A -> B -> C before the workload became ready):
+	// FinalizeSecretRotation only ever releases the single tracked "old"
+	// secret, so any intermediate secret's finalizer would otherwise leak.
+	// keep enumerates every secret that legitimately still holds the
+	// finalizer; all others in the namespace are pruned.
+	currentNotifKeep := ""
+	if notificationsTransportURL != nil {
+		currentNotifKeep = notificationsTransportURL.Status.SecretName
+	}
+	if err := object.PruneSecretConsumerFinalizers(
+		ctx, helper, instance.Namespace, heat.TransportConsumerFinalizer,
+		instance.Status.TransportURLSecret, transportURL.Status.SecretName,
+		instance.Status.NotificationsTransportURLSecret, currentNotifKeep,
+	); err != nil {
+		return ctrl.Result{}, err
+	}
+	if err := object.PruneSecretConsumerFinalizers(
+		ctx, helper, instance.Namespace, heat.ACConsumerFinalizer,
+		instance.Status.ApplicationCredentialSecret,
+		instance.Spec.Auth.ApplicationCredentialSecret,
+	); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	Log.Info("Reconciled Heat successfully")
 
 	return ctrl.Result{}, nil
@@ -1160,12 +1260,14 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 	memcached *memcachedv1.Memcached,
+	transportURLSecret string,
+	expectedInputHash string,
 ) (*heatv1beta1.HeatAPI, controllerutil.OperationResult, error) {
 	heatAPISpec := heatv1beta1.HeatAPISpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatAPITemplate:    instance.Spec.HeatAPI,
 		DatabaseHostname:   instance.Status.DatabaseHostname,
-		TransportURLSecret: instance.Status.TransportURLSecret,
+		TransportURLSecret: transportURLSecret,
 		ServiceAccount:     instance.RbacResourceName(),
 	}
 
@@ -1186,14 +1288,19 @@ func (r *HeatReconciler) apiDeploymentCreateOrUpdate(
 		heatAPISpec.TopologyRef = instance.Spec.TopologyRef
 	}
 
-	// If memcached is not present in the underlying HeatAPI Spec,
-	// inherit from the top-level CR (only when MTLS is in use)
 	if memcached.GetMemcachedMTLSSecret() != "" {
 		heatAPISpec.MemcachedInstance = &instance.Spec.MemcachedInstance
 	}
 
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		if heatAPISpec.MemcachedInstance == nil {
+			heatAPISpec.MemcachedInstance = deployment.Spec.MemcachedInstance
+		}
 		deployment.Spec = heatAPISpec
+		if deployment.Annotations == nil {
+			deployment.Annotations = map[string]string{}
+		}
+		deployment.Annotations["openstack.org/input-secret-hash"] = expectedInputHash
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
@@ -1204,12 +1311,14 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 	memcached *memcachedv1.Memcached,
+	transportURLSecret string,
+	expectedInputHash string,
 ) (*heatv1beta1.HeatCfnAPI, controllerutil.OperationResult, error) {
 	heatCfnAPISpec := heatv1beta1.HeatCfnAPISpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatCfnAPITemplate: instance.Spec.HeatCfnAPI,
 		DatabaseHostname:   instance.Status.DatabaseHostname,
-		TransportURLSecret: instance.Status.TransportURLSecret,
+		TransportURLSecret: transportURLSecret,
 		ServiceAccount:     instance.RbacResourceName(),
 	}
 
@@ -1223,8 +1332,6 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 		heatCfnAPISpec.TopologyRef = instance.Spec.TopologyRef
 	}
 
-	// If memcached is not present in the underlying HeatCnfAPI Spec,
-	// inherit from the top-level CR (only when MTLS is in use)
 	if memcached.GetMemcachedMTLSSecret() != "" {
 		heatCfnAPISpec.MemcachedInstance = &instance.Spec.MemcachedInstance
 	}
@@ -1237,7 +1344,14 @@ func (r *HeatReconciler) cfnapiDeploymentCreateOrUpdate(
 	}
 
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		if heatCfnAPISpec.MemcachedInstance == nil {
+			heatCfnAPISpec.MemcachedInstance = deployment.Spec.MemcachedInstance
+		}
 		deployment.Spec = heatCfnAPISpec
+		if deployment.Annotations == nil {
+			deployment.Annotations = map[string]string{}
+		}
+		deployment.Annotations["openstack.org/input-secret-hash"] = expectedInputHash
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
@@ -1248,12 +1362,14 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 	ctx context.Context,
 	instance *heatv1beta1.Heat,
 	memcached *memcachedv1.Memcached,
+	transportURLSecret string,
+	expectedInputHash string,
 ) (*heatv1beta1.HeatEngine, controllerutil.OperationResult, error) {
 	heatEngineSpec := heatv1beta1.HeatEngineSpec{
 		HeatTemplate:       instance.Spec.HeatTemplate,
 		HeatEngineTemplate: instance.Spec.HeatEngine,
 		DatabaseHostname:   instance.Status.DatabaseHostname,
-		TransportURLSecret: instance.Status.TransportURLSecret,
+		TransportURLSecret: transportURLSecret,
 		ServiceAccount:     instance.RbacResourceName(),
 		TLS:                instance.Spec.HeatAPI.TLS.Ca,
 	}
@@ -1268,8 +1384,6 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 		heatEngineSpec.TopologyRef = instance.Spec.TopologyRef
 	}
 
-	// If memcached is not present in the underlying HeatEngineSpec,
-	// inherit from the top-level CR (only when MTLS is in use)
 	if memcached.GetMemcachedMTLSSecret() != "" {
 		heatEngineSpec.MemcachedInstance = &instance.Spec.MemcachedInstance
 	}
@@ -1282,7 +1396,14 @@ func (r *HeatReconciler) engineDeploymentCreateOrUpdate(
 	}
 
 	op, err := controllerutil.CreateOrUpdate(ctx, r.Client, deployment, func() error {
+		if heatEngineSpec.MemcachedInstance == nil {
+			heatEngineSpec.MemcachedInstance = deployment.Spec.MemcachedInstance
+		}
 		deployment.Spec = heatEngineSpec
+		if deployment.Annotations == nil {
+			deployment.Annotations = map[string]string{}
+		}
+		deployment.Annotations["openstack.org/input-secret-hash"] = expectedInputHash
 		return controllerutil.SetControllerReference(instance, deployment, r.Scheme)
 	})
 
@@ -1297,6 +1418,8 @@ func (r *HeatReconciler) generateServiceSecrets(
 	envVars *map[string]env.Setter,
 	mc *memcachedv1.Memcached,
 	db *mariadbv1.Database,
+	transportURLSecretName string,
+	notificationsTransportURLSecretName string,
 ) error {
 	//
 	// create Secret required for heat input
@@ -1359,7 +1482,7 @@ func (r *HeatReconciler) generateServiceSecrets(
 		return err
 	}
 
-	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.TransportURLSecret, instance.Namespace)
+	transportURLSecret, _, err := oko_secret.GetSecret(ctx, h, transportURLSecretName, instance.Namespace)
 	if err != nil {
 		return err
 	}
@@ -1368,8 +1491,8 @@ func (r *HeatReconciler) generateServiceSecrets(
 
 	// Get notifications transport URL if configured
 	var notificationsTransportURL string
-	if instance.Status.NotificationsTransportURLSecret != "" {
-		notificationsTransportURLSecret, _, err := oko_secret.GetSecret(ctx, h, instance.Status.NotificationsTransportURLSecret, instance.Namespace)
+	if notificationsTransportURLSecretName != "" {
+		notificationsTransportURLSecret, _, err := oko_secret.GetSecret(ctx, h, notificationsTransportURLSecretName, instance.Namespace)
 		if err != nil {
 			return err
 		}
@@ -1515,6 +1638,35 @@ func (r *HeatReconciler) notificationsTransportURLCreateOrUpdate(
 	})
 
 	return transportURL, op, err
+}
+
+// transportURLDeleted deletes the named TransportURL CR, treating an
+// already-absent object as success.
+func (r *HeatReconciler) transportURLDeleted(
+	ctx context.Context,
+	instance *heatv1beta1.Heat,
+	transportURLName string,
+) error {
+	Log := r.GetLogger(ctx)
+	transportURL := &rabbitmqv1.TransportURL{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      transportURLName,
+			Namespace: instance.Namespace,
+		},
+	}
+
+	err := r.Delete(ctx, transportURL)
+	if err != nil {
+		if k8s_errors.IsNotFound(err) {
+			return nil
+		}
+		Log.Info(fmt.Sprintf("Could not delete TransportURL %s err: %s", transportURLName, err))
+		return err
+	}
+
+	Log.Info("Deleted transportURL", ":", transportURLName)
+
+	return nil
 }
 
 // ensureStackDomain creates the OpenStack domain for Heat stacks. It then assigns the user to the Heat stacks domain.
@@ -1673,72 +1825,6 @@ func (r *HeatReconciler) ensureDB(
 	instance.Status.DatabaseHostname = db.GetDatabaseHostname()
 	instance.Status.Conditions.MarkTrue(condition.DBReadyCondition, condition.DBReadyMessage)
 	return db, ctrlResult, nil
-}
-
-// checkHeatAPIGeneration -
-func (r *HeatReconciler) checkHeatAPIGeneration(
-	ctx context.Context,
-	instance *heatv1beta1.Heat,
-) (bool, error) {
-	Log := r.GetLogger(ctx)
-	api := &heatv1beta1.HeatAPIList{}
-	listOpts := []client.ListOption{
-		client.InNamespace(instance.Namespace),
-	}
-	if err := r.List(context.Background(), api, listOpts...); err != nil {
-		Log.Error(err, "Unable to retrieve HeatAPI CR %w")
-		return false, err
-	}
-	for _, item := range api.Items {
-		if item.Generation != item.Status.ObservedGeneration {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
-// checkHeatEngineGeneration -
-func (r *HeatReconciler) checkHeatEngineGeneration(
-	ctx context.Context,
-	instance *heatv1beta1.Heat,
-) (bool, error) {
-	Log := r.GetLogger(ctx)
-	ng := &heatv1beta1.HeatEngineList{}
-	listOpts := []client.ListOption{
-		client.InNamespace(instance.Namespace),
-	}
-	if err := r.List(context.Background(), ng, listOpts...); err != nil {
-		Log.Error(err, "Unable to retrieve HeatEngine CR %w")
-		return false, err
-	}
-	for _, item := range ng.Items {
-		if item.Generation != item.Status.ObservedGeneration {
-			return false, nil
-		}
-	}
-	return true, nil
-}
-
-// checkHeatCfnGeneration -
-func (r *HeatReconciler) checkHeatCfnGeneration(
-	ctx context.Context,
-	instance *heatv1beta1.Heat,
-) (bool, error) {
-	Log := r.GetLogger(ctx)
-	cf := &heatv1beta1.HeatCfnAPIList{}
-	listOpts := []client.ListOption{
-		client.InNamespace(instance.Namespace),
-	}
-	if err := r.List(context.Background(), cf, listOpts...); err != nil {
-		Log.Error(err, "Unable to retrieve HeatCfnApi CR %w")
-		return false, err
-	}
-	for _, item := range cf.Items {
-		if item.Generation != item.Status.ObservedGeneration {
-			return false, nil
-		}
-	}
-	return true, nil
 }
 
 // verifyStatusConditions - Check to see if we have existing conditions.
