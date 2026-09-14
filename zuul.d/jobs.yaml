@@ -1,13 +1,33 @@
 ---
 - job:
-    name: heat-operator-tempest-multinode
-    parent: podified-multinode-edpm-deployment-crc
-    dependencies: ["openstack-k8s-operators-content-provider"]
+    name: heat-s2i-content-provider
+    parent: s2i-openstack-container-content-provider
+    description: |
+      Build s2i heat service images for heat-s2i-tempest.
+    required-projects:
+      - name: openstack-k8s-operators/s2i-openstack-containers
+        override-checkout: main
     vars:
+      s2i_ci_images:
+        - heat/heat-api
+        - heat/heat-engine
+
+- job:
+    name: heat-s2i-test
+    parent: s2i-test-base
+    description: |
+      Validate speculatively-built s2i heat images against a live
+      OpenStack deployment. s2i-built images from the content provider
+      are applied to OpenStackVersion during edpm_prepare via ci-framework
+      set_containers before the control plane is deployed.
+    required-projects:
+      - name: openstack-k8s-operators/s2i-openstack-containers
+        override-checkout: main
+    vars: &heat_cifmw_test_operator_vars
+      change_item: "{{ zuul['items'] | selectattr('project.canonical_name', 'equalto', external_plugin) }}"
       cifmw_extras:
         - "@scenarios/centos-9/multinode-ci.yml"
         - "@{{ ansible_user_dir }}/{{ zuul.projects['github.com/openstack-k8s-operators/heat-operator'].src_dir }}/ci/tempest/ci_fw_vars.yaml"
-      cifmw_run_test_role: test_operator
       cifmw_test_operator_tempest_concurrency: 4
       cifmw_test_operator_timeout: 7200
       cifmw_test_operator_tempest_network_attachments:
@@ -20,7 +40,6 @@
       cifmw_test_operator_tempest_tempestconf_config:
         overrides: |
             compute-feature-enabled.vnc_console true
-            validation.run_validation true
             identity.v3_endpoint_type public
             identity.v2_admin_endpoint_type public
       cifmw_test_operator_tempest_include_list: |
@@ -62,6 +81,9 @@
         heat_tempest_plugin.tests.scenario.test_server_software_config
         heat_tempest_plugin.tests.scenario.test_volumes
         heat_tempest_plugin.tests.scenario.test_server_cfn_init
-      external_plugin: "opendev.org/openstack/heat-tempest-plugin"
-      change_item: "{{ zuul['items'] | selectattr('project.canonical_name', 'equalto', external_plugin) }}"
-      cifmw_test_operator_tempest_external_plugin: "{{ [] if change_item | length < 1 else [ { 'repository': 'https://' + external_plugin + '.git', 'changeRepository': 'https://review' + external_plugin, 'changeRefspec': [ 'refs/changes', change_item[0].change[-2:], change_item[0].change, change_item[0].patchset ] | join('/') } ] }}"
+
+- job:
+    name: heat-operator-tempest-multinode
+    parent: podified-multinode-edpm-deployment-crc
+    dependencies: ["openstack-k8s-operators-content-provider"]
+    vars: *heat_cifmw_test_operator_vars
