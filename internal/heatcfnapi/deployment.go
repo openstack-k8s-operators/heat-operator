@@ -77,6 +77,12 @@ func Deployment(
 			SubPath:   "ssl.conf",
 			ReadOnly:  true,
 		},
+		corev1.VolumeMount{
+			Name:      "config-data",
+			MountPath: "/opt/heat/heat-cfnapi.wsgi",
+			SubPath:   "heat-cfnapi.wsgi",
+			ReadOnly:  true,
+		},
 		volume.WritableDirVolumeMount(volume.RunHttpdVolumeName, volume.RunHttpdMountPath),
 	)
 
