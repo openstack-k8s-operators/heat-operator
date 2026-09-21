@@ -360,6 +360,8 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring(fmt.Sprintf("heat-api-public.%s.svc", heatName.Namespace)))
 			Expect(string(cm.Data["heat-cfnapi-httpd.conf"])).To(
 				ContainSubstring(fmt.Sprintf("heat-cfnapi-public.%s.svc", heatName.Namespace)))
+			Expect(cm.Data).To(HaveKey("heat-api.wsgi"))
+			Expect(cm.Data).To(HaveKey("heat-cfnapi.wsgi"))
 		})
 
 		It("updates the KeystoneAuthURL if keystone internal endpoint changes", func() {
