@@ -33,11 +33,9 @@ const (
 	DeploymentHash = "deployment"
 
 	// HeatAPIContainerImage - default fall-back container image for HeatAPI if associated env var not provided
-	HeatAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
-	// HeatCfnAPIContainerImage - default fall-back container image for HeatCfnAPI if associated env var not provided
-	HeatCfnAPIContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
+	HeatAPIContainerImage = "quay.io/openstack-s2i-containers/openstack-heat-api:master-latest"
 	// HeatEngineContainerImage - default fall-back container image for HeatEngine if associated env var not provided
-	HeatEngineContainerImage = "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
+	HeatEngineContainerImage = "quay.io/openstack-s2i-containers/openstack-heat-engine:master-latest"
 	// HeatDatabaseMigrationAnnotation - Allows users to bypass the webhook validations for changes to databaseInstance
 	HeatDatabaseMigrationAnnotation = "heat.openstack.org/database-migration"
 )
@@ -263,8 +261,9 @@ func (instance Heat) StatusConditionsList() condition.Conditions {
 func SetupDefaults() {
 	// Acquire environmental defaults and initialize Heat defaults with them
 	heatDefaults := HeatDefaults{
-		APIContainerImageURL:    util.GetEnvVar("RELATED_IMAGE_HEAT_API_IMAGE_URL_DEFAULT", HeatAPIContainerImage),
-		CfnAPIContainerImageURL: util.GetEnvVar("RELATED_IMAGE_HEAT_CFNAPI_IMAGE_URL_DEFAULT", HeatCfnAPIContainerImage),
+		APIContainerImageURL: util.GetEnvVar("RELATED_IMAGE_HEAT_API_IMAGE_URL_DEFAULT", HeatAPIContainerImage),
+		// the s2i heat-api image also serves the CFN API; no separate related image
+		CfnAPIContainerImageURL: util.GetEnvVar("RELATED_IMAGE_HEAT_API_IMAGE_URL_DEFAULT", HeatAPIContainerImage),
 		EngineContainerImageURL: util.GetEnvVar("RELATED_IMAGE_HEAT_ENGINE_IMAGE_URL_DEFAULT", HeatEngineContainerImage),
 		DBPurgeAge:              DBPurgeDefaultAge,
 		DBPurgeSchedule:         DBPurgeDefaultSchedule,
