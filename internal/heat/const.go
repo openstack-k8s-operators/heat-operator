@@ -89,6 +89,10 @@ const (
 
 	// ACConsumerFinalizer is added to AC secrets that heat is actively consuming
 	ACConsumerFinalizer = "openstack.org/heat-ac-consumer"
+
+	// TransportConsumerFinalizer is added to transport secrets that heat is
+	// actively consuming, preventing premature deletion during credential rotation
+	TransportConsumerFinalizer = "openstack.org/heat-transport-consumer"
 )
 
 // DbsyncPropagation keeps track of the DBSync Service Propagation Type
