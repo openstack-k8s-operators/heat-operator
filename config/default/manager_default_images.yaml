@@ -12,8 +12,6 @@ spec:
       - name: manager
         env:
         - name: RELATED_IMAGE_HEAT_API_IMAGE_URL_DEFAULT
-          value: quay.io/podified-antelope-centos9/openstack-heat-api:current-podified
-        - name: RELATED_IMAGE_HEAT_CFNAPI_IMAGE_URL_DEFAULT
-          value: quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified
+          value: quay.io/openstack-s2i-containers/openstack-heat-api:master-latest
         - name: RELATED_IMAGE_HEAT_ENGINE_IMAGE_URL_DEFAULT
-          value: quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified
+          value: quay.io/openstack-s2i-containers/openstack-heat-engine:master-latest
