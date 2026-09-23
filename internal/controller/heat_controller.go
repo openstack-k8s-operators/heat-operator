@@ -1938,6 +1938,10 @@ func initTemplateParameters(
 		"QuorumQueues":             quorumQueues,
 	}
 
+	if region := keystoneAPI.GetRegion(); region != "" {
+		params["Region"] = region
+	}
+
 	// Add notifications transport URL if configured
 	if notificationsTransportURL != "" {
 		params["NotificationsTransportURL"] = notificationsTransportURL
