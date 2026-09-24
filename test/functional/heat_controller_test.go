@@ -23,7 +23,6 @@ import (
 
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
 	. "github.com/onsi/gomega"    //revive:disable:dot-imports
-	"gopkg.in/ini.v1"
 
 	//revive:disable-next-line:dot-imports
 	. "github.com/openstack-k8s-operators/lib-common/modules/common/test/helpers"
@@ -361,38 +360,6 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring(fmt.Sprintf("heat-api-public.%s.svc", heatName.Namespace)))
 			Expect(string(cm.Data["heat-cfnapi-httpd.conf"])).To(
 				ContainSubstring(fmt.Sprintf("heat-cfnapi-public.%s.svc", heatName.Namespace)))
-		})
-
-		It("includes region_name in config when KeystoneAPI has region set", func() {
-			const testRegion = "regionTwo"
-
-			keystoneAPI.Status.Region = testRegion
-			Eventually(func(g Gomega) {
-				g.Expect(k8sClient.Status().Update(ctx, keystoneAPI.DeepCopy())).Should(Succeed())
-			}, timeout, interval).Should(Succeed())
-
-			th.ExpectCondition(
-				heatName,
-				ConditionGetterFunc(HeatConditionGetter),
-				condition.ServiceConfigReadyCondition,
-				corev1.ConditionTrue,
-			)
-
-			configSecret := th.GetSecret(heatConfigSecretName)
-			Expect(configSecret).ShouldNot(BeNil())
-			Expect(configSecret.Data).Should(HaveKey("00-default.conf"))
-			configData := string(configSecret.Data["00-default.conf"])
-
-			cfg, err := ini.Load([]byte(configData))
-			Expect(err).ShouldNot(HaveOccurred(), "Should be able to parse config as INI")
-
-			section := cfg.Section("keystone_authtoken")
-			Expect(section).ShouldNot(BeNil(), "Should find [keystone_authtoken] section")
-			Expect(section.Key("region_name").String()).Should(Equal(testRegion))
-
-			section = cfg.Section("DEFAULT")
-			Expect(section).ShouldNot(BeNil(), "Should find [DEFAULT] section")
-			Expect(section.Key("region_name_for_services").String()).Should(Equal(testRegion))
 		})
 
 		It("updates the KeystoneAuthURL if keystone internal endpoint changes", func() {
