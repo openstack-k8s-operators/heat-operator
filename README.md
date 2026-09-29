@@ -21,17 +21,17 @@ spec:
   databaseInstance: openstack
   databaseUser: "heat"
   heatAPI:
-    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api:current-podified"
+    containerImage: "quay.io/openstack-s2i-containers/openstack-heat-api:master-latest"
     customServiceConfig: ""
     replicas: 1
     resources: {}
   heatCfnAPI:
-    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-api-cfn:current-podified"
+    containerImage: "quay.io/openstack-s2i-containers/openstack-heat-api:master-latest"
     customServiceConfig: ""
     replicas: 1
     resources: {}
   heatEngine:
-    containerImage: "quay.io/podified-antelope-centos9/openstack-heat-engine:current-podified"
+    containerImage: "quay.io/openstack-s2i-containers/openstack-heat-engine:master-latest"
     customServiceConfig: ""
     replicas: 1
     resources: {}

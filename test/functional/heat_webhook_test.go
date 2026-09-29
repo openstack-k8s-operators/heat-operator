@@ -54,7 +54,7 @@ var _ = Describe("Heat Webhook", func() {
 				heatv1.HeatAPIContainerImage,
 			))
 			Expect(Heat.Spec.HeatCfnAPI.ContainerImage).Should(Equal(
-				heatv1.HeatCfnAPIContainerImage,
+				heatv1.HeatAPIContainerImage,
 			))
 			Expect(Heat.Spec.HeatEngine.ContainerImage).Should(Equal(
 				heatv1.HeatEngineContainerImage,
