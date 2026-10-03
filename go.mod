@@ -9,16 +9,16 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/gophercloud/gophercloud/v2 v2.15.0
 	github.com/onsi/ginkgo/v2 v2.33.0
-	github.com/onsi/gomega v1.43.1
+	github.com/onsi/gomega v1.44.0
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260925065725-a3d821586430
-	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20260925130913-9892d25ed116
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20260919144046-f1cdd9f36e9f
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20260919144046-f1cdd9f36e9f
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20260919144046-f1cdd9f36e9f
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20260919144046-f1cdd9f36e9f
-	github.com/openstack-k8s-operators/lib-common/modules/users v0.0.0-20260919144046-f1cdd9f36e9f
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260924081326-89faa188a667
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20261001070904-483eb4bd4368
+	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20260927135033-6de27ac9b0b2
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20261001122809-0e19abbc9e47
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20261001122809-0e19abbc9e47
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20261001122809-0e19abbc9e47
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20261001122809-0e19abbc9e47
+	github.com/openstack-k8s-operators/lib-common/modules/users v0.0.0-20261001122809-0e19abbc9e47
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260927135032-f0eb46b149d8
 	gopkg.in/ini.v1 v1.67.0
 	k8s.io/api v0.33.13
 	k8s.io/apimachinery v0.33.13
