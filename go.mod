@@ -11,13 +11,13 @@ require (
 	github.com/onsi/ginkgo/v2 v2.33.0
 	github.com/onsi/gomega v1.43.1
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20260926150258-9cd367ff24e6
-	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20260928065532-e36f0fa878c4
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20261003073849-a5ea1d9f8445
+	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20261003111705-9b442003e6a4
 	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20261001134834-c55d623872db
 	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20261001134834-c55d623872db
 	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20261001134834-c55d623872db
 	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20261001134834-c55d623872db
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20260928063856-4961d441f19e
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20261003073850-052fb7265dd7
 	gopkg.in/ini.v1 v1.67.3
 	k8s.io/api v0.33.13
 	k8s.io/apimachinery v0.33.13
