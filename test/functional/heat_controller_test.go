@@ -349,10 +349,19 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring("backend = dogpile.cache.memcached"))
 			Expect(heatCfg).Should(
 				ContainSubstring(fmt.Sprintf("memcache_servers = %s", memcacheInstance.GetMemcachedServerListWithInetString())))
+			// [keystone_authtoken] uses the inet-prefixed plain listener list
+			// when memcached has no TLS support
 			Expect(heatCfg).Should(
-				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListString())))
+				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListWithInetString())))
 			Expect(heatCfg).Should(
 				ContainSubstring("tls_enabled=false"))
+			// without TLS no memcache TLS settings should be rendered for
+			// [keystone_authtoken], otherwise oslo.cache would try (or silently
+			// ignore) TLS against a plaintext server
+			Expect(heatCfg).ShouldNot(ContainSubstring("memcache_tls_enabled = true"))
+			Expect(heatCfg).ShouldNot(ContainSubstring("memcache_tls_certfile"))
+			Expect(heatCfg).ShouldNot(ContainSubstring("memcache_tls_keyfile"))
+			Expect(heatCfg).ShouldNot(ContainSubstring("memcache_tls_cafile"))
 			Expect(heatCfg).Should(
 				ContainSubstring("stack_domain_admin_password=12345678"))
 			Expect(string(cm.Data["my.cnf"])).To(
@@ -631,8 +640,68 @@ var _ = Describe("Heat controller", func() {
 				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListString())))
 			Expect(heatCfg).Should(
 				ContainSubstring("tls_enabled=true"))
+			// [keystone_authtoken] enables memcache TLS whenever memcached has
+			// TLS support (base TLS), regardless of MTLS
+			Expect(heatCfg).Should(
+				ContainSubstring("memcache_tls_enabled = true"))
 			Expect(string(cm.Data["my.cnf"])).To(
 				ContainSubstring("[client]\nssl-ca=/etc/pki/ca-trust/extracted/pem/tls-ca-bundle.pem\nssl=1"))
+		})
+	})
+
+	When("heatAPI is configured with MTLS memcached", func() {
+		BeforeEach(func() {
+			spec := GetDefaultHeatSpec()
+			heatAPI := GetDefaultHeatAPISpec()
+			heatAPI["tls"] = map[string]any{ //nolint:gosec
+				"caBundleSecretName": "combined-ca-bundle",
+			}
+			spec["heatAPI"] = heatAPI
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMTLSMemcached(namespace, "memcached", memcachedSpec))
+			// memcached instance supports TLS and MTLS auth
+			infra.SimulateMTLSMemcachedReady(memcachedName)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			keystoneAPIName := keystone.CreateKeystoneAPI(namespace)
+			keystoneAPI = keystone.GetKeystoneAPI(keystoneAPIName)
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					GetHeat(heatName).Spec.DatabaseInstance,
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			// db supports tls
+			mariadb.SimulateMariaDBTLSDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+		})
+
+		It("renders the MTLS cert settings in [keystone_authtoken]", func() {
+			cm := th.GetSecret(heatConfigSecretName)
+
+			memcacheInstance := infra.GetMemcached(memcachedName)
+			heatCfg := string(cm.Data["00-default.conf"])
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcached_servers=%s", memcacheInstance.GetMemcachedServerListString())))
+			Expect(heatCfg).Should(
+				ContainSubstring("tls_enabled=true"))
+			Expect(heatCfg).Should(
+				ContainSubstring("memcache_tls_enabled = true"))
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcache_tls_certfile = %s", memcachedv1.CertMountPath())))
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcache_tls_keyfile = %s", memcachedv1.KeyMountPath())))
+			Expect(heatCfg).Should(
+				ContainSubstring(fmt.Sprintf("memcache_tls_cafile = %s", memcachedv1.CaMountPath())))
 		})
 	})
 
