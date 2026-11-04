@@ -118,9 +118,14 @@ func Deployment(
 						{
 							Name: heat.ServiceName + "-" + heat.CfnAPIComponent,
 							Command: []string{
-								"/usr/sbin/httpd",
+								"/usr/bin/dumb-init",
 							},
-							Args:            []string{"-DFOREGROUND"},
+							Args: []string{
+								"--single-child",
+								"--",
+								"/usr/sbin/httpd",
+								"-DFOREGROUND",
+							},
 							Image:           instance.Spec.ContainerImage,
 							SecurityContext: pod.RestrictiveSecurityContext(users.HeatUID, users.HeatGID),
 							Env:             env.MergeEnvs([]corev1.EnvVar{}, envVars),

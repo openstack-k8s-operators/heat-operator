@@ -1502,6 +1502,25 @@ var _ = Describe("Heat controller", func() {
 			th.SimulateJobSuccess(heatDbSyncName)
 		})
 
+		It("should wrap all service commands with dumb-init", func() {
+			for _, service := range []struct {
+				name string
+				args []string
+			}{
+				{"heat-api", []string{"--single-child", "--", "/usr/sbin/httpd", "-DFOREGROUND"}},
+				{"heat-cfnapi", []string{"--single-child", "--", "/usr/sbin/httpd", "-DFOREGROUND"}},
+				{"heat-engine", []string{"--single-child", "--", "/usr/bin/heat-engine", "--config-dir", "/etc/heat/heat.conf.d"}},
+			} {
+				Eventually(func(g Gomega) {
+					deployment := th.GetDeployment(types.NamespacedName{Namespace: namespace, Name: service.name})
+					g.Expect(deployment.Spec.Template.Spec.Containers).NotTo(BeEmpty())
+					container := deployment.Spec.Template.Spec.Containers[0]
+					g.Expect(container.Command).To(Equal([]string{"/usr/bin/dumb-init"}))
+					g.Expect(container.Args).To(Equal(service.args))
+				}, timeout, interval).Should(Succeed(), service.name)
+			}
+		})
+
 		It("should add the consumer finalizer to the transport secret", func() {
 			Eventually(func(g Gomega) {
 				secret := th.GetSecret(types.NamespacedName{

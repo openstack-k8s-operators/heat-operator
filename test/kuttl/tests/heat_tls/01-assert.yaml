@@ -87,8 +87,11 @@ spec:
     spec:
       containers:
       - command:
-        - /usr/sbin/httpd
+        - /usr/bin/dumb-init
         args:
+        - --single-child
+        - --
+        - /usr/sbin/httpd
         - -DFOREGROUND
         volumeMounts:
         - mountPath: /etc/heat/heat.conf.d
@@ -166,8 +169,11 @@ spec:
     spec:
       containers:
       - command:
-        - /usr/sbin/httpd
+        - /usr/bin/dumb-init
         args:
+        - --single-child
+        - --
+        - /usr/sbin/httpd
         - -DFOREGROUND
         volumeMounts:
         - mountPath: /etc/heat/heat.conf.d
@@ -245,6 +251,10 @@ spec:
     spec:
       containers:
       - command:
+        - /usr/bin/dumb-init
+        args:
+        - --single-child
+        - --
         - /usr/bin/heat-engine
         - --config-dir
         - /etc/heat/heat.conf.d
