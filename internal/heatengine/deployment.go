@@ -92,6 +92,11 @@ func Deployment(instance *heatv1beta1.HeatEngine, configHash string, labels map[
 						{
 							Name: fmt.Sprintf("%s-%s", heat.ServiceName, heat.EngineComponent),
 							Command: []string{
+								"/usr/bin/dumb-init",
+							},
+							Args: []string{
+								"--single-child",
+								"--",
 								"/usr/bin/heat-engine",
 								"--config-dir", "/etc/heat/heat.conf.d",
 							},
