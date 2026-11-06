@@ -298,4 +298,74 @@ var _ = Describe("Heat Webhook", func() {
 			return component, fmt.Sprintf("%s.topologyRef", component)
 		}),
 	)
+
+	for _, api := range []string{"heatAPI", "heatCfnAPI"} {
+		for _, endpoint := range []string{"public", "internal"} {
+			createWithOverride := func(override map[string]any) error {
+				spec := GetDefaultHeatSpec()
+				spec[api] = map[string]any{
+					"override": map[string]any{
+						"service": map[string]any{endpoint: override},
+					},
+				}
+				obj := &unstructured.Unstructured{Object: map[string]any{
+					"apiVersion": "heat.openstack.org/v1beta1",
+					"kind":       "Heat",
+					"metadata":   map[string]any{"name": heatName.Name, "namespace": heatName.Namespace},
+					"spec":       spec,
+				}}
+				_, err := controllerutil.CreateOrPatch(
+					th.Ctx, th.K8sClient, obj, func() error { return nil })
+				if err == nil {
+					DeferCleanup(th.DeleteInstance, GetHeat(heatName))
+				}
+				return err
+			}
+			ports := func(name string, port int) map[string]any {
+				return map[string]any{"ports": []any{map[string]any{"name": name, "port": port}}}
+			}
+
+			It("accepts the bare port name on "+api+" "+endpoint, func() {
+				Expect(createWithOverride(map[string]any{"spec": ports(endpoint, 8004)})).To(Succeed())
+			})
+
+			It("rejects a wrong port name on "+api+" "+endpoint, func() {
+				err := createWithOverride(map[string]any{"spec": ports("heat-"+endpoint, 8004)})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("must be \"" + endpoint + "\""))
+			})
+
+			It("accepts an FQDN endpointURL on "+api+" "+endpoint, func() {
+				Expect(createWithOverride(map[string]any{"endpointURL": "https://heat.example.com:8004"})).To(Succeed())
+			})
+
+			It("accepts a ports[].port matching the endpointURL port on "+api+" "+endpoint, func() {
+				Expect(createWithOverride(map[string]any{
+					"endpointURL": "https://heat.example.com:8443",
+					"spec":        ports(endpoint, 8443),
+				})).To(Succeed())
+			})
+
+			It("rejects a ports[].port differing from the endpointURL port on "+api+" "+endpoint, func() {
+				err := createWithOverride(map[string]any{
+					"endpointURL": "https://heat.example.com:8443",
+					"spec":        ports(endpoint, 8004),
+				})
+				Expect(err).To(HaveOccurred())
+				Expect(err.Error()).To(ContainSubstring("must match the port in endpointURL"))
+			})
+
+			for name, url := range map[string]string{
+				"a bare short name":  "https://heat",
+				"a missing scheme":   "heat.example.com:8004",
+				"an IP literal host": "https://192.168.1.10:8004",
+			} {
+				It("rejects "+name+" as endpointURL on "+api+" "+endpoint, func() {
+					err := createWithOverride(map[string]any{"endpointURL": url})
+					Expect(err).To(HaveOccurred())
+					Expect(err.Error()).To(ContainSubstring("endpointURL"))
+				})
+			}
+		}
+	}
 })
