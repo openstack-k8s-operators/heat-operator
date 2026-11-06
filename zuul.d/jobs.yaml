@@ -23,67 +23,71 @@
     required-projects:
       - name: openstack-k8s-operators/s2i-openstack-containers
         override-checkout: main
-    vars: &heat_cifmw_test_operator_vars
-      change_item: "{{ zuul['items'] | selectattr('project.canonical_name', 'equalto', external_plugin) }}"
-      cifmw_extras:
+    vars:
+      heat_cifmw_test_operator_vars: &heat_cifmw_test_operator_vars
+        change_item: "{{ zuul['items'] | selectattr('project.canonical_name', 'equalto', external_plugin) }}"
+        cifmw_test_operator_tempest_concurrency: 4
+        cifmw_test_operator_timeout: 7200
+        cifmw_test_operator_tempest_network_attachments:
+          - ctlplane
+        # This value is used to populate the `tempestconfRun` parameter of the Tempest CR: https://openstack-k8s-operators.github.io/test-operator/crds.html#tempest-custom-resource
+        # https://github.com/openstack-k8s-operators/ci-framework/blob/main/roles/test_operator/defaults/main.yml
+        # NOTE(gibi): identity.v3_endpoint_type override is a WA to force the
+        # publicURL as otherwise tempest gets configured with adminURL and that
+        # causes test instability.
+        cifmw_test_operator_tempest_tempestconf_config:
+          overrides: |
+              compute-feature-enabled.vnc_console true
+              identity.v3_endpoint_type public
+              identity.v2_admin_endpoint_type public
+        cifmw_test_operator_tempest_include_list: |
+          heat_tempest_plugin.*
+          heat_integrationtests.*
+        cifmw_test_operator_tempest_exclude_list: |
+          heat_tempest_plugin.tests.functional.test_os_wait_condition.OSWaitCondition.test_create_stack_with_multi_signal_waitcondition
+          heat_tempest_plugin.tests.scenario.test_server_cfn_init.CfnInitIntegrationTest.test_server_cfn_init
+          heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
+          heat_tempest_plugin.tests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
+          heat_tempest_plugin.tests.scenario.test_server_software_config.SoftwareConfigIntegrationTest.test_server_software_config
+          heat_tempest_plugin.tests.scenario.test_octavia_lbaas.LoadBalancerTest
+          heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
+          heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_raw
+          heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_software_config
+          heat_tempest_plugin.tests.functional.test_software_config.ParallelDeploymentsTest.test_deployments_metadata
+          heat_integrationtests.functional.test_aws_stack
+          heat_integrationtests.functional.test_cancel_update.CancelUpdateTest.test_cancel_update_server_with_port
+          heat_integrationtests.functional.test_reload_on_sighup
+          heat_integrationtests.functional.test_resource_group.ResourceGroupAdoptTest.test_adopt
+          heat_integrationtests.functional.test_software_config.ZaqarSignalTransportTest.test_signal_queues
+          heat_integrationtests.functional.test_waitcondition.ZaqarWaitConditionTest
+          heat_integrationtests.functional.test_event_sinks.ZaqarEventSinkTest.test_events
+          heat_integrationtests.functional.test_stack_tags.StackTagTest.test_hidden_stack
+          heat_integrationtests.functional.test_template_resource.TemplateResourceAdoptTest
+          heat_integrationtests.functional.test_purge.PurgeTest.test_purge
+          heat_integrationtests.functional.test_notifications.NotificationTest
+          heat_integrationtests.functional.test_os_wait_condition.OSWaitCondition
+          heat_integrationtests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
+          heat_integrationtests.scenario.test_server_software_config
+          heat_integrationtests.scenario.test_volumes
+          heat_integrationtests.scenario.test_server_cfn_init
+          heat_tempest_plugin.tests.functional.test_aws_stack
+          heat_tempest_plugin.tests.functional.test_software_config.ZaqarSignalTransportTest.test_signal_queues
+          heat_tempest_plugin.tests.functional.test_waitcondition.ZaqarWaitConditionTest
+          heat_tempest_plugin.tests.functional.test_event_sinks.ZaqarEventSinkTest.test_events
+          heat_tempest_plugin.tests.functional.test_os_wait_condition.OSWaitCondition
+          heat_tempest_plugin.tests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
+          heat_tempest_plugin.tests.scenario.test_server_software_config
+          heat_tempest_plugin.tests.scenario.test_volumes
+          heat_tempest_plugin.tests.scenario.test_server_cfn_init
+      s2i_extras: &heat_extras
         - "@scenarios/centos-9/multinode-ci.yml"
         - "@{{ ansible_user_dir }}/{{ zuul.projects['github.com/openstack-k8s-operators/heat-operator'].src_dir }}/ci/tempest/ci_fw_vars.yaml"
-      cifmw_test_operator_tempest_concurrency: 4
-      cifmw_test_operator_timeout: 7200
-      cifmw_test_operator_tempest_network_attachments:
-        - ctlplane
-      # This value is used to populate the `tempestconfRun` parameter of the Tempest CR: https://openstack-k8s-operators.github.io/test-operator/crds.html#tempest-custom-resource
-      # https://github.com/openstack-k8s-operators/ci-framework/blob/main/roles/test_operator/defaults/main.yml
-      # NOTE(gibi): identity.v3_endpoint_type override is a WA to force the
-      # publicURL as otherwise tempest gets configured with adminURL and that
-      # causes test instability.
-      cifmw_test_operator_tempest_tempestconf_config:
-        overrides: |
-            compute-feature-enabled.vnc_console true
-            identity.v3_endpoint_type public
-            identity.v2_admin_endpoint_type public
-      cifmw_test_operator_tempest_include_list: |
-        heat_tempest_plugin.*
-        heat_integrationtests.*
-      cifmw_test_operator_tempest_exclude_list: |
-        heat_tempest_plugin.tests.functional.test_os_wait_condition.OSWaitCondition.test_create_stack_with_multi_signal_waitcondition
-        heat_tempest_plugin.tests.scenario.test_server_cfn_init.CfnInitIntegrationTest.test_server_cfn_init
-        heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
-        heat_tempest_plugin.tests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
-        heat_tempest_plugin.tests.scenario.test_server_software_config.SoftwareConfigIntegrationTest.test_server_software_config
-        heat_tempest_plugin.tests.scenario.test_octavia_lbaas.LoadBalancerTest
-        heat_tempest_plugin.tests.scenario.test_aodh_alarm.AodhAlarmTest.test_alarm
-        heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_raw
-        heat_tempest_plugin.tests.scenario.test_server_signal.ServerSignalIntegrationTest.test_server_signal_userdata_format_software_config
-        heat_tempest_plugin.tests.functional.test_software_config.ParallelDeploymentsTest.test_deployments_metadata
-        heat_integrationtests.functional.test_aws_stack
-        heat_integrationtests.functional.test_cancel_update.CancelUpdateTest.test_cancel_update_server_with_port
-        heat_integrationtests.functional.test_reload_on_sighup
-        heat_integrationtests.functional.test_resource_group.ResourceGroupAdoptTest.test_adopt
-        heat_integrationtests.functional.test_software_config.ZaqarSignalTransportTest.test_signal_queues
-        heat_integrationtests.functional.test_waitcondition.ZaqarWaitConditionTest
-        heat_integrationtests.functional.test_event_sinks.ZaqarEventSinkTest.test_events
-        heat_integrationtests.functional.test_stack_tags.StackTagTest.test_hidden_stack
-        heat_integrationtests.functional.test_template_resource.TemplateResourceAdoptTest
-        heat_integrationtests.functional.test_purge.PurgeTest.test_purge
-        heat_integrationtests.functional.test_notifications.NotificationTest
-        heat_integrationtests.functional.test_os_wait_condition.OSWaitCondition
-        heat_integrationtests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
-        heat_integrationtests.scenario.test_server_software_config
-        heat_integrationtests.scenario.test_volumes
-        heat_integrationtests.scenario.test_server_cfn_init
-        heat_tempest_plugin.tests.functional.test_aws_stack
-        heat_tempest_plugin.tests.functional.test_software_config.ZaqarSignalTransportTest.test_signal_queues
-        heat_tempest_plugin.tests.functional.test_waitcondition.ZaqarWaitConditionTest
-        heat_tempest_plugin.tests.functional.test_event_sinks.ZaqarEventSinkTest.test_events
-        heat_tempest_plugin.tests.functional.test_os_wait_condition.OSWaitCondition
-        heat_tempest_plugin.tests.scenario.test_base_resources.BasicResourcesTest.test_base_resources_integration
-        heat_tempest_plugin.tests.scenario.test_server_software_config
-        heat_tempest_plugin.tests.scenario.test_volumes
-        heat_tempest_plugin.tests.scenario.test_server_cfn_init
+      <<: *heat_cifmw_test_operator_vars
 
 - job:
     name: heat-operator-tempest-multinode
     parent: podified-multinode-edpm-deployment-crc
     dependencies: ["openstack-k8s-operators-content-provider"]
-    vars: *heat_cifmw_test_operator_vars
+    vars:
+      cifmw_extras: *heat_extras
+      <<: *heat_cifmw_test_operator_vars
