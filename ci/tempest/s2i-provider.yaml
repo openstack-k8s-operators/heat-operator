@@ -1,0 +1,25 @@
+---
+- name: Explain published image selection
+  hosts: builder
+  gather_facts: false
+  tasks:
+    - name: Skip image builds without an S2I dependency
+      when: not heat_s2i_build_required | bool
+      ansible.builtin.debug:
+        msg: No S2I change in the buildset; Heat will use Quay master-latest images.
+
+# import_playbook is resolved on the executor, before play variables exist.
+# Load Zuul's inventory explicitly: hostvars is not available during parsing.
+# from_yaml cannot read Ansible's !unsafe tags. Remove them only from this
+# temporary parsing copy and return only the checkout path, never PR messages
+# or job variables. The actual inventory retains its template protections.
+# Keep this a single expression: older Ansible splits leading set blocks from
+# the filename when parsing import_playbook arguments.
+- name: Build and publish speculative Heat images
+  ansible.builtin.import_playbook: >-
+    {{ ('{0[executor][work_root]}/'
+        '{0[projects][github.com/openstack-k8s-operators/s2i-openstack-containers][src_dir]}/'
+        'playbooks/container-ci/zuul/run.yaml').format(
+          (lookup('ansible.builtin.file', ansible_inventory_sources[0]) |
+           regex_replace('!unsafe(?=\s)', '') | from_yaml)['all']['vars']['zuul']) }}
+  when: heat_s2i_build_required | bool
