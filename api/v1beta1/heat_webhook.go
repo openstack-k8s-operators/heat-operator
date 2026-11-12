@@ -185,9 +185,15 @@ func (r *HeatSpec) ValidateCreate(basePath *field.Path, namespace string) ([]str
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
 		basePath.Child("heatAPI").Child("override").Child("service"),
 		r.HeatAPI.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(
+		basePath.Child("heatAPI").Child("override").Child("service"),
+		r.HeatAPI.Override.Service)...)
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatCfnAPI").Child("override").Child("service"),
+		r.HeatCfnAPI.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(
 		basePath.Child("heatCfnAPI").Child("override").Child("service"),
 		r.HeatCfnAPI.Override.Service)...)
 
@@ -210,9 +216,15 @@ func (r *HeatSpecCore) ValidateCreate(basePath *field.Path, namespace string) ([
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
 		basePath.Child("heatAPI").Child("override").Child("service"),
 		r.HeatAPI.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(
+		basePath.Child("heatAPI").Child("override").Child("service"),
+		r.HeatAPI.Override.Service)...)
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatCfnAPI").Child("override").Child("service"),
+		r.HeatCfnAPI.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(
 		basePath.Child("heatCfnAPI").Child("override").Child("service"),
 		r.HeatCfnAPI.Override.Service)...)
 
@@ -277,9 +289,15 @@ func (r *HeatSpec) ValidateUpdate(old HeatSpec, basePath *field.Path, annotation
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
 		basePath.Child("heatAPI").Child("override").Child("service"),
 		r.HeatAPI.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(
+		basePath.Child("heatAPI").Child("override").Child("service"),
+		r.HeatAPI.Override.Service)...)
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatCfnAPI").Child("override").Child("service"),
+		r.HeatCfnAPI.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(
 		basePath.Child("heatCfnAPI").Child("override").Child("service"),
 		r.HeatCfnAPI.Override.Service)...)
 
@@ -310,9 +328,15 @@ func (r *HeatSpecCore) ValidateUpdate(old HeatSpecCore, basePath *field.Path, na
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
 		basePath.Child("heatAPI").Child("override").Child("service"),
 		r.HeatAPI.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(
+		basePath.Child("heatAPI").Child("override").Child("service"),
+		r.HeatAPI.Override.Service)...)
 
 	// validate the service override key is valid
 	allErrs = append(allErrs, service.ValidateRoutedOverrides(
+		basePath.Child("heatCfnAPI").Child("override").Child("service"),
+		r.HeatCfnAPI.Override.Service)...)
+	allErrs = append(allErrs, validateServicePortNames(
 		basePath.Child("heatCfnAPI").Child("override").Child("service"),
 		r.HeatCfnAPI.Override.Service)...)
 
@@ -417,4 +441,10 @@ func (spec *HeatSpec) ValidateHeatTopology(basePath *field.Path, namespace strin
 		spec.HeatEngine.ValidateTopology(engPath, namespace)...)
 
 	return allErrs
+}
+
+// validateServicePortNames rejects service override ports[].name values that
+// are not the bare endpoint name, and invalid endpointURL/ports[].port values.
+func validateServicePortNames(basePath *field.Path, overrides map[service.Endpoint]service.RoutedOverrideSpec) field.ErrorList {
+	return common_webhook.ValidatePortNameOverrides(basePath, overrides, common_webhook.DefaultServicePortNames())
 }

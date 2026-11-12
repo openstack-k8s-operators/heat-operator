@@ -1533,8 +1533,12 @@ func (r *HeatReconciler) generateServiceSecrets(
 			apiTLSEnabled    = instance.Spec.HeatAPI.TLS.API.Enabled(endpt)
 			cfnAPITLSEnabled = instance.Spec.HeatCfnAPI.TLS.API.Enabled(endpt)
 		)
-		renderVhost(httpdAPIVhostConfig, instance, endpt, heatapi.ServiceName, apiTLSEnabled)
-		renderVhost(httpdCfnAPIVhostConfig, instance, endpt, heatcfnapi.ServiceName, cfnAPITLSEnabled)
+		if err := renderVhost(httpdAPIVhostConfig, instance, endpt, heatapi.ServiceName, apiTLSEnabled, instance.Spec.HeatAPI.Override.Service[endpt]); err != nil {
+			return err
+		}
+		if err := renderVhost(httpdCfnAPIVhostConfig, instance, endpt, heatcfnapi.ServiceName, cfnAPITLSEnabled, instance.Spec.HeatCfnAPI.Override.Service[endpt]); err != nil {
+			return err
+		}
 	}
 
 	// create HeatAPI httpd vhost template parameters
@@ -1950,21 +1954,29 @@ func initTemplateParameters(
 	return params
 }
 
-func renderVhost(httpdVhostConfig map[string]any, instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool) {
+func renderVhost(httpdVhostConfig map[string]any, instance *heatv1beta1.Heat, endpt service.Endpoint, serviceName string, tlsEnabled bool, override service.RoutedOverrideSpec) error {
 	var (
-		ServerNameString = fmt.Sprintf("%s-%s.%s.svc", serviceName, endpt.String(), instance.Namespace)
-		SSLCertFilePath  = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
-		SSLKeyFilePath   = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
+		defaultName     = fmt.Sprintf("%s-%s.%s.svc", serviceName, endpt.String(), instance.Namespace)
+		SSLCertFilePath = fmt.Sprintf("/etc/pki/tls/certs/%s.crt", endpt.String())
+		SSLKeyFilePath  = fmt.Sprintf("/etc/pki/tls/private/%s.key", endpt.String())
 	)
 
+	serverName, serverAliases, err := service.GetVHostServerName(override, defaultName)
+	if err != nil {
+		return err
+	}
+
 	endptConfig := map[string]any{}
-	endptConfig["ServerName"] = ServerNameString
+	endptConfig["ServerName"] = serverName
+	endptConfig["ServerAliases"] = serverAliases
 	endptConfig["TLS"] = tlsEnabled // default TLS to false, and set it bellow to true if enabled
 	if tlsEnabled {
 		endptConfig["SSLCertificateFile"] = SSLCertFilePath
 		endptConfig["SSLCertificateKeyFile"] = SSLKeyFilePath
 	}
 	httpdVhostConfig[endpt.String()] = endptConfig
+
+	return nil
 }
 
 // validateAuthEncryptionKey - the heat_auth_encrption_key needs to be 32 characters long. This function validates

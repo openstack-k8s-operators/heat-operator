@@ -19,6 +19,7 @@ package functional_test
 import (
 	"fmt"
 	"os"
+	"strings"
 	"time"
 
 	. "github.com/onsi/ginkgo/v2" //revive:disable:dot-imports
@@ -41,6 +42,7 @@ import (
 	rabbitmqv1 "github.com/openstack-k8s-operators/infra-operator/apis/rabbitmq/v1beta1"
 	keystonev1 "github.com/openstack-k8s-operators/keystone-operator/api/v1beta1"
 	condition "github.com/openstack-k8s-operators/lib-common/modules/common/condition"
+	"github.com/openstack-k8s-operators/lib-common/modules/common/service"
 	mariadbv1 "github.com/openstack-k8s-operators/mariadb-operator/api/v1beta1"
 )
 
@@ -555,6 +557,190 @@ var _ = Describe("Heat controller", func() {
 				cron := GetCronJob(heatDbPurgeCronJobName)
 				g.Expect(cron.Spec.Schedule).To(Equal(heat.Spec.DBPurge.Schedule))
 			}, timeout, interval).Should(Succeed())
+		})
+	})
+
+	When("Heat service overrides set endpointURL", func() {
+		var lbAnnotation = map[string]any{"metallb.universe.tf/address-pool": "internalapi"}
+
+		BeforeEach(func() {
+			spec := GetDefaultHeatSpec()
+			for _, api := range []struct{ key, host string }{{"heatAPI", "heat"}, {"heatCfnAPI", "heat-cfn"}} {
+				spec[api.key] = map[string]any{
+					"override": map[string]any{
+						"service": map[string]any{
+							"public": map[string]any{
+								"endpointURL": "https://" + api.host + ".example.com",
+								"metadata":    map[string]any{"annotations": lbAnnotation},
+								"spec":        map[string]any{"type": "LoadBalancer"},
+							},
+							"internal": map[string]any{
+								"endpointURL": "https://" + api.host + "-int.example.com",
+								"metadata":    map[string]any{"annotations": lbAnnotation},
+								"spec":        map[string]any{"type": "LoadBalancer"},
+							},
+						},
+					},
+				}
+			}
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatSecret(namespace, SecretName))
+			DeferCleanup(infra.DeleteMemcached, infra.CreateMemcached(namespace, "memcached", memcachedSpec))
+			infra.SimulateMemcachedReady(memcachedName)
+			DeferCleanup(
+				k8sClient.Delete, ctx, CreateHeatMessageBusSecret(namespace, HeatMessageBusSecretName))
+			DeferCleanup(
+				mariadb.DeleteDBService,
+				mariadb.CreateDBService(
+					namespace,
+					"openstack",
+					corev1.ServiceSpec{
+						Ports: []corev1.ServicePort{{Port: 3306}},
+					},
+				),
+			)
+			apiFixture := setupHeatKeystoneFixture(logger)
+			DeferCleanup(apiFixture.Cleanup)
+			keystoneAPIName := keystone.CreateKeystoneAPIWithFixture(namespace, apiFixture)
+			keystone.UpdateKeystoneAPIEndpoint(keystoneAPIName, "internal", apiFixture.Endpoint())
+			DeferCleanup(keystone.DeleteKeystoneAPI, keystoneAPIName)
+			DeferCleanup(th.DeleteInstance, CreateHeat(heatName, spec))
+			infra.SimulateTransportURLReady(heatTransportURLName)
+			mariadb.SimulateMariaDBAccountCompleted(types.NamespacedName{Namespace: namespace, Name: GetHeat(heatName).Spec.DatabaseAccount})
+			mariadb.SimulateMariaDBDatabaseCompleted(types.NamespacedName{Namespace: namespace, Name: heat.DatabaseCRName})
+			th.SimulateJobSuccess(heatDbSyncName)
+			// The controller creates the Services one by one and stops at the first
+			// LoadBalancer without an IP, so give every one an IP as it appears.
+			Eventually(func(g Gomega) {
+				var missing []string
+				for _, svcName := range []string{"heat-api-internal", "heat-cfnapi-internal", "heat-api-public", "heat-cfnapi-public"} {
+					svc := &corev1.Service{}
+					if err := k8sClient.Get(ctx, types.NamespacedName{Namespace: namespace, Name: svcName}, svc); err != nil {
+						missing = append(missing, svcName)
+						continue
+					}
+					if len(svc.Status.LoadBalancer.Ingress) == 0 {
+						svc.Status.LoadBalancer.Ingress = []corev1.LoadBalancerIngress{{IP: "1.1.1.1"}}
+						g.Expect(k8sClient.Status().Update(ctx, svc)).To(Succeed())
+					}
+				}
+				g.Expect(missing).To(BeEmpty())
+			}, 20*time.Second, interval).Should(Succeed())
+			simulateHeatSubServicesReady(heatName)
+		})
+
+		It("renders ServerName/ServerAlias for every API vhost", func() {
+			Eventually(func(g Gomega) {
+				cm := th.GetSecret(heatConfigSecretName)
+				for _, c := range []struct{ file, svc, pub, intl string }{
+					{"heat-api-httpd.conf", "heat-api", "heat.example.com", "heat-int.example.com"},
+					{"heat-cfnapi-httpd.conf", "heat-cfnapi", "heat-cfn.example.com", "heat-cfn-int.example.com"},
+				} {
+					conf := string(cm.Data[c.file])
+					g.Expect(conf).To(ContainSubstring("ServerName " + c.pub))
+					g.Expect(conf).To(ContainSubstring("ServerName " + c.intl))
+					for _, e := range []string{"public", "internal"} {
+						g.Expect(conf).To(ContainSubstring(fmt.Sprintf("ServerAlias %s-%s.%s.svc\n", c.svc, e, namespace)))
+					}
+					// short + cluster FQDN alias per endpoint
+					g.Expect(strings.Count(conf, "ServerAlias")).To(Equal(4))
+				}
+			}, timeout, interval).Should(Succeed())
+		})
+
+		It("names every API Service port bare and keeps the object names", func() {
+			for _, svcName := range []string{"heat-api", "heat-cfnapi"} {
+				for _, endpoint := range []string{"public", "internal"} {
+					Eventually(func(g Gomega) {
+						svc := &corev1.Service{}
+						g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+							Namespace: namespace, Name: svcName + "-" + endpoint}, svc)).To(Succeed())
+						g.Expect(svc.Spec.Ports).To(HaveLen(1))
+						g.Expect(svc.Spec.Ports[0].Name).To(Equal(endpoint))
+					}, timeout, interval).Should(Succeed())
+				}
+			}
+		})
+
+		It("does not set the dnsmasq hostname annotation on public LoadBalancer Services", func() {
+			for _, svcName := range []string{"heat-api", "heat-cfnapi"} {
+				Eventually(func(g Gomega) {
+					svc := &corev1.Service{}
+					g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+						Namespace: namespace, Name: svcName + "-public"}, svc)).To(Succeed())
+					g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeLoadBalancer))
+					g.Expect(svc.Annotations).NotTo(HaveKey(service.AnnotationHostnameKey))
+				}, timeout, interval).Should(Succeed())
+			}
+		})
+
+		It("keeps the in-cluster dnsmasq hostname on LoadBalancer Services", func() {
+			for _, svcName := range []string{"heat-api", "heat-cfnapi"} {
+				Eventually(func(g Gomega) {
+					svc := &corev1.Service{}
+					g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+						Namespace: namespace, Name: svcName + "-internal"}, svc)).To(Succeed())
+					g.Expect(svc.Annotations).To(HaveKeyWithValue(
+						service.AnnotationHostnameKey, fmt.Sprintf("%s-internal.%s.svc", svcName, namespace)))
+				}, timeout, interval).Should(Succeed())
+			}
+		})
+
+		It("drops the dnsmasq hostname annotation when the internal endpoint is switched to ClusterIP", func() {
+			Eventually(func(g Gomega) {
+				instance := GetHeat(heatName)
+				for _, overrides := range []map[service.Endpoint]service.RoutedOverrideSpec{
+					instance.Spec.HeatAPI.Override.Service, instance.Spec.HeatCfnAPI.Override.Service} {
+					o := overrides[service.EndpointInternal]
+					o.Spec = nil
+					overrides[service.EndpointInternal] = o
+				}
+				g.Expect(k8sClient.Update(ctx, instance)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			for _, svcName := range []string{"heat-api", "heat-cfnapi"} {
+				Eventually(func(g Gomega) {
+					svc := &corev1.Service{}
+					g.Expect(k8sClient.Get(ctx, types.NamespacedName{
+						Namespace: namespace, Name: svcName + "-internal"}, svc)).To(Succeed())
+					g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeClusterIP))
+					g.Expect(svc.Annotations).NotTo(HaveKey(service.AnnotationHostnameKey))
+				}, timeout, interval).Should(Succeed())
+			}
+		})
+
+		It("drops a stale dnsmasq hostname annotation when the public endpoint is switched to ClusterIP", func() {
+			Eventually(func(g Gomega) {
+				instance := GetHeat(heatName)
+				for _, overrides := range []map[service.Endpoint]service.RoutedOverrideSpec{
+					instance.Spec.HeatAPI.Override.Service, instance.Spec.HeatCfnAPI.Override.Service} {
+					o := overrides[service.EndpointPublic]
+					o.Spec = nil
+					overrides[service.EndpointPublic] = o
+				}
+				g.Expect(k8sClient.Update(ctx, instance)).To(Succeed())
+			}, timeout, interval).Should(Succeed())
+
+			for _, svcName := range []string{"heat-api", "heat-cfnapi"} {
+				name := types.NamespacedName{Namespace: namespace, Name: svcName + "-public"}
+				// inject the stale annotation once the Service is ClusterIP, so only
+				// the ClusterIP path can remove it
+				Eventually(func(g Gomega) {
+					svc := &corev1.Service{}
+					g.Expect(k8sClient.Get(ctx, name, svc)).To(Succeed())
+					g.Expect(svc.Spec.Type).To(Equal(corev1.ServiceTypeClusterIP))
+					if svc.Annotations == nil {
+						svc.Annotations = map[string]string{}
+					}
+					svc.Annotations[service.AnnotationHostnameKey] = "stale.example.com"
+					g.Expect(k8sClient.Update(ctx, svc)).To(Succeed())
+				}, timeout, interval).Should(Succeed())
+				Eventually(func(g Gomega) {
+					svc := &corev1.Service{}
+					g.Expect(k8sClient.Get(ctx, name, svc)).To(Succeed())
+					g.Expect(svc.Annotations).NotTo(HaveKey(service.AnnotationHostnameKey))
+				}, timeout, interval).Should(Succeed())
+			}
 		})
 	})
 
