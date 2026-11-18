@@ -147,6 +147,8 @@ To undeploy the operator, simply set the `enabled` value to false from within th
 
 ## Contributing
 
+See [CONTRIBUTING.md](CONTRIBUTING.md) for contribution guidelines and DCO information.
+
 The following guide relies on a already deployed `OpenStackControlPlane`. If you don't already have this, you can
 follow the guides located on the following repo:
 https://github.com/openstack-k8s-operators/install_yamls
