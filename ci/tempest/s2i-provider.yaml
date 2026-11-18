@@ -1,0 +1,18 @@
+---
+- name: Explain published image selection
+  hosts: builder
+  gather_facts: false
+  tasks:
+    - name: Skip image builds without an S2I dependency
+      when: not heat_s2i_build_required | bool
+      ansible.builtin.debug:
+        msg: No S2I change in the buildset; Heat will use Quay master-latest images.
+
+# Zuul passes its metadata as extra variables, available even when static
+# imports are parsed. It is not part of the per-playbook execution inventory.
+- name: Build and publish speculative Heat images
+  ansible.builtin.import_playbook: >-
+    {{ zuul.executor.work_root ~ '/' ~
+       zuul.projects['github.com/openstack-k8s-operators/s2i-openstack-containers'].src_dir ~
+       '/playbooks/container-ci/zuul/run.yaml' }}
+  when: heat_s2i_build_required | bool
