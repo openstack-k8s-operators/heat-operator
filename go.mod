@@ -11,13 +11,13 @@ require (
 	github.com/onsi/ginkgo/v2 v2.34.0
 	github.com/onsi/gomega v1.44.0
 	github.com/openstack-k8s-operators/heat-operator/api v0.3.1-0.20240214134649-6643d1b09d49
-	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20261109081745-7cc41680ceea
-	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20261107160707-6021ee24b393
-	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20261113070841-a8a07362403d
-	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20261113070841-a8a07362403d
-	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20261113070841-a8a07362403d
-	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20261113070841-a8a07362403d
-	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20261107160713-22523fe6b6d8
+	github.com/openstack-k8s-operators/infra-operator/apis v0.6.1-0.20261118064743-77184024dab3
+	github.com/openstack-k8s-operators/keystone-operator/api v0.6.1-0.20261114143254-1f30fde46c04
+	github.com/openstack-k8s-operators/lib-common/modules/common v0.6.1-0.20261120143354-e8b5bd7909b0
+	github.com/openstack-k8s-operators/lib-common/modules/openstack v0.6.1-0.20261120143354-e8b5bd7909b0
+	github.com/openstack-k8s-operators/lib-common/modules/storage v0.6.1-0.20261120143354-e8b5bd7909b0
+	github.com/openstack-k8s-operators/lib-common/modules/test v0.6.1-0.20261120143354-e8b5bd7909b0
+	github.com/openstack-k8s-operators/mariadb-operator/api v0.6.1-0.20261114143658-62c7ba8ddf80
 	gopkg.in/ini.v1 v1.67.3
 	k8s.io/api v0.33.13
 	k8s.io/apimachinery v0.33.13
