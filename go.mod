@@ -1,6 +1,6 @@
 module github.com/openstack-k8s-operators/heat-operator
 
-go 1.26.3
+go 1.26.10
 
 replace github.com/openstack-k8s-operators/heat-operator/api => ./api
 
